@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>L5 Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="https://mms-backend-rose.vercel.app/docs/asset/swagger-ui.css?v=6c89a7b56731679f8e6fbbe97762408d">
+    <link rel="icon" type="image/png" href="https://mms-backend-rose.vercel.app/docs/asset/favicon-32x32.png?v=40d4f2c38d1cd854ad463f16373cbcb6" sizes="32x32"/>
+    <link rel="icon" type="image/png" href="https://mms-backend-rose.vercel.app/docs/asset/favicon-16x16.png?v=f0ae831196d55d8f4115b6c5e8ec5384" sizes="16x16"/>
+    <style>
+    html
+    {
+        box-sizing: border-box;
+        overflow: -moz-scrollbars-vertical;
+        overflow-y: scroll;
+    }
+    *,
+    *:before,
+    *:after
+    {
+        box-sizing: inherit;
+    }
+
+    body {
+      margin:0;
+      background: #fafafa;
+    }
+    </style>
+    </head>
+
+<body >
+<div id="swagger-ui"></div>
+
+<script src="https://mms-backend-rose.vercel.app/docs/asset/swagger-ui-bundle.js?v=f1a737f742dd692d123be959f22f726f"></script>
+<script src="https://mms-backend-rose.vercel.app/docs/asset/swagger-ui-standalone-preset.js?v=7289ecfaa5507c519cb95606e6216dbb"></script>
+<script>
+    window.onload = function() {
+        const urls = [];
+
+                    urls.push({name: "L5 Swagger UI", url: "https://mms-backend-rose.vercel.app/docs?api-docs.json"});
+        
+        // Build a system
+        const ui = SwaggerUIBundle({
+            dom_id: '#swagger-ui',
+            urls: urls,
+            "urls.primaryName": "L5 Swagger UI",
+            operationsSorter: null,
+            configUrl: null,
+            validatorUrl: null,
+            oauth2RedirectUrl: "https://mms-backend-rose.vercel.app/api/oauth2-callback",
+
+            requestInterceptor: function(request) {
+                request.headers['X-CSRF-TOKEN'] = '';
+                return request;
+            },
+
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+            ],
+
+            plugins: [
+                SwaggerUIBundle.plugins.DownloadUrl
+            ],
+
+            layout: "StandaloneLayout",
+            docExpansion : "none",
+            deepLinking: true,
+            filter: true,
+            persistAuthorization: "false",
+
+        })
+
+        window.ui = ui
+
+            }
+</script>
+</body>
+</html>
