@@ -15,7 +15,8 @@ import {
   Bell,
   User,
   ExternalLink,
-  Edit2
+  Edit2,
+  Target
 } from 'lucide-react';
 
 import { PageHeader } from "../../app/components/PageHeader";
@@ -50,7 +51,7 @@ const StatCard = ({ icon: Icon, title, value, subtext, trend, progress }: any) =
 );
 
 const CampaignCard = ({ campaign, isExpanded, onToggle }: { campaign: Campaign, isExpanded: boolean, onToggle: () => void }) => {
-  const progress = Math.min((campaign.raisedAmount / campaign.targetAmount) * 100, 100);
+  const progress = campaign.targetAmount > 0 ? Math.min((campaign.raisedAmount / campaign.targetAmount) * 100, 100) : 0;
   
   return (
     <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border hover:shadow-lg transition-all duration-300 group">
@@ -95,8 +96,8 @@ const CampaignCard = ({ campaign, isExpanded, onToggle }: { campaign: Campaign, 
 
         <div className="space-y-3 cursor-pointer" onClick={onToggle}>
           <div className="flex justify-between text-sm flex-row-reverse">
-            <span className="text-muted-foreground">تم جمع: <span className="font-bold text-foreground">{campaign.raisedAmount.toLocaleString()} ر.س</span></span>
-            <span className="text-muted-foreground">الهدف: {campaign.targetAmount.toLocaleString()} ر.س</span>
+            <span className="text-muted-foreground">تم جمع: <span className="font-bold text-foreground">{Number(campaign.raisedAmount || 0).toLocaleString('ar-EG')} ل.س</span></span>
+            <span className="text-muted-foreground">الهدف: {Number(campaign.targetAmount || 0).toLocaleString('ar-EG')} ل.س</span>
           </div>
           <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
             <div 
@@ -201,27 +202,26 @@ export function CampaignsSection({ onCreateCampaign }: CampaignsSectionProps) {
         <StatCard 
           icon={Wallet} 
           title="إجمالي التبرعات" 
-          value={`${campaignStats?.totalRaised?.toLocaleString() || 0} ر.س`} 
+          value={`${Number(campaignStats?.totalRaised || 0).toLocaleString('ar-EG')} ل.س`} 
           subtext="" 
-          trend={15} 
         />
         <StatCard 
           icon={Zap} 
           title="الحملات النشطة" 
-          value={`${campaignStats?.activeCampaigns || 0}`} 
+          value={Number(campaignStats?.activeCampaigns || 0)} 
           subtext="تحتاج دعم مستمر" 
         />
         <StatCard 
           icon={CheckCircle} 
           title="الحملات المكتملة" 
-          value={`${(campaignStats?.totalCampaigns || 0) - (campaignStats?.activeCampaigns || 0)}`} 
+          value={Number(campaignStats?.completedCampaigns || 0)} 
           subtext="في العام الحالي" 
         />
         <StatCard 
-          icon={TrendingUp} 
+          icon={Target} 
           title="نسبة الإنجاز الكلية" 
-          value={`${campaignStats?.targetAmount ? Math.round(((campaignStats.totalRaised || 0) / campaignStats.targetAmount) * 100) : 0}%`} 
-          progress={campaignStats?.targetAmount ? Math.round(((campaignStats.totalRaised || 0) / campaignStats.targetAmount) * 100) : 0} 
+          value={`${Number(campaignStats?.successRate || 0)}%`} 
+          progress={Number(campaignStats?.successRate || 0)} 
         />
       </div>
 

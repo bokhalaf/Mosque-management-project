@@ -29,11 +29,7 @@ export function AuthLayout({ children, isDark, onToggleDark }: AuthLayoutProps) 
       {/* Content Container */}
       <div className="w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
-            <Sparkles className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-black text-foreground">مسجد الفلاح</h1>
-          <p className="text-sm font-bold text-primary mt-1 uppercase tracking-wider">بوابة الإدارة الذكية</p>
+          <img src="/logo.png" alt="وصل" className="h-24 w-auto object-contain drop-shadow-xl mb-4" />
         </div>
 
         <div className="bg-card border border-border rounded-3xl p-8 shadow-lg shadow-black/5">
@@ -42,7 +38,7 @@ export function AuthLayout({ children, isDark, onToggleDark }: AuthLayoutProps) 
 
         <div className="mt-8 text-center">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} مسجد الفلاح. جميع الحقوق محفوظة.
+            © {new Date().getFullYear()} نظام وصل. جميع الحقوق محفوظة.
           </p>
         </div>
       </div>

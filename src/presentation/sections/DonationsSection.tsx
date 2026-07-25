@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { 
   Search, Bell, Plus, Download, Filter, Eye, Edit, Printer, 
   TrendingUp, Users, Target, Clock, ArrowUpRight, ArrowDownRight, 
@@ -13,7 +14,13 @@ interface DonationsSectionProps {
 }
 
 export function DonationsSection({ onAddDonation, onViewDonationDetails }: DonationsSectionProps) {
-  const { donations, stats, loading } = useDonations();
+  const { donations, pagination, page, setPage, search, setSearch, filter, setFilter, statusFilter, setStatusFilter, campaigns, stats, loading } = useDonations();
+
+  useEffect(() => {
+    if (stats) {
+      console.log("UI Donations Stats Received:", stats);
+    }
+  }, [stats]);
 
   if (loading) {
     return (
@@ -46,37 +53,37 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-8 pb-8">
-        {/* KPI Cards */}
+        {/* KPI Cards Section */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="إجمالي التبرعات"
-            value={`${stats?.totalDonations?.toLocaleString() || 0} ر.س`}
-            trend="+12.5%"
-            isPositive={true}
+            value={`${Number(stats?.totalDonations || 0).toLocaleString('ar-EG')} ل.س`}
+            trend={stats?.totalDonationsTrend ? `${stats.totalDonationsTrend > 0 ? '+' : ''}${stats.totalDonationsTrend}%` : undefined}
+            isPositive={(stats?.totalDonationsTrend || 0) >= 0}
             icon={Wallet}
             color="emerald"
           />
           <StatCard
             title="تبرعات هذا الشهر"
-            value={`${stats?.monthlyDonations?.toLocaleString() || 0} ر.س`}
-            trend="+8.2%"
-            isPositive={true}
+            value={`${Number(stats?.monthlyDonations || 0).toLocaleString('ar-EG')} ل.س`}
+            trend={stats?.monthlyDonationsTrend ? `${stats.monthlyDonationsTrend > 0 ? '+' : ''}${stats.monthlyDonationsTrend}%` : undefined}
+            isPositive={(stats?.monthlyDonationsTrend || 0) >= 0}
             icon={Calendar}
             color="blue"
           />
           <StatCard
             title="حملات نشطة"
-            value={`${stats?.activeCampaigns || 0}`}
-            trend="-2"
-            isPositive={false}
+            value={`${Number(stats?.activeCampaigns || 0)}`}
+            trend={stats?.activeCampaignsTrend ? `${stats.activeCampaignsTrend > 0 ? '+' : ''}${stats.activeCampaignsTrend}` : undefined}
+            isPositive={(stats?.activeCampaignsTrend || 0) >= 0}
             icon={Target}
             color="amber"
           />
           <StatCard
-            title="إيصالات قيد المعالجة"
-            value={`${stats?.pendingReceipts || 0}`}
-            trend={`+${stats?.growthPercentage || 0}%`}
-            isPositive={true}
+            title="متبرعون جدد هذا الشهر"
+            value={`${Number(stats?.newDonors || 0)}`}
+            trend={stats?.newDonorsTrend ? `${stats.newDonorsTrend > 0 ? '+' : ''}${stats.newDonorsTrend}%` : undefined}
+            isPositive={(stats?.newDonorsTrend || 0) >= 0}
             icon={Users}
             color="indigo"
           />
@@ -87,23 +94,56 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
           <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm">
             <div className="p-8 border-b border-border flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-foreground">سجل التبرعات الأخير</h3>
-                <p className="text-xs text-muted-foreground mt-1">آخر ٥٠ عملية تبرع تم تسجيلها</p>
+                <h3 className="text-xl font-bold text-foreground">سجل التبرعات</h3>
+                <p className="text-xs text-muted-foreground mt-1">عرض جميع عمليات التبرع المسجلة</p>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
                 <div className="relative flex-1 md:flex-none">
                   <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input 
                     type="text" 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                     placeholder="بحث عن متبرع، مبلغ، أو تاريخ..." 
                     className="pr-11 pl-4 py-2.5 bg-muted border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none w-full md:w-80 text-right text-foreground placeholder:text-muted-foreground"
                     dir="rtl"
                   />
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-muted text-foreground rounded-xl hover:bg-muted/80 transition-colors text-sm font-bold">
-                  <Filter className="w-4 h-4" />
-                  تصفية
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <select 
+                      value={filter}
+                      onChange={(e) => {
+                        setFilter(e.target.value);
+                        setPage(1);
+                      }}
+                      className="appearance-none flex items-center gap-2 px-4 pl-10 py-2.5 bg-muted text-foreground rounded-xl hover:bg-muted/80 transition-colors text-sm font-bold outline-none cursor-pointer border-none ring-0"
+                      dir="rtl"
+                    >
+                      <option value="">النوع (الكل)</option>
+                      <option value="cash">نقدي</option>
+                      <option value="in_kind">عيني</option>
+                    </select>
+                    <Filter className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-foreground" />
+                  </div>
+
+                  <div className="relative">
+                    <select 
+                      value={statusFilter}
+                      onChange={(e) => {
+                        setStatusFilter(e.target.value);
+                        setPage(1);
+                      }}
+                      className="appearance-none flex items-center gap-2 px-4 pl-10 py-2.5 bg-muted text-foreground rounded-xl hover:bg-muted/80 transition-colors text-sm font-bold outline-none cursor-pointer border-none ring-0"
+                      dir="rtl"
+                    >
+                      <option value="">الحالة (الكل)</option>
+                      <option value="pending">قيد المعالجة (pending)</option>
+                      <option value="completed">مكتمل (completed)</option>
+                    </select>
+                    <CheckCircle2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-foreground" />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -143,7 +183,7 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
                         <span className="text-sm font-black text-primary">
-                          {donation.amount?.toLocaleString()} ر.س
+                          {Number(donation.amount || 0).toLocaleString('ar-EG')} ل.س
                         </span>
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
@@ -181,6 +221,55 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {pagination && pagination.last_page > 0 && (
+              <div className="flex items-center justify-between px-8 py-4 border-t border-border bg-muted/20">
+                <p className="text-sm text-muted-foreground font-medium">
+                  إجمالي التبرعات: {pagination.total}
+                </p>
+                <div className="flex gap-2 items-center">
+                  <button 
+                    disabled={page === 1}
+                    onClick={() => setPage((p: number) => Math.max(1, p - 1))}
+                    className="px-4 py-2 bg-card border border-border rounded-xl disabled:opacity-50 text-sm hover:bg-muted transition-colors font-bold text-foreground"
+                  >
+                    السابق
+                  </button>
+                  
+                  <div className="flex items-center gap-1 mx-2" dir="ltr">
+                    {Array.from({ length: pagination.last_page }, (_, i) => i + 1)
+                      .filter(i => i === 1 || i === pagination.last_page || Math.abs(i - page) <= 2)
+                      .map((i, index, array) => (
+                        <React.Fragment key={i}>
+                          {index > 0 && array[index - 1] !== i - 1 && (
+                            <span className="px-2 text-muted-foreground">...</span>
+                          )}
+                          <button
+                            onClick={() => setPage(i)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                              page === i 
+                                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' 
+                                : 'bg-card border border-border text-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        </React.Fragment>
+                      ))
+                    }
+                  </div>
+
+                  <button 
+                    disabled={page === pagination.last_page}
+                    onClick={() => setPage((p: number) => Math.min(pagination.last_page, p + 1))}
+                    className="px-4 py-2 bg-card border border-border rounded-xl disabled:opacity-50 text-sm hover:bg-muted transition-colors font-bold text-foreground"
+                  >
+                    التالي
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

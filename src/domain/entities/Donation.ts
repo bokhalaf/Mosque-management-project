@@ -8,6 +8,16 @@ export interface Donation {
   date: string;
 }
 
+export interface PaginatedDonations {
+  data: Donation[];
+  pagination: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  } | null;
+}
+
 export interface Campaign {
   id: string;
   title: string;
@@ -32,10 +42,18 @@ export interface AddCampaignPayload {
 
 export interface FinancialStats {
   totalDonations: number;
+  totalDonationsTrend?: number;
   monthlyDonations: number;
+  monthlyDonationsTrend?: number;
   activeCampaigns: number;
-  pendingReceipts: number;
-  growthPercentage: number;
+  activeCampaignsTrend?: number;
+  newDonors: number;
+  newDonorsTrend?: number;
+}
+
+export interface DailySummary {
+  totalToday: number;
+  operationsCount: number;
 }
 
 export interface AddCashDonationPayload {

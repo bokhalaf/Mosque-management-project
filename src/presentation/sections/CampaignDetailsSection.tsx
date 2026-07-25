@@ -49,7 +49,7 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
     );
   }
 
-  const progress = Math.min((campaign.raisedAmount / campaign.targetAmount) * 100, 100);
+  const progress = campaign.targetAmount > 0 ? Math.min((campaign.raisedAmount / campaign.targetAmount) * 100, 100) : 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
@@ -113,7 +113,7 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
                   </div>
                   <div>
                     <p className="text-sm font-bold text-muted-foreground mb-1">المبلغ المحقق</p>
-                    <p className="text-3xl font-black text-foreground">{campaign.raisedAmount.toLocaleString()} ر.س</p>
+                    <p className="text-3xl font-black text-foreground">{Number(campaign.raisedAmount || 0).toLocaleString('ar-EG')} ل.س</p>
                   </div>
                 </div>
                 <div className="hidden md:block w-px h-16 bg-border"></div>
@@ -123,7 +123,7 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
                   </div>
                   <div>
                     <p className="text-sm font-bold text-muted-foreground mb-1">الهدف المالي</p>
-                    <p className="text-3xl font-black text-foreground">{campaign.targetAmount.toLocaleString()} ر.س</p>
+                    <p className="text-3xl font-black text-foreground">{Number(campaign.targetAmount || 0).toLocaleString('ar-EG')} ل.س</p>
                   </div>
                 </div>
               </div>
@@ -139,7 +139,7 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
                 </div>
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-primary">{Math.round(progress)}% مكتمل</span>
-                  <span className="text-muted-foreground">المتبقي: {(campaign.targetAmount - campaign.raisedAmount).toLocaleString()} ر.س</span>
+                  <span className="text-muted-foreground">المتبقي: {Number((campaign.targetAmount - campaign.raisedAmount) || 0).toLocaleString('ar-EG')} ل.س</span>
                 </div>
               </div>
             </div>

@@ -8,7 +8,7 @@ import {
   Plus, Users, GraduationCap, Wrench, Activity, Heart,
   Settings, UserPlus, Target, FileText,
   ChevronLeft, MessageSquareWarning, CalendarDays, ListTodo,
-  LogOut, Loader2
+  LogOut, Loader2, BookOpen, Mic
 } from "lucide-react";
 import { AuthUser } from "../../domain/entities/Auth";
 
@@ -61,14 +61,29 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    id: "sermons",
+    label: "خطب المسجد",
+    icon: BookOpen,
+    items: [
+      { id: "all-sermons", label: "مكتبة الخطب", href: "/sermons" },
+      { id: "add-sermon", label: "إضافة خطبة جديدة", href: "/sermons/create" },
+    ],
+  },
+  {
     id: "maintenance",
-    label: "الصيانة والخدمات",
+    label: "إدارة الصيانة",
     icon: Wrench,
     items: [
-      { id: "complaints", label: "الشكاوى والطلبات", href: "/maintenance/complaints" },
-      { id: "maintenance-tasks", label: "مهام الصيانة", href: "/maintenance/tasks" },
-      { id: "create-task", label: "إنشاء طلب صيانة", href: "/maintenance/tasks/create" },
+      { id: "maintenance-tasks", label: "طلبات ومهام الصيانة", href: "/maintenance/tasks" },
+      { id: "create-task", label: "طلب صيانة جديد", href: "/maintenance/tasks/create" },
     ],
+  },
+  {
+    id: "complaints",
+    label: "البلاغات والشكاوى",
+    icon: MessageSquareWarning,
+    href: "/maintenance/complaints",
+    items: [],
   },
   {
     id: "tasks",
@@ -102,10 +117,14 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
   // Teachers
   "all-teachers": Users,
   schedule: Table,
+  // Sermons
+  "all-sermons": BookOpen,
+  "add-sermon": Mic,
   // Maintenance
-  complaints: MessageSquareWarning,
   "maintenance-tasks": Wrench,
   "create-task": Plus,
+  // Complaints
+  complaints: MessageSquareWarning,
   // Tasks
   tasks: ListTodo,
   // Design System
@@ -133,9 +152,8 @@ export function Sidebar({
   user,
 }: SidebarProps) {
   const pathname = usePathname() || "/";
-  const [expanded, setExpanded] = useState<string[]>(["donations", "students", "maintenance", "tasks"]);
+  const [expanded, setExpanded] = useState<string[]>(["donations", "sermons", "students", "maintenance", "tasks"]);
 
-  // Automatically expand section based on current path
   useEffect(() => {
     const currentSection = NAV.find(s => s.href === pathname || s.items.some(i => pathname.startsWith(i.href)));
     if (currentSection && !expanded.includes(currentSection.id)) {
@@ -157,14 +175,8 @@ export function Sidebar({
     >
       {/* Brand & Mobile Close */}
       <div className="h-16 flex items-center justify-between gap-4 px-6 border-b border-border shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-            <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
-          </div>
-          <div className="min-w-0 text-right">
-            <p className="text-sm font-black text-foreground">مسجد الفلاح</p>
-            <p className="text-[10px] text-primary font-bold uppercase tracking-wider">بوابة الإدارة الذكية</p>
-          </div>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="وصل" className="h-12 w-auto object-contain drop-shadow-md" />
         </div>
 
         {/* Mobile Close Button */}

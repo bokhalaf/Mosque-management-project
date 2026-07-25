@@ -70,7 +70,7 @@ export function DonationDetailsSection({ donationId, onBack }: DonationDetailsSe
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">قيمة التبرع</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-5xl font-black text-emerald-900">{donation.amount.toLocaleString()}</span>
-                    <span className="text-xl font-bold text-emerald-600/60">ر.س</span>
+                    <span className="text-xl font-bold text-emerald-600/60">ل.س</span>
                   </div>
                   
                   <div className="mt-12 space-y-6">
@@ -189,7 +189,7 @@ export function DonationDetailsSection({ donationId, onBack }: DonationDetailsSe
 
                   <div className="py-6 border-y-2 border-dashed border-slate-100 text-center">
                     <p className="text-xs text-slate-400 mb-2">المبلغ المدفوع</p>
-                    <p className="text-3xl font-black text-emerald-900">{donation.amount.toLocaleString()} ر.س</p>
+                    <p className="text-3xl font-black text-emerald-900">{Number(donation.amount || 0).toLocaleString('ar-EG')} ل.س</p>
                   </div>
 
                   <div className="text-[10px] text-slate-400 text-center leading-relaxed px-4">

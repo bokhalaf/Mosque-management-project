@@ -7,12 +7,30 @@ import { GetDonationStatsUseCase } from "../../domain/usecases/GetDonationStatsU
 import { AddCashDonationUseCase } from "../../domain/usecases/AddCashDonationUseCase";
 import { GetDonationByReferenceUseCase } from "../../domain/usecases/GetDonationByReferenceUseCase";
 import { DownloadReceiptUseCase } from "../../domain/usecases/DownloadReceiptUseCase";
+import { GetDailySummaryUseCase } from "../../domain/usecases/GetDailySummaryUseCase";
 
 export function useDonations() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [stats, setStats] = useState<FinancialStats | null>(null);
+  const [dailySummary, setDailySummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  const [pagination, setPagination] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
+
 
   const repository = useMemo(() => new DonationRepositoryImpl(), []);
   
@@ -22,18 +40,23 @@ export function useDonations() {
   const addCashDonationUC = useMemo(() => new AddCashDonationUseCase(repository), [repository]);
   const getDonationByReferenceUC = useMemo(() => new GetDonationByReferenceUseCase(repository), [repository]);
   const downloadReceiptUC = useMemo(() => new DownloadReceiptUseCase(repository), [repository]);
+  const getDailySummaryUC = useMemo(() => new GetDailySummaryUseCase(repository), [repository]);
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
-        const [d, c, s] = await Promise.all([
-          getDonationsUC.execute(),
+        const [donationsRes, c, s, ds] = await Promise.all([
+          getDonationsUC.execute(page, 10, debouncedSearch, filter, statusFilter),
           getCampaignsUC.execute(),
           getStatsUC.execute(),
+          getDailySummaryUC.execute(),
         ]);
-        setDonations(d);
+        setDonations(donationsRes.data);
+        setPagination(donationsRes.pagination);
         setCampaigns(c);
         setStats(s);
+        setDailySummary(ds);
       } catch (error) {
         console.error("Failed to fetch donations data:", error);
       } finally {
@@ -41,7 +64,7 @@ export function useDonations() {
       }
     }
     fetchData();
-  }, [getDonationsUC, getCampaignsUC, getStatsUC]);
+  }, [getDonationsUC, getCampaignsUC, getStatsUC, getDailySummaryUC, page, debouncedSearch, filter, statusFilter]);
 
   const addCashDonation = useCallback(async (payload: AddCashDonationPayload) => {
     return await addCashDonationUC.execute(payload);
@@ -59,7 +82,17 @@ export function useDonations() {
     donations, 
     campaigns, 
     stats, 
-    loading,
+    dailySummary,
+    loading, 
+    pagination,
+    page,
+    setPage,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    statusFilter,
+    setStatusFilter,
     addCashDonation,
     getDonationByReference,
     downloadReceipt

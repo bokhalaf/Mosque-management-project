@@ -267,35 +267,76 @@ export function DashboardSection() {
             </div>
           </div>
 
-          {/* Quick Actions Card */}
-          <div className="bg-emerald-900 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-xl">
-            <div className="relative z-10">
-              <h3 className="text-2xl font-black mb-2">إجراءات سريعة</h3>
-              <p className="text-emerald-100/60 text-sm mb-8">الوصول السريع للمهام الأكثر تكراراً</p>
+          {/* Mini Calendar & Tasks Card */}
+          <div className="bg-card rounded-[2rem] p-6 relative overflow-hidden shadow-sm border border-border">
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-xl font-black text-foreground">مهام اليوم</h3>
+                  <p className="text-muted-foreground text-[11px] mt-1">الجمعة، ١٤ مايو ٢٠٢٦</p>
+                </div>
+                <button className="w-10 h-10 rounded-xl bg-muted border border-border flex items-center justify-center hover:bg-primary/5 transition-colors group">
+                  <CalendarCheck className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Weekly Calendar Strip */}
+              <div className="flex justify-between items-center mb-5 bg-muted p-1.5 rounded-2xl border border-border">
                 {[
-                  { icon: UserPlus, label: "إضافة طالب" },
-                  { icon: Wrench, label: "طلب صيانة" },
-                  { icon: BookOpen, label: "إضافة خطبة" },
-                  { icon: MessageSquare, label: "رد على شكوى" },
-                ].map((a) => (
-                  <button key={a.label} className="flex flex-col items-center gap-3 p-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all border border-white/10">
-                    <a.icon className="w-6 h-6 text-emerald-300" />
-                    <span className="text-xs font-bold">{a.label}</span>
-                  </button>
+                  { day: 'ث', date: '١١' },
+                  { day: 'أ', date: '١٢' },
+                  { day: 'خ', date: '١٣' },
+                  { day: 'ج', date: '١٤', active: true },
+                  { day: 'س', date: '١٥' },
+                ].map((d, i) => (
+                  <div key={i} className={`flex flex-col items-center justify-center w-10 h-12 rounded-xl transition-all cursor-pointer ${d.active ? 'bg-primary shadow-lg shadow-primary/20' : 'hover:bg-background'}`}>
+                    <span className={`text-[10px] font-bold ${d.active ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>{d.day}</span>
+                    <span className={`text-sm font-black ${d.active ? 'text-primary-foreground' : 'text-foreground'}`}>{d.date}</span>
+                  </div>
                 ))}
               </div>
 
-              <button className="w-full mt-8 py-4 bg-white text-emerald-900 rounded-2xl font-black text-sm hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
-                عرض كافة الصلاحيات
+              {/* Tasks List */}
+              <div className="space-y-3 flex-grow">
+                <div className="group relative flex items-start gap-3 p-3 rounded-2xl hover:bg-muted border border-transparent hover:border-border transition-all cursor-pointer">
+                  <div className="w-1 h-full absolute right-0 top-0 bg-primary rounded-full scale-y-0 group-hover:scale-y-50 transition-transform origin-center"></div>
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <Clock className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-sm font-bold text-foreground mb-1 group-hover:text-primary transition-colors">خطبة الجمعة</p>
+                    <p className="text-[10px] text-muted-foreground">الشيخ أحمد محمود • بعد ساعتين</p>
+                  </div>
+                </div>
+
+                <div className="group relative flex items-start gap-3 p-3 rounded-2xl hover:bg-muted border border-transparent hover:border-border transition-all cursor-pointer">
+                  <div className="w-1 h-full absolute right-0 top-0 bg-amber-500 rounded-full scale-y-0 group-hover:scale-y-50 transition-transform origin-center"></div>
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <Wrench className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-sm font-bold text-foreground mb-1 group-hover:text-amber-500 transition-colors">صيانة مكيفات المصلى</p>
+                    <p className="text-[10px] text-muted-foreground">شركة التبريد • ٤:٠٠ عصراً</p>
+                  </div>
+                </div>
+
+                <div className="group relative flex items-start gap-3 p-3 rounded-2xl hover:bg-muted border border-transparent hover:border-border transition-all cursor-pointer">
+                  <div className="w-1 h-full absolute right-0 top-0 bg-indigo-500 rounded-full scale-y-0 group-hover:scale-y-50 transition-transform origin-center"></div>
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                    <Users className="w-4 h-4 text-indigo-500" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-sm font-bold text-foreground mb-1 group-hover:text-indigo-500 transition-colors">اجتماع مشرفي الحلقات</p>
+                    <p className="text-[10px] text-muted-foreground">قاعة الاجتماعات • بعد العشاء</p>
+                  </div>
+                </div>
+              </div>
+
+              <button className="w-full mt-4 py-3 bg-muted text-foreground border border-border rounded-2xl font-black text-xs hover:bg-background transition-all flex items-center justify-center gap-2 shadow-sm">
+                جدول المهام بالكامل
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Decorative circles */}
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-emerald-800/50 rounded-full blur-3xl"></div>
           </div>
         </div>
       </div>

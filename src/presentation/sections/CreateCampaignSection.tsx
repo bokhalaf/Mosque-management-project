@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { PageHeader } from "../../app/components/PageHeader";
-import { 
-  Camera, X, Info, Calendar, Target, TrendingUp, 
-  ChevronLeft, Layout, Type, AlignRight, DollarSign, 
-  Save, Eye, ArrowRight, Plus
+import {
+  Camera, X, Info, Calendar, Target, TrendingUp,
+  ChevronLeft, Layout, Type, AlignRight, DollarSign,
+  Save, Eye, ArrowRight, Plus, Loader2
 } from "lucide-react";
 import { useCampaigns } from "../hooks/useCampaigns";
+import { useToast } from "../../app/components/ui/Toast";
 
 interface CreateCampaignSectionProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ interface CreateCampaignSectionProps {
 
 export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
   const { addCampaign } = useCampaigns();
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -21,22 +23,27 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
     goal: '',
     endDate: '',
     category: 'بناء وتوسعة',
-    image: null as string | null
+    imagePreview: null as string | null,
+    imageFile: null as File | null,
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setFormData({ ...formData, image: event.target?.result as string });
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFormData(prev => ({
+        ...prev,
+        imageFile: file,
+        imagePreview: event.target?.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async () => {
     if (!formData.title || !formData.goal) {
-      alert("الرجاء تعبئة الحقول المطلوبة (عنوان الحملة، والمبلغ المستهدف).");
+      showToast('الرجاء تعبئة الحقول المطلوبة (عنوان الحملة، والمبلغ المستهدف)', 'error');
       return;
     }
     try {
@@ -45,15 +52,14 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
         title: formData.title,
         description: formData.description,
         targetAmount: Number(formData.goal) || 0,
-        image: formData.image || undefined,
-        category: formData.category,
+        imageFile: formData.imageFile || undefined,
         endDate: formData.endDate
       });
-      alert("تم إنشاء الحملة بنجاح!");
+      showToast('✅ تم إنشاء الحملة بنجاح!', 'success');
       onBack();
     } catch (err: any) {
       console.error("Submit Error:", err);
-      alert("حدث خطأ أثناء إنشاء الحملة:\n" + (err.message || "تأكد من صحة البيانات المدخلة"));
+      showToast('❌ حدث خطأ: ' + (err.message || 'تأكد من صحة البيانات المدخلة'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +67,7 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
-      <PageHeader 
+      <PageHeader
         title="إنشاء حملة تبرع جديدة"
         description="أدخل تفاصيل الحملة المخطط لها بدقة لجمع التبرعات لمشاريع المسجد."
         onBack={onBack}
@@ -75,12 +81,14 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
             <button className="px-6 py-3 bg-card border border-border text-foreground rounded-2xl font-bold hover:bg-muted transition-all active:scale-95">
               حفظ كمسودة
             </button>
-            <button 
+            <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/10 active:scale-95 disabled:opacity-50"
+              className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/10 active:scale-95 disabled:opacity-50 flex items-center gap-2"
             >
-              {isSubmitting ? 'جاري النشر...' : 'نشر الحملة'}
+              {isSubmitting ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />جاري النشر...</>
+              ) : 'نشر الحملة'}
             </button>
           </>
         }
@@ -94,14 +102,14 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
               <Type className="w-5 h-5 text-primary" />
               المعلومات الأساسية
             </h3>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-bold text-foreground mb-2">عنوان الحملة</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="مثال: حملة بناء توسعة الدور الثاني"
                   className="w-full px-5 py-4 bg-muted border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-right text-foreground placeholder:text-muted-foreground"
                 />
@@ -110,9 +118,9 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-2">الفئة</label>
-                  <select 
+                  <select
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-5 py-4 bg-muted border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-right appearance-none text-foreground"
                   >
                     <option>بناء وتوسعة</option>
@@ -125,10 +133,10 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
                   <label className="block text-sm font-bold text-foreground mb-2">تاريخ الانتهاء</label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={formData.endDate}
-                      onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                       className="w-full px-5 py-4 bg-muted border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-right text-foreground"
                     />
                   </div>
@@ -137,10 +145,10 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
 
               <div>
                 <label className="block text-sm font-bold text-foreground mb-2">وصف الحملة</label>
-                <textarea 
+                <textarea
                   rows={4}
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="اشرح أهداف الحملة وكيف سيتم استخدام التبرعات..."
                   className="w-full px-5 py-4 bg-muted border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-right resize-none text-foreground placeholder:text-muted-foreground"
                 />
@@ -157,13 +165,13 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-foreground mb-2">المبلغ المستهدف (ريال)</label>
+                  <label className="block text-sm font-bold text-foreground mb-2">المبلغ المستهدف (ل.س)</label>
                   <div className="relative">
                     <Target className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={formData.goal}
-                      onChange={(e) => setFormData({...formData, goal: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
                       placeholder="مثال: ٥٠,٠٠٠"
                       className="w-full px-5 py-4 bg-muted border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-right text-foreground placeholder:text-muted-foreground"
                     />
@@ -181,16 +189,15 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
 
               <div>
                 <label className="block text-sm font-bold text-foreground mb-2">صورة الغلاف</label>
-                <div 
-                  className={`relative h-48 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center transition-all ${
-                    formData.image ? 'border-primary bg-primary/10' : 'border-border bg-muted hover:border-primary/50 hover:bg-muted/80'
-                  }`}
+                <div
+                  className={`relative h-48 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center transition-all ${formData.imagePreview ? 'border-primary bg-primary/10' : 'border-border bg-muted hover:border-primary/50 hover:bg-muted/80'
+                    }`}
                 >
-                  {formData.image ? (
+                  {formData.imagePreview ? (
                     <>
-                      <img src={formData.image} className="absolute inset-0 w-full h-full object-cover rounded-[2rem]" alt="Preview" />
-                      <button 
-                        onClick={() => setFormData({...formData, image: null})}
+                      <img src={formData.imagePreview} className="absolute inset-0 w-full h-full object-cover rounded-[2rem]" alt="Preview" />
+                      <button
+                        onClick={() => setFormData({ ...formData, imagePreview: null, imageFile: null })}
                         className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg"
                       >
                         <X className="w-4 h-4" />
@@ -225,8 +232,8 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
             <div className="bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-xl shadow-black/5">
               {/* Image Preview */}
               <div className="h-64 bg-muted relative">
-                {formData.image ? (
-                  <img src={formData.image} className="w-full h-full object-cover" alt="Campaign" />
+                {formData.imagePreview ? (
+                  <img src={formData.imagePreview} className="w-full h-full object-cover" alt="Campaign" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
                     <Camera className="w-12 h-12" />
@@ -250,8 +257,8 @@ export function CreateCampaignSection({ onBack }: CreateCampaignSectionProps) {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-foreground">المبلغ المحقق: ٠ ر.س</span>
-                    <span className="text-sm font-bold text-muted-foreground">من {formData.goal || '٠'} ر.س</span>
+                    <span className="text-sm font-bold text-foreground">المبلغ المحقق: ٠ ل.س</span>
+                    <span className="text-sm font-bold text-muted-foreground">من {formData.goal || '٠'} ل.س</span>
                   </div>
                   <div className="h-3 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-primary w-[15%] rounded-full shadow-[0_0_10px_rgba(var(--primary),0.3)]"></div>

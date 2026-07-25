@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Prometheus Scraper Config targeting distributed app containers
+# Task: [DO-2] Cluster Telemetry & APM Monitoring
+# ─────────────────────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval: 5s       # How often to scrape metrics from targets
+  evaluation_interval: 5s   # How often to evaluate rules
+
+# ─── Alerting (optional future hook) ─────────────────────────────────────────
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# ─── Scrape Jobs ──────────────────────────────────────────────────────────────
+scrape_configs:
+
+  # API Ingress Gateway — primary traffic entry point
+  - job_name: 'api_ingress_gateway'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api-gateway:3000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'api-gateway'
+
+  # Microservice Replica nodes — horizontal service fleet
+  - job_name: 'microservice_replicas'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'srv-01:3001'
+          - 'srv-02:3002'
+          - 'srv-03:3003'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: replica_id
+        replacement: '$1'
+      - source_labels: [__address__]
+        regex: '([^:]+):.*'
+        target_label: host
+        replacement: '$1'
+
+  # Node Exporter — system-level CPU / Memory / Disk metrics
+  - job_name: 'node_exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Database health endpoint (e.g., postgres_exporter)
+  - job_name: 'database_health'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'db-primary:9187'
+          - 'db-replica-1:9188'
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '([^:]+):.*'
+        target_label: db_node
+        replacement: '$1'

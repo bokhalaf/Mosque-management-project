@@ -1,24 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PageHeader } from "../../app/components/PageHeader";
 import { 
   Wrench, Save, X, Activity, CheckCircle2, AlertTriangle, 
-  MapPin, Clock, Paperclip, Plus, Send, Settings, User, DollarSign,
-  Briefcase, ArrowRight, UploadCloud, Link as LinkIcon, Info
+  MapPin, Clock, Paperclip, Plus, Send, Settings, User,
+  ArrowRight, UploadCloud, Info, RefreshCw, Zap, Droplets, Hammer, Sparkles, FileText, Check, Trash2
 } from 'lucide-react';
+import { MaintenanceRepositoryImpl } from "../../data/repositories/MaintenanceRepositoryImpl";
+
+const maintenanceRepo = new MaintenanceRepositoryImpl();
 
 interface CreateMaintenanceRequestSectionProps {
   onBack: () => void;
 }
 
+const CATEGORIES = [
+  { id: 'electrical', label: 'أعطال كهربائية', desc: 'إنارة، مكيفات، مفاتيح كهرباء', icon: Zap, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' },
+  { id: 'plumbing', label: 'سباكة وتمديدات', desc: 'تسريبات، دورات مياه، مضخات', icon: Droplets, color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' },
+  { id: 'carpentry', label: 'نجارة وأثاث', desc: 'أبواب، نوافذ، أرفف ومكتبات', icon: Hammer, color: 'text-orange-500 bg-orange-500/10 border-orange-500/20' },
+  { id: 'cleaning', label: 'نظافة وعناية', desc: 'غسيل سجاد، تعقيم مرافق', icon: Sparkles, color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' },
+  { id: 'other', label: 'أخرى', desc: 'صيانة عامة أو طارئة', icon: Wrench, color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' },
+];
+
+const PRIORITIES = [
+  { id: 'low', label: 'عادية', badge: 'منخفضة', sla: 'خلال ٧٢ ساعة', style: 'border-slate-500/20 text-slate-600 bg-slate-500/10' },
+  { id: 'medium', label: 'متوسطة', badge: 'متوسطة', sla: 'خلال ٤٨ ساعة', style: 'border-primary/20 text-primary bg-primary/10' },
+  { id: 'high', label: 'عالية', badge: 'عالية', sla: 'خلال ٢٤ ساعة', style: 'border-amber-500/20 text-amber-600 bg-amber-500/10' },
+  { id: 'urgent', label: 'حرجة', badge: 'حرجة جداً', sla: 'استجابة فورية (أقل من ساعتين)', style: 'border-red-500/20 text-red-500 bg-red-500/10 font-black' },
+];
+
 export function CreateMaintenanceRequestSection({ onBack }: CreateMaintenanceRequestSectionProps) {
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('electrical');
   const [priority, setPriority] = useState('medium');
-  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedCategoryObj = CATEGORIES.find(c => c.id === category) || CATEGORIES[0];
+  const selectedPriorityObj = PRIORITIES.find(p => p.id === priority) || PRIORITIES[1];
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      setError("يرجى كتابة عنوان مختصر ومحدد للطلب.");
+      return;
+    }
+    if (!description.trim()) {
+      setError("يرجى كتابة وصف مفصل للمشكلة لمساعدة الفني.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await maintenanceRepo.createMaintenanceRequest({
+        title: title.trim(),
+        category,
+        priority,
+        description: description.trim(),
+        notes: notes.trim() || undefined,
+        files: selectedFiles.length > 0 ? selectedFiles : undefined,
+      });
+
+      alert("تم إرسال طلب الصيانة مع المرفقات بنجاح إلى النظام!");
+      onBack();
+    } catch (err: any) {
+      console.error("Error creating maintenance request:", err);
+      setError(err.message || "حدث خطأ أثناء إرسال طلب الصيانة");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-24">
+    <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader 
-        title="إنشاء طلب صيانة"
-        description="تسجيل عطل جديد وتحديد مسار المعالجة مع الحفاظ على كفاءة العمليات التشغيلية."
+        title="إنشاء طلب صيانة جديد"
+        description="سجّل العطل بسهولة مع تحديد التصنيف والأولوية ورفع صور ومرفقات العطل."
         onBack={onBack}
         breadcrumbs={[
           { label: "العمليات التشغيلية" },
@@ -26,15 +106,26 @@ export function CreateMaintenanceRequestSection({ onBack }: CreateMaintenanceReq
           { label: "طلب صيانة جديد", active: true }
         ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <button 
+              type="button"
               onClick={onBack}
-              className="px-4 py-2 bg-transparent text-muted-foreground rounded-lg text-sm font-bold hover:bg-muted transition-all"
+              className="px-4 py-2.5 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl text-xs font-bold transition-all hover:bg-muted"
             >
               إلغاء
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-lg text-sm font-bold hover:bg-muted transition-all shadow-sm">
-              <Save className="w-4 h-4" /> حفظ كمسودة
+            <button 
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
+            >
+              {submitting ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              <span>إرسال طلب الصيانة</span>
             </button>
           </div>
         }
@@ -43,225 +134,295 @@ export function CreateMaintenanceRequestSection({ onBack }: CreateMaintenanceReq
       <div className="px-4 md:px-8 py-4 grid grid-cols-1 xl:grid-cols-12 gap-8">
         
         {/* Main Form Column */}
-        <div className="xl:col-span-8 space-y-8">
+        <div className="xl:col-span-8 space-y-6">
           
-          {/* SECTION: Basic Information */}
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-            <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
-              <Info className="w-5 h-5 text-primary" /> المعلومات الأساسية
-            </h3>
-            
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-2">عنوان الطلب <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
-                  placeholder="مثال: تعطل وحدة التكييف المركزية..." 
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground placeholder:text-muted-foreground"
-                />
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-2xl text-xs flex items-center justify-between shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
+              <X className="w-4 h-4 cursor-pointer hover:opacity-80" onClick={() => setError(null)} />
+            </div>
+          )}
+
+          {/* STEP 1: Title & Category Selection */}
+          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+            <div>
+              <label className="block text-sm font-black text-foreground mb-2 flex items-center gap-1.5">
+                <span>عنوان الطلب</span>
+                <span className="text-red-500">*</span>
+              </label>
+              <input 
+                type="text" 
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="مثال: عطل في مكيف المحراب الرئيسي أو تسريب مياه بالمغاسل..." 
+                className="w-full px-4 py-3.5 bg-muted/60 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-bold outline-none transition-all text-foreground placeholder:text-muted-foreground/70"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-black text-foreground mb-3 flex items-center gap-1.5">
+                <span>التصنيف الفني للعطل</span>
+                <span className="text-red-500">*</span>
+              </label>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-bold text-foreground mb-2">التصنيف الفني <span className="text-red-500">*</span></label>
-                  <select 
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground"
+              {/* Category Grid Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  const isSelected = category === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategory(cat.id)}
+                      className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between relative group ${
+                        isSelected 
+                          ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-sm' 
+                          : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-2.5 rounded-lg border ${cat.color}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        {isSelected && (
+                          <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-foreground mb-0.5">{cat.label}</h4>
+                        <p className="text-[10px] text-muted-foreground font-bold">{cat.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 2: Priority Level Selection */}
+          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+            <label className="block text-sm font-black text-foreground mb-1 flex items-center gap-1.5">
+              <span>درجة الأهمية والاستجابة المطلوبة</span>
+              <span className="text-red-500">*</span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {PRIORITIES.map((p) => {
+                const isSelected = priority === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPriority(p.id)}
+                    className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between relative ${
+                      isSelected
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-sm'
+                        : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
+                    }`}
                   >
-                    <option value="" disabled>اختر التصنيف...</option>
-                    <option value="electrical">أعطال كهربائية</option>
-                    <option value="plumbing">سباكة وتمديدات مياه</option>
-                    <option value="hvac">تكييف وتبريد (HVAC)</option>
-                    <option value="audio">الأنظمة الصوتية والمرئية</option>
-                    <option value="structural">صيانة إنشائية</option>
-                    <option value="furniture">أثاث وفرش</option>
-                    <option value="cleaning">نظافة وعناية بالمرافق</option>
-                    <option value="other">أخرى</option>
-                  </select>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${p.style}`}>
+                        {p.badge}
+                      </span>
+                      {isSelected && (
+                        <div className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <span className="block text-xs font-black text-foreground">{p.label}</span>
+                      <span className="block text-[10px] text-muted-foreground font-bold mt-1">
+                        <Clock className="w-3 h-3 inline ml-1" />
+                        {p.sla}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* STEP 3: Issue Description & Notes */}
+          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-5">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-black text-foreground flex items-center gap-1.5">
+                  <span>تفاصيل ووصف العطل</span>
+                  <span className="text-red-500">*</span>
+                </label>
+                <span className="text-[10px] text-muted-foreground font-bold">
+                  {description.length} حرف
+                </span>
+              </div>
+              <textarea 
+                rows={5}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="اكتب وصفاً واضحاً للمشكلة، المكان المحدد في المسجد، وهل يؤثر العطل على أوقات الصلاة..." 
+                className="w-full px-4 py-3 bg-muted/60 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm outline-none transition-all resize-none text-foreground placeholder:text-muted-foreground/70 leading-relaxed font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-black text-foreground mb-2">ملاحظات إضافية للفني (اختياري)</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="مثال: يرجى الحضور بين صلاتي الظهر والعصر، المورد المحلي للتكييف..."
+                className="w-full px-4 py-3 bg-muted/60 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-bold outline-none transition-all text-foreground placeholder:text-muted-foreground/70"
+              />
+            </div>
+
+            {/* Interactive File Upload Zone */}
+            <div>
+              <label className="block text-sm font-black text-foreground mb-2">مرفقات وصور العطل (اختياري)</label>
+              
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange}
+                multiple 
+                accept="image/png, image/jpeg, image/jpg, application/pdf, .doc, .docx"
+                className="hidden" 
+              />
+
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-border hover:border-primary/50 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-muted/40 transition-colors cursor-pointer bg-card group"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 text-primary border border-primary/20 group-hover:scale-110 transition-transform">
+                  <UploadCloud className="w-5 h-5" />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-foreground mb-2">درجة الأهمية <span className="text-red-500">*</span></label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['low', 'medium', 'high', 'critical'].map(p => (
-                      <button
-                        key={p}
-                        onClick={() => setPriority(p)}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all border ${
-                          priority === p 
-                            ? p === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-500' 
-                            : p === 'high' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600'
-                            : p === 'medium' ? 'bg-primary/10 border-primary/20 text-primary'
-                            : 'bg-slate-500/10 border-slate-500/20 text-slate-600'
-                            : 'bg-muted border-border text-muted-foreground hover:bg-muted/80'
-                        }`}
-                      >
-                        {p === 'critical' ? 'حرجة' : p === 'high' ? 'عالية' : p === 'medium' ? 'متوسطة' : 'عادية'}
-                      </button>
+                <p className="text-xs font-bold text-foreground mb-0.5">انقر لرفع صور أو مستندات العطل (اختياري)</p>
+                <p className="text-[10px] text-muted-foreground font-bold">الأنواع المدعومة: JPG, PNG, PDF, DOC (حتى 10 ميغابايت للملف)</p>
+              </div>
+
+              {/* Selected Files List Preview */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <span className="text-[11px] font-bold text-muted-foreground">الملفات المحددة ({selectedFiles.length}):</span>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded-xl text-xs font-bold text-foreground">
+                        <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span className="max-w-[160px] truncate">{file.name}</span>
+                        <span className="text-[10px] text-muted-foreground">({formatFileSize(file.size)})</span>
+                        <X 
+                          className="w-3.5 h-3.5 cursor-pointer text-muted-foreground hover:text-red-500 transition-colors mr-1"
+                          onClick={(e) => { e.stopPropagation(); removeFile(idx); }} 
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          </div>
 
-          {/* SECTION: Location */}
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-            <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" /> تفاصيل الموقع
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-2">المنطقة <span className="text-red-500">*</span></label>
-                <select className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground">
-                  <option>المصلى الرئيسي (رجال)</option>
-                  <option>مصلى النساء</option>
-                  <option>الساحات الخارجية</option>
-                  <option>دورات المياه</option>
-                  <option>سكن الإمام/المؤذن</option>
-                  <option>المرافق الإدارية</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-2">القسم المحدد</label>
-                <input 
-                  type="text" 
-                  placeholder="مثال: الدور الثاني، البوابة الشرقية..." 
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground placeholder:text-muted-foreground"
-                />
-              </div>
+            {/* Form Footer Action Buttons */}
+            <div className="pt-6 border-t border-border flex items-center justify-between">
+              <button 
+                type="button"
+                onClick={onBack}
+                className="px-6 py-3 bg-muted text-foreground rounded-xl text-xs font-bold hover:bg-muted/80 transition-all border border-border"
+              >
+                إلغاء
+              </button>
+              
+              <button 
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {submitting ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>إرسال طلب الصيانة</span>
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-foreground mb-2">مرافق متأثرة (اختياري)</label>
-              <input 
-                type="text" 
-                placeholder="مثال: يمنع استخدام الركن الجنوبي الغربي بالكامل." 
-                className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-          </div>
 
-          {/* SECTION: Issue Details & Attachments */}
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-            <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" /> تفاصيل المشكلة والمرفقات
-            </h3>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-2">وصف العطل <span className="text-red-500">*</span></label>
-                <textarea 
-                  rows={4}
-                  placeholder="الرجاء تقديم وصف دقيق وشامل للمشكلة لمساعدة الفني في تحديد المعدات المطلوبة..." 
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm resize-none text-foreground placeholder:text-muted-foreground"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-2">المرفقات الإضافية (صور، مقاطع مرئية، مستندات)</label>
-                <div className="w-full border-2 border-dashed border-border rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors cursor-pointer bg-card">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                    <UploadCloud className="w-6 h-6 text-primary" />
-                  </div>
-                  <p className="text-sm font-bold text-foreground mb-1">انقر للرفع أو قم بسحب الملفات هنا</p>
-                  <p className="text-xs text-muted-foreground">الحد الأقصى للملفات: ١٠ ميغابايت (JPG, PNG, PDF, MP4)</p>
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
 
-        {/* Side Summary Column */}
+        {/* Side Column: Live Summary Preview */}
         <div className="xl:col-span-4 space-y-6">
-          
-          {/* SECTION: Live Request Summary Card */}
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24">
-            <h3 className="text-lg font-bold text-foreground mb-4">ملخص الطلب</h3>
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24 space-y-6">
             
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-base font-black text-foreground flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" /> ملخص الطلب
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                معاينة مباشرة
+              </span>
+            </div>
+
             <div className="space-y-4">
-              <div className="pb-4 border-b border-border">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">حالة الاعتماد الأولية</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-sm font-bold text-foreground">جاهز للإرسال</span>
+              <div>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">العنوان</span>
+                <p className="text-sm font-bold text-foreground line-clamp-2">
+                  {title.trim() || 'لم يتم كتابة عنوان بعد...'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">التصنيف</span>
+                  <span className="text-xs font-bold text-foreground inline-flex items-center gap-1">
+                    <selectedCategoryObj.icon className="w-3.5 h-3.5 text-primary" />
+                    {selectedCategoryObj.label}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">الأولوية</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${selectedPriorityObj.style}`}>
+                    {selectedPriorityObj.badge}
+                  </span>
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center py-2">
-                <span className="text-xs text-muted-foreground font-medium">مستوى الأولوية</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                    priority === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-500' 
-                  : priority === 'high' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600'
-                  : priority === 'medium' ? 'bg-primary/10 border-primary/20 text-primary'
-                  : 'bg-slate-500/10 border-slate-500/20 text-slate-600'
-                }`}>
-                  {priority === 'critical' ? 'حرجة' : priority === 'high' ? 'عالية' : priority === 'medium' ? 'متوسطة' : 'عادية'}
+
+              <div className="pt-2 border-t border-border/60">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">المرفقات</span>
+                <span className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <Paperclip className="w-3.5 h-3.5 text-primary" />
+                  {selectedFiles.length > 0 ? `${selectedFiles.length} ملفات محددة` : 'لا توجد مرفقات'}
                 </span>
               </div>
-              
-              <div className="flex justify-between items-center py-2">
-                <span className="text-xs text-muted-foreground font-medium">التصنيف</span>
-                <span className="text-sm font-bold text-foreground">{category || 'غير محدد'}</span>
+            </div>
+
+            {/* Workflow steps indicator */}
+            <div className="pt-4 border-t border-border space-y-3">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">مسار طلب الصيانة</span>
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-3 text-xs font-bold text-foreground">
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">1</div>
+                  <span>تقديم الطلب</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground">
+                  <div className="w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center text-[10px]">2</div>
+                  <span>المراجعة والتكليف</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground">
+                  <div className="w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center text-[10px]">3</div>
+                  <span>متابعة وإنجاز العمل</span>
+                </div>
               </div>
             </div>
 
-            {/* SECTION: Maintenance Timeline Preview */}
-            <div className="mt-8 pt-6 border-t border-border">
-              <h4 className="text-sm font-bold text-foreground mb-4">مسار العملية المتوقع</h4>
-              <div className="space-y-4 relative">
-                <div className="absolute right-3.5 top-2 bottom-2 w-px bg-border"></div>
-                
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center border-2 border-card text-white">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">إنشاء الطلب</span>
-                </div>
-                
-                <div className="flex items-center gap-4 relative z-10 opacity-50">
-                  <div className="w-7 h-7 rounded-full bg-muted border border-border flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/30"></div>
-                  </div>
-                  <span className="text-xs font-bold text-foreground">الاعتماد والمراجعة</span>
-                </div>
-
-                <div className="flex items-center gap-4 relative z-10 opacity-50">
-                  <div className="w-7 h-7 rounded-full bg-muted border border-border flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/30"></div>
-                  </div>
-                  <span className="text-xs font-bold text-foreground">تنفيذ الصيانة</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
 
-      {/* SECTION: Quick Actions Footer */}
-      <div className="fixed bottom-0 left-0 right-0 lg:right-[280px] bg-card border-t border-border p-4 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-40 transition-all">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-4 md:px-8">
-          <button 
-            onClick={onBack}
-            className="px-6 py-2.5 bg-muted text-foreground rounded-xl text-sm font-bold hover:bg-muted/80 transition-all border border-border"
-          >
-            مسح البيانات
-          </button>
-          
-          <div className="flex gap-3">
-            <button className="px-6 py-2.5 bg-card border border-border text-foreground rounded-xl text-sm font-bold hover:bg-muted transition-all">
-              حفظ كمسودة
-            </button>
-            <button 
-              onClick={onBack}
-              className="flex items-center gap-2 px-8 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-            >
-              <Send className="w-4 h-4" />
-              إرسال الطلب واعتماده
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
