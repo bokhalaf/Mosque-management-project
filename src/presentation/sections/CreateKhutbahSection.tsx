@@ -3,8 +3,11 @@ import React, { useState, useRef } from 'react';
 import { PageHeader } from "../../app/components/PageHeader";
 import { 
   BookOpen, Plus, Mic, Square, Play, Pause, Trash2, 
-  UploadCloud, Send, FileText, CheckCircle2, User, Clock, AlertTriangle, RefreshCw, Sparkles, Wand2
+  UploadCloud, Send, FileText, CheckCircle2, User, Clock, AlertTriangle, RefreshCw, Sparkles
 } from 'lucide-react';
+import { SermonRepositoryImpl } from "../../data/repositories/SermonRepositoryImpl";
+
+const sermonRepo = new SermonRepositoryImpl();
 
 interface CreateKhutbahSectionProps {
   onBack: () => void;
@@ -48,7 +51,7 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Start Live Audio Recording (for audio file)
+  // Start Live Audio Recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -92,7 +95,7 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
     }
   };
 
-  // ── Speech-to-Text Dictation (تحويل الصوت المباشر إلى نص) ──
+  // Speech-to-Text Dictation (تحويل الصوت المباشر إلى نص)
   const toggleSpeechToText = () => {
     if (isDictating) {
       if (recognitionRef.current) {
@@ -105,7 +108,6 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      // Fallback simulation if Web Speech API is not supported in environment
       setIsDictating(true);
       const simulatedPhrases = [
         "الحمد لله رب العالمين والصلاة والسلام على أشرف الأنبياء والمرسلين.",
@@ -204,11 +206,22 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
     setError(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      alert("تم حفظ ونشر الخطبة بنجاح في مكتبة خطب المسجد!");
+      const todayStr = new Date().toISOString().split('T')[0];
+      const created = await sermonRepo.createSermon({
+        title: title.trim(),
+        speaker_name: preacher.trim(),
+        sermon_date: todayStr,
+        content: content.trim(),
+        category: category,
+        publishForFriday: publishForFriday,
+        attachments: uploadedAudioFile ? [uploadedAudioFile] : undefined,
+      });
+
+      alert(`تم تقديم وحفظ الخطبة "${created.title}" بنجاح عبر الـ API!`);
       onBack();
     } catch (err: any) {
-      setError("حدث خطأ أثناء حفظ الخطبة.");
+      console.error("Error creating sermon:", err);
+      setError(err.message || "حدث خطأ أثناء حفظ الخطبة.");
     } finally {
       setSubmitting(false);
     }
@@ -228,12 +241,14 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
         actions={
           <div className="flex items-center gap-3">
             <button 
+              type="button"
               onClick={onBack}
               className="px-4 py-2.5 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl text-xs font-bold transition-all hover:bg-muted"
             >
               إلغاء
             </button>
             <button 
+              type="button"
               onClick={handleSubmit}
               disabled={submitting}
               className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
@@ -380,7 +395,7 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
             </div>
           </div>
 
-          {/* STEP 3: Text & Main Outline with Speech-to-Text Dictation (تحويل الصوت إلى نص) */}
+          {/* STEP 3: Text & Main Outline with Speech-to-Text Dictation */}
           <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
               <h3 className="text-base font-black text-foreground flex items-center gap-2">
@@ -462,11 +477,12 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
             </div>
 
             <button 
+              type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-md hover:bg-primary/90 transition-all"
+              className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-md hover:bg-primary/90 transition-all disabled:opacity-50"
             >
-              حفظ ونشر الخطبة
+              {submitting ? "جاري الإرسال..." : "حفظ ونشر الخطبة"}
             </button>
           </div>
         </div>

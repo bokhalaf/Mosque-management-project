@@ -2,27 +2,42 @@
 // Domain Entity — Sermon / Khutbah
 // ==============================
 
+export interface SermonAttachment {
+  id?: number | string;
+  url: string;
+  file_name?: string;
+  file_type?: string;
+}
+
 export interface Sermon {
-  id: string;
+  id: number | string;
   title: string;
-  preacher: string;
-  category: 'faith' | 'fiqh' | 'ethics' | 'contemporary' | 'occasions' | string;
+  speaker_name?: string;
+  preacher?: string;
+  sermon_date?: string;
   date?: string;
+  category?: 'faith' | 'fiqh' | 'ethics' | 'contemporary' | 'occasions' | string;
   duration?: string;
   audioUrl?: string;
-  audioBlob?: Blob;
   content: string;
+  status: 'pending' | 'Scheduled' | 'approved' | 'rejected' | 'completed' | string;
+  notes?: string | null;
+  attachments?: (string | SermonAttachment)[];
   isPublishedForFriday?: boolean;
-  status: 'draft' | 'approved' | 'scheduled_for_friday';
-  createdAt: string;
+  mosque_manager_id?: number;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
 }
 
 export interface CreateSermonPayload {
   title: string;
-  preacher: string;
-  category: string;
-  date?: string;
+  speaker_name: string;
+  sermon_date: string;
   content: string;
+  category?: string;
+  notes?: string;
+  attachments?: File[];
   audioFile?: File | Blob;
   publishForFriday?: boolean;
 }
