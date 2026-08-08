@@ -26,11 +26,23 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const { showToast } = useToast();
   const { logout, loading: logoutLoading } = useLogout();
 
-  // Close sidebar on navigation
+  // Close sidebar on navigation and reset scroll
   useEffect(() => {
     setIsSidebarOpen(false);
     if (mainRef.current) mainRef.current.scrollTop = 0;
   }, [pathname]);
+
+  // Prevent background body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSidebarOpen]);
 
   // Keyboard: Alt+D = toggle dark
   useEffect(() => {
@@ -53,6 +65,12 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     setCurrentUser(null);
     setIsAuthenticated(false);
     setAuthRoute("login");
+  };
+
+  const handleSidebarWheelScroll = (deltaY: number) => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop += deltaY;
+    }
   };
 
   // ── Auth screens ──────────────────────────────────────
@@ -103,9 +121,10 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           user={currentUser}
           onLogout={handleLogout}
           logoutLoading={logoutLoading}
+          onWheelScroll={handleSidebarWheelScroll}
         />
 
-        {/* Main Content */}
+        {/* Main Content Container */}
         <main
           className="flex-1 flex flex-col min-w-0 overflow-x-hidden"
           style={{ height: "100dvh" }}
@@ -123,7 +142,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
             }
           />
 
-          <div ref={mainRef} className="flex-1 overflow-y-auto">
+          <div ref={mainRef} className="flex-1 overflow-y-auto scroll-smooth">
             <div className="px-4 lg:px-8 py-6 relative z-10 w-full max-w-[1600px] mx-auto min-h-full flex flex-col">
               <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500 relative z-0">
                 {children}

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from "../../app/components/PageHeader";
-import { 
+import {
   Wrench, CheckCircle2, Clock, AlertTriangle,
-  Activity, Plus, Filter, Search, Download, Eye, 
-  FileText, RefreshCw, X, Layers, SlidersHorizontal
+  Activity, Plus, Filter, Search, Download, Eye,
+  FileText, RefreshCw, X, Layers, SlidersHorizontal, Terminal, Copy
 } from 'lucide-react';
-import { MaintenanceRepositoryImpl } from "../../data/repositories/MaintenanceRepositoryImpl";
+import { MaintenanceRepositoryImpl, MaintenanceRecentDebugResponse } from "../../data/repositories/MaintenanceRepositoryImpl";
 import { MaintenanceRequestItem, MaintenanceStats } from "../../domain/entities/Maintenance";
 
 const maintenanceRepo = new MaintenanceRepositoryImpl();
@@ -14,13 +14,13 @@ const maintenanceRepo = new MaintenanceRepositoryImpl();
 const getPriorityStyles = (priority: string) => {
   switch (priority) {
     case 'critical':
-    case 'urgent': 
+    case 'urgent':
       return 'bg-red-500/10 text-red-500 border-red-500/20 font-black';
-    case 'high': 
+    case 'high':
       return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-    case 'medium': 
+    case 'medium':
       return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-    case 'low': 
+    case 'low':
       return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
     default:
       return 'bg-muted text-muted-foreground border-border';
@@ -89,11 +89,10 @@ const formatDate = (dateStr?: string) => {
 };
 
 const StatCard = ({ title, value, icon: Icon, colorStyle, isActive, onClick, subtitle }: any) => (
-  <div 
+  <div
     onClick={onClick}
-    className={`bg-card border rounded-[1.5rem] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden ${
-      isActive ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/40'
-    }`}
+    className={`bg-card border rounded-[1.5rem] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden ${isActive ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/40'
+      }`}
   >
     <div className="flex items-start justify-between mb-3">
       <div className={`p-3 rounded-xl border ${colorStyle} transition-transform group-hover:scale-105`}>
@@ -113,10 +112,10 @@ const StatCard = ({ title, value, icon: Icon, colorStyle, isActive, onClick, sub
   </div>
 );
 
-export function MaintenanceTasksSection({ 
-  onViewTaskDetails, 
-  onCreateTask 
-}: { 
+export function MaintenanceTasksSection({
+  onViewTaskDetails,
+  onCreateTask
+}: {
   onViewTaskDetails?: (id: string) => void,
   onCreateTask?: () => void
 }) {
@@ -137,6 +136,11 @@ export function MaintenanceTasksSection({
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Live Server Debug Inspection States
+  const [recentDebug, setRecentDebug] = useState<MaintenanceRecentDebugResponse | null>(null);
+  const [copiedDebug, setCopiedDebug] = useState(false);
+  const [showDebugBox, setShowDebugBox] = useState(true);
+
   // Fetch Stats API
   const loadStats = useCallback(async () => {
     setLoadingStats(true);
@@ -150,17 +154,29 @@ export function MaintenanceTasksSection({
     }
   }, []);
 
-  // Fetch Maintenance Requests API
+  // Fetch Recent Maintenance Requests API with Debug Logging
   const loadRequests = useCallback(async () => {
     setLoadingRequests(true);
     setError(null);
     try {
+      // 1. Fetch direct debug metadata for /api/maintenance/recent
+      const debugRes = await maintenanceRepo.getRecentMaintenanceWithDebug({
+        q: searchQuery,
+        status: statusFilter,
+        priority: priorityFilter,
+        category: categoryFilter,
+      });
+
+      setRecentDebug(debugRes);
+
+      // 2. Fetch full merged requests
       const result = await maintenanceRepo.getMaintenanceRequests({
         q: searchQuery,
         status: statusFilter,
         priority: priorityFilter,
         category: categoryFilter,
       });
+
       setRequests(result.data || []);
     } catch (err: any) {
       console.error("Error loading maintenance requests:", err);
@@ -190,6 +206,14 @@ export function MaintenanceTasksSection({
     setSearchQuery('');
   };
 
+  const copyDebugJson = () => {
+    if (recentDebug) {
+      navigator.clipboard.writeText(JSON.stringify(recentDebug.rawResponse, null, 2));
+      setCopiedDebug(true);
+      setTimeout(() => setCopiedDebug(false), 2000);
+    }
+  };
+
   const statusTabs = [
     { id: 'all', label: 'الجميع' },
     { id: 'pending', label: 'قيد الانتظار', count: stats.open_requests },
@@ -200,26 +224,36 @@ export function MaintenanceTasksSection({
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
-      <PageHeader 
+      <PageHeader
         title="إدارة المهام والصيانة"
-        description="تتبع طلبات الصيانة الدورية والطارئة بكفاءة."
+        description="تتبع طلبات الصيانة الدورية والطارئة مع معاينة استجابة السيرفر لأحدث الطلبات."
         breadcrumbs={[
           { label: "الإدارة التشغيلية" },
           { label: "مهام الصيانة", active: true }
         ]}
         actions={
           <div className="flex gap-2">
-            <button 
+            <button
+              onClick={() => setShowDebugBox(prev => !prev)}
+              className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all"
+              title="عرض/إخفاء مربع رد السيرفر"
+            >
+              <Terminal className="w-4 h-4" />
+              <span>{showDebugBox ? 'إخفاء رد السيرفر' : 'طباعة رد السيرفر'}</span>
+            </button>
+
+            <button
               onClick={() => { loadStats(); loadRequests(); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-sm font-bold hover:bg-muted transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all"
               title="تحديث البيانات"
             >
               <RefreshCw className={`w-4 h-4 ${(loadingStats || loadingRequests) ? 'animate-spin' : ''}`} />
               <span>تحديث</span>
             </button>
+
             <button
               onClick={onCreateTask}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
             >
               <Plus className="w-4 h-4" /> طلب صيانة جديد
             </button>
@@ -228,41 +262,86 @@ export function MaintenanceTasksSection({
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-8">
-        
+
+        {/* 🔴 LIVE RECENT MAINTENANCE API RESPONSE DEBUG INSPECTOR BOX 🔴 */}
+        {showDebugBox && recentDebug && (
+          <div className="p-6 bg-slate-900 border border-emerald-500/30 rounded-2xl text-emerald-400 shadow-xl space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
+                <h4 className="text-sm font-black text-white dir-ltr">
+                  Recent Maintenance API Response Inspector (HTTP {recentDebug.httpStatus})
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300">
+                  GET /api/maintenance/recent
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copyDebugJson}
+                  className="flex items-center gap-1 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-all"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedDebug ? 'تم النسخ!' : 'نسخ الـ JSON'}</span>
+                </button>
+                <X
+                  className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer"
+                  onClick={() => setShowDebugBox(false)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs font-mono">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-300">
+                <span><strong>Endpoint:</strong> GET {recentDebug.endpointUrl}</span>
+                <span><strong>Returned Items Count:</strong> {recentDebug.items.length} عنصر</span>
+              </div>
+
+              <div>
+                <span className="text-slate-400 block mb-1"><strong>Server Body Output (مخرج الـ JSON المرجَع من السيرفر):</strong></span>
+                <pre className="p-4 bg-slate-950 text-emerald-300 rounded-xl overflow-x-auto text-[11px] dir-ltr border border-emerald-900/50 font-mono max-h-72">
+                  {JSON.stringify(recentDebug.rawResponse, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* SECTION 1: Interactive KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard 
-            title="طلبات مفتوحة" 
-            value={loadingStats ? "..." : (stats.open_requests ?? 0)} 
-            icon={Wrench} 
-            colorStyle="bg-primary/10 text-primary border-primary/20" 
+          <StatCard
+            title="طلبات مفتوحة"
+            value={loadingStats ? "..." : (stats.open_requests ?? 0)}
+            icon={Wrench}
+            colorStyle="bg-primary/10 text-primary border-primary/20"
             isActive={statusFilter === 'pending'}
             onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
             subtitle="قيد الانتظار"
           />
-          <StatCard 
-            title="جاري العمل" 
-            value={loadingStats ? "..." : (stats.in_progress ?? 0)} 
-            icon={Activity} 
-            colorStyle="bg-amber-500/10 text-amber-500 border-amber-500/20" 
+          <StatCard
+            title="جاري العمل"
+            value={loadingStats ? "..." : (stats.in_progress ?? 0)}
+            icon={Activity}
+            colorStyle="bg-amber-500/10 text-amber-500 border-amber-500/20"
             isActive={statusFilter === 'in_progress'}
             onClick={() => setStatusFilter(statusFilter === 'in_progress' ? 'all' : 'in_progress')}
             subtitle="قيد التنفيذ حالياً"
           />
-          <StatCard 
-            title="تم إنجازها (الشهر)" 
-            value={loadingStats ? "..." : (stats.completed_this_month ?? 0)} 
-            icon={CheckCircle2} 
-            colorStyle="bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+          <StatCard
+            title="تم إنجازها (الشهر)"
+            value={loadingStats ? "..." : (stats.completed_this_month ?? 0)}
+            icon={CheckCircle2}
+            colorStyle="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
             isActive={statusFilter === 'completed'}
             onClick={() => setStatusFilter(statusFilter === 'completed' ? 'all' : 'completed')}
             subtitle="مكتملة ومغلقة"
           />
-          <StatCard 
-            title="أعطال حرجة" 
-            value={loadingStats ? "..." : (stats.critical ?? 0)} 
-            icon={AlertTriangle} 
-            colorStyle="bg-red-500/10 text-red-500 border-red-500/20" 
+          <StatCard
+            title="أعطال حرجة"
+            value={loadingStats ? "..." : (stats.critical ?? 0)}
+            icon={AlertTriangle}
+            colorStyle="bg-red-500/10 text-red-500 border-red-500/20"
             isActive={priorityFilter === 'urgent' || priorityFilter === 'critical'}
             onClick={() => setPriorityFilter(priorityFilter === 'urgent' ? 'all' : 'urgent')}
             subtitle="أولوية قصوى"
@@ -270,13 +349,13 @@ export function MaintenanceTasksSection({
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          
+
           {/* Main Column */}
           <div className="xl:col-span-9 space-y-6">
-            
+
             {/* SECTION 2: UI/UX Enhanced Search & Filters Bar */}
             <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
-              
+
               {/* Row 1: Status Segmented Control Tabs */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-border">
                 <span className="text-xs font-bold text-muted-foreground pl-2 flex items-center gap-1 shrink-0">
@@ -286,17 +365,15 @@ export function MaintenanceTasksSection({
                   <button
                     key={tab.id}
                     onClick={() => setStatusFilter(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-                      statusFilter === tab.id
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${statusFilter === tab.id
                         ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]'
                         : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-                    }`}
+                      }`}
                   >
                     <span>{tab.label}</span>
                     {tab.count !== undefined && (
-                      <span className={`px-1.5 py-0.5 text-[10px] rounded-md ${
-                        statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-background text-foreground'
-                      }`}>
+                      <span className={`px-1.5 py-0.5 text-[10px] rounded-md ${statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-background text-foreground'
+                        }`}>
                         {tab.count}
                       </span>
                     )}
@@ -308,15 +385,15 @@ export function MaintenanceTasksSection({
               <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
                 <div className="relative w-full md:w-80">
                   <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input 
-                    type="text" 
-                    placeholder="ابحث عن مهمة أو رقم طلب..." 
+                  <input
+                    type="text"
+                    placeholder="ابحث عن مهمة أو رقم طلب..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-4 pr-11 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground placeholder:text-muted-foreground"
                   />
                   {searchQuery && (
-                    <button 
+                    <button
                       onClick={() => setSearchQuery('')}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
@@ -365,7 +442,7 @@ export function MaintenanceTasksSection({
               {hasActiveFilters && (
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60 animate-in fade-in">
                   <span className="text-[11px] font-bold text-muted-foreground">الفلاتر النشطة:</span>
-                  
+
                   {statusFilter !== 'all' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-bold border border-primary/20">
                       الحالة: {getStatusLabel(statusFilter)}
@@ -394,7 +471,7 @@ export function MaintenanceTasksSection({
                     </span>
                   )}
 
-                  <button 
+                  <button
                     onClick={resetFilters}
                     className="text-xs font-bold text-red-500 hover:underline mr-auto flex items-center gap-1"
                   >
@@ -472,9 +549,9 @@ export function MaintenanceTasksSection({
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-center">
                               <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
+                                <button
                                   onClick={() => onViewTaskDetails && onViewTaskDetails(String(task.id))}
-                                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all" 
+                                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
                                   title="عرض التفاصيل"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -509,11 +586,10 @@ export function MaintenanceTasksSection({
                       <div className="absolute right-4 top-10 bottom-[-20px] w-px bg-border"></div>
                     )}
                     <div className="relative z-10 shrink-0">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 border-card ${
-                        task.status === 'completed' ? 'bg-emerald-500 text-white' :
-                        task.status === 'in_progress' ? 'bg-amber-500 text-white' :
-                        'bg-blue-500 text-white'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 border-card ${task.status === 'completed' ? 'bg-emerald-500 text-white' :
+                          task.status === 'in_progress' ? 'bg-amber-500 text-white' :
+                            'bg-blue-500 text-white'
+                        }`}>
                         {task.status === 'completed' && <CheckCircle2 className="w-4 h-4" />}
                         {task.status === 'in_progress' && <Activity className="w-4 h-4" />}
                         {task.status === 'pending' && <Clock className="w-4 h-4" />}

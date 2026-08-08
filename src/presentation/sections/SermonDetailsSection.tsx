@@ -4,12 +4,14 @@ import { PageHeader } from "../../app/components/PageHeader";
 import { 
   BookOpen, Calendar, User, Clock, CheckCircle2, 
   Printer, Copy, Play, Pause, Volume2, Paperclip, 
-  Radio, FileText, RefreshCw, AlertCircle, Send, Check, ShieldCheck, ArrowRight
+  Radio, FileText, RefreshCw, AlertCircle, Send, Check, ShieldCheck, ArrowRight, Square
 } from 'lucide-react';
 import { SermonRepositoryImpl } from "../../data/repositories/SermonRepositoryImpl";
 import { Sermon } from "../../domain/entities/Sermon";
+import { ArabicTTSPlayer } from "../utils/arabicTTS";
 
 const sermonRepo = new SermonRepositoryImpl();
+const ttsPlayer = ArabicTTSPlayer.getInstance();
 
 interface SermonDetailsSectionProps {
   sermonId: string | number;
@@ -54,9 +56,11 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  // Text-to-Speech Arabic Voice Reader States
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSpeechPaused, setIsSpeechPaused] = useState(false);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -76,27 +80,33 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
     fetchDetails();
   }, [fetchDetails]);
 
-  const toggleAudio = () => {
-    if (!sermon?.audioUrl) {
-      alert("لا يوجد تسجـيل صوتي مرفق لهذه الخطبة.");
+  // Guaranteed Responsive Voice Arabic Speech Synthesizer
+  const toggleSermonSpeech = () => {
+    const textToRead = sermon?.content || (sermon as any)?.description || sermon?.notes || sermon?.title;
+
+    if (!textToRead) {
+      alert("لا يوجد نص مكتوب لقراءته في هذه الخطبة.");
       return;
     }
 
-    if (!audioElement) {
-      const audio = new Audio(sermon.audioUrl);
-      audio.onended = () => setIsPlaying(false);
-      setAudioElement(audio);
-      audio.play();
-      setIsPlaying(true);
-    } else {
-      if (isPlaying) {
-        audioElement.pause();
-        setIsPlaying(false);
+    if (isSpeaking) {
+      if (isSpeechPaused) {
+        ttsPlayer.resume();
       } else {
-        audioElement.play();
-        setIsPlaying(true);
+        ttsPlayer.pause();
       }
+    } else {
+      ttsPlayer.speak(textToRead, (speaking, paused) => {
+        setIsSpeaking(speaking);
+        setIsSpeechPaused(paused);
+      });
     }
+  };
+
+  const stopSpeech = () => {
+    ttsPlayer.stop();
+    setIsSpeaking(false);
+    setIsSpeechPaused(false);
   };
 
   const copyContent = () => {
@@ -139,12 +149,13 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
 
   const badge = getStatusBadge(sermon.status);
   const speakerName = sermon.speaker_name || sermon.preacher || "الشيخ الخطيب";
+  const sermonTextContent = sermon.content || (sermon as any).description || sermon.notes || "لا يوجد نص مكتوب مسجل لهذه الخطبة.";
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader 
         title={`تفاصيل خطبة: ${sermon.title}`}
-        description="استعراض النص الكامل وعناصر الخطبة والتسجيل الصوتي والمرفقات."
+        description="استعراض النص الكامل وعناصر الخطبة والقارئ الصوتي والمرفقات."
         onBack={onBack}
         breadcrumbs={[
           { label: "إدارة المسجد" },
@@ -153,6 +164,20 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
         ]}
         actions={
           <div className="flex items-center gap-2">
+            {/* Read Aloud Voice Button */}
+            <button 
+              onClick={toggleSermonSpeech}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                isSpeaking 
+                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20' 
+                  : 'bg-card border-border text-foreground hover:bg-muted'
+              }`}
+              title="القارئ الصوتي لنص الخطبة ومحاورها"
+            >
+              <Volume2 className={`w-4 h-4 ${isSpeaking && !isSpeechPaused ? 'animate-bounce text-white' : 'text-primary'}`} />
+              <span>{isSpeaking ? (isSpeechPaused ? 'استكمال القارئ' : 'إيقاف مؤقت') : 'القارئ الصوتي'}</span>
+            </button>
+
             <button 
               onClick={copyContent} 
               className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all" 
@@ -234,34 +259,51 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
               </div>
             </div>
 
-            {/* Audio Audio Preview Bar */}
-            <div className="p-4 bg-muted/60 border border-border rounded-2xl flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={toggleAudio}
-                  className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:bg-primary/90 transition-all shrink-0"
-                >
-                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
-                </button>
-                <div>
-                  <p className="text-xs font-bold text-foreground">التسجيل الصوتي للخطبة</p>
-                  <p className="text-[10px] text-muted-foreground">{isPlaying ? 'جاري الاستماع الآن...' : 'انقر للاستماع للتسجيل'}</p>
+            {/* Voice Reader Active Banner */}
+            {isSpeaking && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between gap-4 animate-in fade-in">
+                <div className="flex items-center gap-3">
+                  <Volume2 className="w-5 h-5 text-emerald-600 animate-bounce" />
+                  <span className="text-xs font-bold text-emerald-600">القارئ الصوتي يقرأ نص ومحاور الخطبة الآن بوضوح...</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSermonSpeech}
+                    className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm"
+                  >
+                    {isSpeechPaused ? 'استكمال' : 'إيقاف مؤقت'}
+                  </button>
+                  <button
+                    onClick={stopSpeech}
+                    className="px-3.5 py-1.5 bg-red-500 text-white rounded-xl text-xs font-bold shadow-sm"
+                  >
+                    إنهاء
+                  </button>
                 </div>
               </div>
-
-              <Volume2 className={`w-5 h-5 text-primary ${isPlaying ? 'animate-bounce' : ''}`} />
-            </div>
+            )}
           </div>
 
-          {/* SECTION 2: Sermon Full Text Content */}
+          {/* SECTION 2: Sermon Full Text Content & Outlines */}
           <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
-            <h3 className="text-base font-black text-foreground flex items-center gap-2 border-b border-border pb-4">
-              <FileText className="w-4.5 h-4.5 text-primary" /> نص ومحاور الخطبة
-            </h3>
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-base font-black text-foreground flex items-center gap-2">
+                <FileText className="w-4.5 h-4.5 text-primary" /> نص ومحاور الخطبة
+              </h3>
+
+              <button
+                onClick={toggleSermonSpeech}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all border border-primary/20"
+              >
+                <Volume2 className="w-4 h-4" />
+                <span>{isSpeaking ? (isSpeechPaused ? 'استكمال القراءة' : 'إيقاف مؤقت') : 'قراءة بصوت القارئ'}</span>
+              </button>
+            </div>
 
             <div className="p-6 bg-muted/50 rounded-2xl border border-border">
               <p className="text-sm text-foreground leading-loose whitespace-pre-wrap font-medium">
-                {sermon.content || "لا يوجد نص مسجل لهذه الخطبة."}
+                {sermonTextContent}
               </p>
             </div>
           </div>

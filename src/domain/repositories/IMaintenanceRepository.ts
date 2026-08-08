@@ -21,6 +21,7 @@ export interface GetMaintenanceParams {
 export interface IMaintenanceRepository {
   getMaintenancePageStats(): Promise<MaintenanceStats>;
   getMaintenanceRequests(params?: GetMaintenanceParams): Promise<PaginatedMaintenanceRequests>;
+  getRecentMaintenanceRequests(params?: GetMaintenanceParams): Promise<MaintenanceRequestItem[]>;
   getMaintenanceDetails(id: string | number): Promise<MaintenanceRequestItem>;
   createMaintenanceRequest(payload: CreateMaintenancePayload): Promise<MaintenanceRequestItem>;
   updateMaintenanceRequest(id: string | number, payload: Partial<CreateMaintenancePayload> & { status?: string }): Promise<MaintenanceRequestItem>;

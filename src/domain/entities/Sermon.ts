@@ -1,5 +1,5 @@
 // ==============================
-// Domain Entity — Sermon / Khutbah
+// Domain Entity — Sermon & Sermon Selection
 // ==============================
 
 export interface SermonAttachment {
@@ -20,7 +20,7 @@ export interface Sermon {
   duration?: string;
   audioUrl?: string;
   content: string;
-  status: 'pending' | 'Scheduled' | 'approved' | 'rejected' | 'completed' | string;
+  status: 'pending' | 'Scheduled' | 'approved' | 'rejected' | 'completed' | 'archived' | string;
   notes?: string | null;
   attachments?: (string | SermonAttachment)[];
   isPublishedForFriday?: boolean;
@@ -40,4 +40,20 @@ export interface CreateSermonPayload {
   attachments?: File[];
   audioFile?: File | Blob;
   publishForFriday?: boolean;
+}
+
+export interface SermonSelection {
+  id: number | string;
+  sermon_id: number | string;
+  sermon?: Sermon;
+  selection_date: string;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface StoreSermonSelectionPayload {
+  sermon_id: number | string;
+  selection_date?: string;
+  notes?: string;
 }
