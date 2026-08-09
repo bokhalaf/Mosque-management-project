@@ -8,7 +8,7 @@ import {
   Plus, Users, GraduationCap, Wrench, Activity, Coins,
   Settings, UserPlus, Target, FileText,
   ChevronLeft, MessageSquareWarning, CalendarDays, ListTodo,
-  LogOut, Loader2, BookOpen, Mic
+  LogOut, Loader2, BookOpen, Mic, HeartHandshake, Award, Clock
 } from "lucide-react";
 import { AuthUser } from "../../domain/entities/Auth";
 
@@ -35,6 +35,19 @@ const NAV: NavSection[] = [
     icon: Users,
     href: "/students",
     items: [],
+  },
+  {
+    id: "volunteers",
+    label: "إدارة المتطوعين",
+    icon: HeartHandshake,
+    items: [
+      { id: "all-opportunities", label: "الفرص التطوعية", href: "/volunteers/opportunities" },
+      { id: "create-opportunity", label: "إنشاء فرصة جديدة", href: "/volunteers/opportunities/create" },
+      { id: "all-applications", label: "طلبات التقديم", href: "/volunteers/applications" },
+      { id: "assign-tasks", label: "إسناد المهام", href: "/volunteers/tasks" },
+      { id: "log-hours", label: "تسجيل الساعات والتقييم", href: "/volunteers/logs" },
+      { id: "certificates", label: "إصدار الشهادات", href: "/volunteers/certificates" },
+    ],
   },
   {
     id: "donations",
@@ -99,6 +112,13 @@ const NAV: NavSection[] = [
 ];
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
+  // Volunteers
+  "all-opportunities": HeartHandshake,
+  "create-opportunity": Plus,
+  "all-applications": Users,
+  "assign-tasks": Layers,
+  "log-hours": Clock,
+  certificates: Award,
   // Donations
   overview: LayoutDashboard,
   "add-donation": UserPlus,
@@ -144,7 +164,7 @@ export function Sidebar({
   onWheelScroll,
 }: SidebarProps) {
   const pathname = usePathname() || "/";
-  const [expanded, setExpanded] = useState<string[]>(["donations", "sermons", "maintenance", "tasks"]);
+  const [expanded, setExpanded] = useState<string[]>(["volunteers", "donations", "sermons", "maintenance", "tasks"]);
 
   useEffect(() => {
     const currentSection = NAV.find(s => s.href === pathname || s.items.some(i => pathname.startsWith(i.href)));
