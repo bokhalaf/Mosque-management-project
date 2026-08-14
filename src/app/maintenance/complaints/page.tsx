@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ComplaintsSection } from "../../../presentation/sections/ComplaintsSection";
+import { ComplaintsSection } from "../../../presentation/sections/complaints";
 
 export default function ComplaintsPage() {
   const router = useRouter();

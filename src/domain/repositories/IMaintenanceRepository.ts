@@ -19,10 +19,13 @@ export interface GetMaintenanceParams {
 }
 
 export interface IMaintenanceRepository {
+  // Swagger Endpoints
   getMaintenancePageStats(): Promise<MaintenanceStats>;
   getMaintenanceRequests(params?: GetMaintenanceParams): Promise<PaginatedMaintenanceRequests>;
+  searchMaintenanceRequests?(params?: GetMaintenanceParams): Promise<PaginatedMaintenanceRequests>;
   getRecentMaintenanceRequests(params?: GetMaintenanceParams): Promise<MaintenanceRequestItem[]>;
   getMaintenanceDetails(id: string | number): Promise<MaintenanceRequestItem>;
+  trackMaintenanceRequest?(id: string | number): Promise<any>;
   createMaintenanceRequest(payload: CreateMaintenancePayload): Promise<MaintenanceRequestItem>;
   updateMaintenanceRequest(id: string | number, payload: Partial<CreateMaintenancePayload> & { status?: string }): Promise<MaintenanceRequestItem>;
   deleteMaintenanceRequest(id: string | number): Promise<void>;

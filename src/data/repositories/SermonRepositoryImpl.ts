@@ -10,7 +10,7 @@ import {
 } from "../../domain/entities/Sermon";
 import { ISermonRepository } from "../../domain/repositories/ISermonRepository";
 
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
 const STORAGE_KEY_UPCOMING = "selected_friday_sermon_persistent";
 const STORAGE_KEY_HISTORY = "sermon_selections_history_persistent";

@@ -1,6 +1,6 @@
 'use client';
 import { useParams, useRouter } from "next/navigation";
-import { SermonDetailsSection } from "../../../presentation/sections/SermonDetailsSection";
+import { SermonDetailsSection } from "../../../presentation/sections/sermons";
 
 export default function SermonDetailsPage() {
   const params = useParams();

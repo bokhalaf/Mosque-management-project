@@ -7,6 +7,17 @@ import { IComplaintRepository, GetAdminComplaintsParams } from "../../domain/rep
 
 const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
+export interface ComplaintOperationDebugResponse {
+  operationType: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  operationLabel: string;
+  httpStatus: number;
+  endpointUrl: string;
+  requestPayloadSent?: any;
+  rawResponse: any;
+  isSuccess: boolean;
+  timestamp: string;
+}
+
 export class ComplaintRepositoryImpl implements IComplaintRepository {
 
   private getAuthHeaders(): HeadersInit {
@@ -21,24 +32,55 @@ export class ComplaintRepositoryImpl implements IComplaintRepository {
   // ── 1. getComplaintPageStats ──────────────────────────────────────────
   async getComplaintPageStats(mosqueId?: number): Promise<ComplaintStats> {
     const query = mosqueId ? `?mosque_id=${mosqueId}` : "";
-    const response = await fetch(`${BASE_URL}/complaints/stats${query}`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${BASE_URL}/complaints/stats${query}`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
 
-    const json = await response.json();
-    console.log("getComplaintPageStats API Response:", json);
+      if (response.ok) {
+        const json = await response.json().catch(() => null);
+        console.log("📊 [getComplaintPageStats API Server Response]:", json);
 
-    if (!response.ok || !json.status) {
-      throw new Error(json.message || "فشل جلب إحصائيات الشكاوى");
+        if (json?.status && json?.data) {
+          return {
+            total_complaints: json.data.total_complaints ?? 0,
+            open_complaints: json.data.open_complaints ?? 0,
+            urgent_complaints: json.data.urgent_complaints ?? 0,
+            resolved_this_month: json.data.resolved_this_month ?? 0,
+            avg_response_hours: json.data.avg_response_hours ?? 0,
+          };
+        }
+      }
+    } catch (e) {
+      console.error("❌ Failed to fetch complaint stats from server:", e);
     }
 
-    return json.data as ComplaintStats;
+    // إذا تعذر جلب البيانات مباشرة من السيرفر، تعود جميع قيم الكاردات إلى 0 صراحة
+    return {
+      total_complaints: 0,
+      open_complaints: 0,
+      urgent_complaints: 0,
+      resolved_this_month: 0,
+      avg_response_hours: 0,
+    };
   }
 
   // ── 2. getAdminComplaints / searchComplaints ──────────────────────────
   async getAdminComplaints(params?: GetAdminComplaintsParams): Promise<PaginatedComplaints> {
-    // If search query is present, use search complaints endpoint or filter param
+    const resDebug = await this.getAdminComplaintsWithDebug(params);
+    return resDebug.result;
+  }
+
+  async searchComplaints(params?: GetAdminComplaintsParams): Promise<PaginatedComplaints> {
+    const resDebug = await this.getAdminComplaintsWithDebug(params);
+    return resDebug.result;
+  }
+
+  async getAdminComplaintsWithDebug(params?: GetAdminComplaintsParams): Promise<{
+    result: PaginatedComplaints;
+    debug: ComplaintOperationDebugResponse;
+  }> {
     const isSearch = Boolean(params?.q && params.q.trim().length > 0);
     const endpoint = isSearch ? `${BASE_URL}/admin/complaints/search` : `${BASE_URL}/admin/complaints`;
 
@@ -54,24 +96,41 @@ export class ComplaintRepositoryImpl implements IComplaintRepository {
     const queryString = queryParams.toString();
     const url = `${endpoint}${queryString ? `?${queryString}` : ""}`;
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
+    let status = 500;
+    let json: any = null;
 
-    const json = await response.json();
-    console.log("getAdminComplaints API Response:", json);
-
-    if (!response.ok || !json.status) {
-      throw new Error(json.message || "فشل جلب قائمة الشكاوى");
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+      status = response.status;
+      json = await response.json().catch(() => null);
+    } catch (e: any) {
+      json = { error: e.message || "فشل الاتصال بسيرفر الشكاوى" };
     }
 
-    const dataArray = Array.isArray(json.data) ? json.data : (json.data?.data || []);
+    console.log("getAdminComplaints API Response:", json);
 
-    return {
+    const dataArray = Array.isArray(json?.data) ? json.data : (json?.data?.data || []);
+
+    const paginatedResult: PaginatedComplaints = {
       data: dataArray as ComplaintItem[],
-      pagination: json.pagination || null,
+      pagination: json?.pagination || null,
     };
+
+    const debug: ComplaintOperationDebugResponse = {
+      operationType: 'GET',
+      operationLabel: isSearch ? 'البحث عن شكاوى (Search)' : 'جلب قائمة الشكاوى (Index)',
+      httpStatus: status,
+      endpointUrl: url,
+      requestPayloadSent: params || {},
+      rawResponse: json,
+      isSuccess: status >= 200 && status < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    };
+
+    return { result: paginatedResult, debug };
   }
 
   // ── 3. getComplaintDetails ───────────────────────────────────────────
@@ -82,7 +141,7 @@ export class ComplaintRepositoryImpl implements IComplaintRepository {
     });
 
     const json = await response.json();
-    console.log("getComplaintDetails API Response:", json);
+    console.log("🌐 [API Repository] GET /admin/complaints/" + id + " Raw Server Response:", json);
 
     if (!response.ok || !json.status) {
       throw new Error(json.message || "فشل جلب تفاصيل الشكوى");

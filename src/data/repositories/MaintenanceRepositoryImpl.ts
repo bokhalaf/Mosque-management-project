@@ -20,6 +20,17 @@ export interface MaintenanceRecentDebugResponse {
   rawResponse: any;
 }
 
+export interface MaintenanceOperationDebugResponse {
+  operationType: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  operationLabel: string;
+  httpStatus: number;
+  endpointUrl: string;
+  requestPayloadSent?: any;
+  rawResponse: any;
+  isSuccess: boolean;
+  timestamp: string;
+}
+
 export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
 
   private getAuthHeaders(isFormData: boolean = false): HeadersInit {
@@ -37,9 +48,10 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
       try {
         const user = JSON.parse(userStr);
         if (user.mosque_id) return Number(user.mosque_id);
+        if (user.mosque?.id) return Number(user.mosque.id);
       } catch (e) { }
     }
-    return 20; // Default mosque ID
+    return 5; // Default mosque ID
   }
 
   private getPersistentLocalRequests(): MaintenanceRequestItem[] {
@@ -48,7 +60,7 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
       if (saved) {
         try {
           return JSON.parse(saved);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     return [];
@@ -74,30 +86,29 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
 
   // ── 1. getMaintenancePageStats ──────────────────────────────────────
   async getMaintenancePageStats(): Promise<MaintenanceStats> {
-    const mosqueId = this.getMosqueId();
-    let stats: MaintenanceStats | null = null;
 
     try {
-      const response = await fetch(`${BASE_URL}/maintenance/stats?mosque_id=${mosqueId}`, {
+      const response = await fetch(`${BASE_URL}/maintenance/stats`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
       if (response.ok) {
         const json = await response.json();
+        console.log("getMaintenancePageStats API Response:", json);
         if (json.status && json.data) {
-          stats = json.data as MaintenanceStats;
+          return json.data as MaintenanceStats;
         }
       }
     } catch (e) {
       console.error("Failed to fetch stats from API:", e);
     }
 
-    const localList = this.getPersistentLocalRequests();
+    // Fallback: أصفار حقيقية إذا فشل السيرفر
     return {
-      open_requests: stats?.open_requests || (localList.filter(r => r.status === 'pending').length + 14),
-      in_progress: stats?.in_progress || (localList.filter(r => r.status === 'in_progress').length + 5),
-      completed_this_month: stats?.completed_this_month || (localList.filter(r => r.status === 'completed').length + 42),
-      critical: stats?.critical || (localList.filter(r => r.priority === 'urgent' || r.priority === 'critical').length + 1),
+      open_requests: 0,
+      in_progress: 0,
+      completed_this_month: 0,
+      critical: 0,
     };
   }
 
@@ -157,7 +168,14 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
 
   // ── 3. getMaintenanceRequests (GET ALL requests: /api/maintenance) ─
   async getMaintenanceRequests(params?: GetMaintenanceParams): Promise<PaginatedMaintenanceRequests> {
-    const mosqueId = this.getMosqueId();
+    const debugRes = await this.getMaintenanceRequestsWithDebug(params);
+    return debugRes.result;
+  }
+
+  async getMaintenanceRequestsWithDebug(params?: GetMaintenanceParams): Promise<{
+    result: PaginatedMaintenanceRequests;
+    debug: MaintenanceOperationDebugResponse;
+  }> {
     const queryParams = new URLSearchParams();
     if (params?.status && params.status !== "all") queryParams.append("status", params.status);
     if (params?.category && params.category !== "all") queryParams.append("category", params.category);
@@ -168,16 +186,21 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
 
     const queryString = queryParams.toString();
 
-    // Primary & Fallback API endpoints
+    const isSearch = Boolean(params?.q && params.q.trim().length > 0);
+
+    // Primary & Fallback API endpoints (Swagger: searchMaintenanceRequests vs maintenance.index)
     const urlsToTry = [
+      ...(isSearch ? [`${BASE_URL}/maintenance/search${queryString ? `?${queryString}` : ''}`] : []),
       `${BASE_URL}/maintenance${queryString ? `?${queryString}` : ''}`,
-      `${BASE_URL}/maintenance/public?mosque_id=${mosqueId}${queryString ? `&${queryString}` : ''}`,
       `${BASE_URL}/maintenance/recent${queryString ? `?${queryString}` : ''}`,
       `${BASE_URL}/maintenances${queryString ? `?${queryString}` : ''}`,
     ];
 
     let items: MaintenanceRequestItem[] = [];
     let pagination = null;
+    let lastStatus = 500;
+    let lastUrl = urlsToTry[0];
+    let lastRawJson: any = null;
 
     for (const url of urlsToTry) {
       try {
@@ -186,7 +209,10 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
           headers: this.getAuthHeaders(),
         });
 
+        lastStatus = response.status;
+        lastUrl = url;
         const json = await response.json().catch(() => null);
+        lastRawJson = json;
 
         if (response.ok && (json?.status || Array.isArray(json?.data) || Array.isArray(json))) {
           const dataObj = json.data;
@@ -202,45 +228,65 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
 
           if (items.length > 0) break;
         }
-      } catch (e) {
-        console.warn(`Error trying endpoint ${url}:`, e);
+      } catch (e: any) {
+        lastRawJson = { error: e.message || "فشل الاتصال بالسيرفر" };
       }
     }
 
-    // Merge with persistent local requests (ensuring added requests NEVER disappear)
-    const persistent = this.getPersistentLocalRequests();
-    const map = new Map<string | number, MaintenanceRequestItem>();
-
-    persistent.forEach(localItem => {
-      let match = true;
-      if (params?.status && params.status !== 'all' && localItem.status !== params.status) match = false;
-      if (params?.priority && params.priority !== 'all' && localItem.priority !== params.priority) match = false;
-      if (params?.category && params.category !== 'all' && localItem.category !== params.category) match = false;
-      if (params?.q && !localItem.title.includes(params.q) && !localItem.description.includes(params.q)) match = false;
-
-      if (match) {
-        map.set(localItem.id, localItem);
-      }
-    });
-
-    items.forEach(item => map.set(item.id, item));
-
-    const mergedList = Array.from(map.values());
-
-    return {
-      data: mergedList,
-      pagination: pagination || { current_page: 1, last_page: 1, per_page: mergedList.length, total: mergedList.length },
+    const paginatedResult: PaginatedMaintenanceRequests = {
+      data: items,
+      pagination: pagination || { current_page: 1, last_page: 1, per_page: items.length, total: items.length },
     };
+
+    const debug: MaintenanceOperationDebugResponse = {
+      operationType: 'GET',
+      operationLabel: 'جلب قائمة طلبات الصيانة',
+      httpStatus: lastStatus,
+      endpointUrl: lastUrl,
+      requestPayloadSent: params || {},
+      rawResponse: lastRawJson || { status: true, message: 'API data loaded', count: items.length },
+      isSuccess: lastStatus >= 200 && lastStatus < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    };
+
+    return { result: paginatedResult, debug };
   }
 
-  // ── 4. getMaintenanceDetails ────────────────────────────────────────
-  async getMaintenanceDetails(id: string | number): Promise<MaintenanceRequestItem> {
-    const persistent = this.getPersistentLocalRequests();
-    const localMatch = persistent.find(r => String(r.id) === String(id) || r.maintenance_number === String(id));
-    if (localMatch) {
-      return localMatch;
-    }
+  // ── 3b. searchMaintenanceRequests (GET /api/maintenance/search - searchMaintenanceRequests) ─
+  async searchMaintenanceRequests(params?: GetMaintenanceParams): Promise<PaginatedMaintenanceRequests> {
+    const queryParams = new URLSearchParams();
+    if (params?.q) queryParams.append("q", params.q.trim());
+    if (params?.status && params.status !== "all") queryParams.append("status", params.status);
+    if (params?.category && params.category !== "all") queryParams.append("category", params.category);
+    if (params?.priority && params.priority !== "all") queryParams.append("priority", params.priority);
+    if (params?.per_page) queryParams.append("per_page", String(params.per_page));
+    if (params?.page) queryParams.append("page", String(params.page));
 
+    const queryString = queryParams.toString();
+    const endpointUrl = `${BASE_URL}/maintenance/search${queryString ? `?${queryString}` : ''}`;
+
+    try {
+      const response = await fetch(endpointUrl, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+      if (response.ok) {
+        const json = await response.json();
+        const dataObj = json.data;
+        const items = Array.isArray(dataObj) ? dataObj : (dataObj?.data || []);
+        return {
+          data: items,
+          pagination: json.pagination || null,
+        };
+      }
+    } catch (e) {}
+
+    // Fallback to getMaintenanceRequests if search endpoint is unavailable
+    return this.getMaintenanceRequests(params);
+  }
+
+  // ── 4. getMaintenanceDetails (GET /api/maintenance/{id} - maintenance.show) ─
+  async getMaintenanceDetails(id: string | number): Promise<MaintenanceRequestItem> {
     const response = await fetch(`${BASE_URL}/maintenance/${id}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
@@ -255,15 +301,49 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
     return json.data as MaintenanceRequestItem;
   }
 
+  // ── 4b. trackMaintenanceRequest (GET /api/maintenance/track - maintenance.track) ─
+  async trackMaintenanceRequest(id: string | number): Promise<any> {
+    const urlsToTry = [
+      `${BASE_URL}/maintenance/track/${id}`,
+      `${BASE_URL}/maintenance/${id}/track`,
+      `${BASE_URL}/maintenance/track?id=${id}`,
+      `${BASE_URL}/maintenance/track?maintenance_number=${id}`,
+    ];
+
+    for (const url of urlsToTry) {
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        if (response.ok) {
+          const json = await response.json();
+          if (json.status && json.data) {
+            return json.data;
+          }
+        }
+      } catch (e) {}
+    }
+    return null;
+  }
+
+
   // ── 5. createMaintenanceRequest ─────────────────────────────────────
   async createMaintenanceRequest(payload: CreateMaintenancePayload): Promise<MaintenanceRequestItem> {
+    const resDebug = await this.createMaintenanceRequestWithDebug(payload);
+    return resDebug.item;
+  }
+
+  async createMaintenanceRequestWithDebug(payload: CreateMaintenancePayload): Promise<{
+    item: MaintenanceRequestItem;
+    debug: MaintenanceOperationDebugResponse;
+  }> {
     const mosqueId = payload.mosque_id || this.getMosqueId();
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
     const category = this.mapCategory(payload.category);
     const priority = this.mapPriority(payload.priority);
 
-    // Build FormData payload as expected by POST /api/maintenance
     const formData = new FormData();
     formData.append("mosque_id", String(mosqueId));
     formData.append("title", payload.title);
@@ -279,10 +359,12 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
     }
 
     let createdItem: MaintenanceRequestItem | null = null;
-    let apiSuccess = false;
+    let lastStatus = 500;
+    let endpointUrl = `${BASE_URL}/maintenance`;
+    let rawJson: any = null;
 
     try {
-      const response = await fetch(`${BASE_URL}/maintenance`, {
+      const response = await fetch(endpointUrl, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -291,14 +373,14 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
         body: formData,
       });
 
-      const json = await response.json().catch(() => null);
+      lastStatus = response.status;
+      rawJson = await response.json().catch(() => null);
 
-      if (response.ok && (json?.status || json?.id || json?.data)) {
-        apiSuccess = true;
-        createdItem = (json.data || json) as MaintenanceRequestItem;
+      if (response.ok && (rawJson?.status || rawJson?.id || rawJson?.data)) {
+        createdItem = (rawJson.data || rawJson) as MaintenanceRequestItem;
       }
     } catch (e: any) {
-      console.warn("POST /api/maintenance API call error:", e);
+      rawJson = { error: e.message || "فشل الاتصال بالسيرفر لإرسال الطلب" };
     }
 
     const mockFiles = (payload.files || []).map((f, i) => ({
@@ -323,74 +405,178 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
       files: mockFiles,
     };
 
-    // Save persistently in localStorage so request stays after refresh
-    const persistent = this.getPersistentLocalRequests();
-    persistent.unshift(newItem);
-    this.savePersistentLocalRequests(persistent);
+    // لا نحفظ في localStorage عند الإنشاء — نعتمد فقط على الـ API
 
-    return newItem;
+    const debug: MaintenanceOperationDebugResponse = {
+      operationType: 'POST',
+      operationLabel: 'إنشاء طلب صيانة جديد (maintenance.store)',
+      httpStatus: lastStatus,
+      endpointUrl,
+      requestPayloadSent: {
+        title: payload.title,
+        description: payload.description,
+        category,
+        priority,
+        notes: payload.notes,
+        filesCount: payload.files?.length || 0,
+      },
+      rawResponse: rawJson || { status: true, message: 'تم حفظ طلب الصيانة محلياً والسيرفر', data: newItem },
+      isSuccess: lastStatus >= 200 && lastStatus < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    };
+
+    return { item: newItem, debug };
   }
 
-  // ── 6. updateMaintenanceRequest ─────────────────────────────────────
+  // ── 6. updateMaintenanceRequest (PUT /api/maintenance/{id}) ────────
   async updateMaintenanceRequest(
     id: string | number,
     payload: Partial<CreateMaintenancePayload> & { status?: string }
   ): Promise<MaintenanceRequestItem> {
+    const resDebug = await this.updateMaintenanceRequestWithDebug(id, payload);
+    return resDebug.item;
+  }
+
+  async updateMaintenanceRequestWithDebug(
+    id: string | number,
+    payload: Partial<CreateMaintenancePayload> & { status?: string }
+  ): Promise<{
+    item: MaintenanceRequestItem;
+    debug: MaintenanceOperationDebugResponse;
+  }> {
     const targetStatus = payload.status;
     const notes = payload.notes || (targetStatus === 'cancelled' ? 'تم إلغاء طلب الصيانة' : undefined);
 
     const persistent = this.getPersistentLocalRequests();
-    const localMatch = persistent.find(r => String(r.id) === String(id) || r.maintenance_number === String(id));
+    let localMatch = persistent.find(r => String(r.id) === String(id) || r.maintenance_number === String(id));
     if (localMatch) {
+      if (payload.title) localMatch.title = payload.title;
+      if (payload.description) localMatch.description = payload.description;
+      if (payload.category) localMatch.category = this.mapCategory(payload.category);
+      if (payload.priority) localMatch.priority = this.mapPriority(payload.priority);
       if (targetStatus) localMatch.status = targetStatus as any;
       if (notes) localMatch.notes = notes;
       localMatch.updated_at = new Date().toISOString();
       this.savePersistentLocalRequests(persistent);
     }
 
-    try {
-      await fetch(`${BASE_URL}/maintenance/admin/${id}`, {
-        method: "PUT",
-        headers: this.getAuthHeaders(false),
-        body: JSON.stringify({
-          status: targetStatus,
-          notes: notes,
-        }),
-      });
-    } catch (e) {
-      console.warn("API updateMaintenanceRequest error:", e);
+    const bodyPayload: any = {};
+    if (payload.title) bodyPayload.title = payload.title;
+    if (payload.description) bodyPayload.description = payload.description;
+    if (payload.category) bodyPayload.category = this.mapCategory(payload.category);
+    if (payload.priority) bodyPayload.priority = this.mapPriority(payload.priority);
+    if (targetStatus) bodyPayload.status = targetStatus;
+    if (notes) bodyPayload.notes = notes;
+
+    const urlsToTry = [
+      `${BASE_URL}/maintenance/${id}`,
+      `${BASE_URL}/maintenance/admin/${id}`,
+      `${BASE_URL}/maintenances/${id}`,
+    ];
+
+    let apiUpdatedItem: MaintenanceRequestItem | null = null;
+    let lastStatus = 500;
+    let lastUrl = urlsToTry[0];
+    let lastRawJson: any = null;
+
+    for (const url of urlsToTry) {
+      try {
+        const response = await fetch(url, {
+          method: "PUT",
+          headers: this.getAuthHeaders(false),
+          body: JSON.stringify(bodyPayload),
+        });
+        lastStatus = response.status;
+        lastUrl = url;
+        const json = await response.json().catch(() => null);
+        lastRawJson = json;
+
+        if (response.ok && (json?.status || json?.id || json?.data)) {
+          apiUpdatedItem = (json.data || json) as MaintenanceRequestItem;
+          break;
+        }
+      } catch (e: any) {
+        lastRawJson = { error: e.message || "فشل التعديل عبر السيرفر" };
+      }
     }
 
-    if (localMatch) {
-      return localMatch;
-    }
-
-    return {
+    const finalItem = apiUpdatedItem || localMatch || {
       id: id,
       maintenance_number: `MR-${new Date().getFullYear()}-${id}`,
       title: payload.title || "طلب صيانة",
       description: payload.description || "",
-      category: (payload.category as any) || "other",
-      priority: (payload.priority as any) || "medium",
+      category: this.mapCategory(payload.category),
+      priority: this.mapPriority(payload.priority),
       status: (targetStatus as any) || "pending",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    const debug: MaintenanceOperationDebugResponse = {
+      operationType: 'PUT',
+      operationLabel: `تعديل طلب الصيانة (maintenance.update) #${id}`,
+      httpStatus: lastStatus,
+      endpointUrl: lastUrl,
+      requestPayloadSent: bodyPayload,
+      rawResponse: lastRawJson || { status: true, message: 'تم تحديث طلب الصيانة بنجاح', data: finalItem },
+      isSuccess: lastStatus >= 200 && lastStatus < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    };
+
+    return { item: finalItem, debug };
   }
 
-  // ── 7. deleteMaintenanceRequest ─────────────────────────────────────
+  // ── 7. deleteMaintenanceRequest (DELETE /api/maintenance/{id}) ─────
   async deleteMaintenanceRequest(id: string | number): Promise<void> {
+    await this.deleteMaintenanceRequestWithDebug(id);
+  }
+
+  async deleteMaintenanceRequestWithDebug(id: string | number): Promise<{
+    debug: MaintenanceOperationDebugResponse;
+  }> {
     const persistent = this.getPersistentLocalRequests();
     const filtered = persistent.filter(r => String(r.id) !== String(id) && r.maintenance_number !== String(id));
     this.savePersistentLocalRequests(filtered);
 
-    try {
-      await fetch(`${BASE_URL}/maintenance/${id}`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders(false),
-      });
-    } catch (e) {
-      console.warn("API deleteMaintenanceRequest error:", e);
+    const urlsToTry = [
+      `${BASE_URL}/maintenance/${id}`,
+      `${BASE_URL}/maintenance/admin/${id}`,
+      `${BASE_URL}/maintenances/${id}`,
+    ];
+
+    let lastStatus = 500;
+    let lastUrl = urlsToTry[0];
+    let lastRawJson: any = null;
+
+    for (const url of urlsToTry) {
+      try {
+        const response = await fetch(url, {
+          method: "DELETE",
+          headers: this.getAuthHeaders(false),
+        });
+        lastStatus = response.status;
+        lastUrl = url;
+        lastRawJson = await response.json().catch(() => null);
+        if (response.ok) {
+          console.log(`Successfully deleted maintenance request ${id} via ${url}`);
+          break;
+        }
+      } catch (e: any) {
+        lastRawJson = { error: e.message || "فشل الحذف عبر السيرفر" };
+      }
     }
+
+    const debug: MaintenanceOperationDebugResponse = {
+      operationType: 'DELETE',
+      operationLabel: `حذف طلب الصيانة (maintenance.destroy) #${id}`,
+      httpStatus: lastStatus,
+      endpointUrl: lastUrl,
+      requestPayloadSent: { id },
+      rawResponse: lastRawJson || { status: true, message: `تم حذف طلب الصيانة #${id} بنجاح` },
+      isSuccess: lastStatus >= 200 && lastStatus < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    };
+
+    return { debug };
   }
 }

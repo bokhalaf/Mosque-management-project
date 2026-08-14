@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { MaintenanceTasksSection } from "../../../presentation/sections/MaintenanceTasksSection";
+import { MaintenanceTasksSection } from "../../../presentation/sections/maintenance";
 
 export default function MaintenanceTasksPage() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from "next/navigation";
-import { CreateKhutbahSection } from "../../../presentation/sections/CreateKhutbahSection";
+import { CreateKhutbahSection } from "../../../presentation/sections/sermons";
 
 export default function CreateSermonPage() {
   const router = useRouter();
