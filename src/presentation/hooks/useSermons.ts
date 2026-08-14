@@ -116,7 +116,10 @@ export function useSermons() {
     return () => clearTimeout(timer);
   }, [searchQuery, addDebugLog]);
 
+  const [selectingSermonId, setSelectingSermonId] = useState<string | number | null>(null);
+
   const handleSelectForFriday = useCallback(async (sermon: Sermon) => {
+    setSelectingSermonId(sermon.id);
     try {
       const newSelection = await selectFridayUseCase.select(sermon);
       addDebugLog(
@@ -130,6 +133,8 @@ export function useSermons() {
     } catch (e: any) {
       console.error('Error setting Friday sermon:', e);
       showToast(e.message || 'تعذر اختيار خطبة الجمعة', 'error');
+    } finally {
+      setSelectingSermonId(null);
     }
   }, [addDebugLog, showToast]);
 
@@ -174,6 +179,7 @@ export function useSermons() {
     setSearchQuery,
     // Loading
     loading,
+    selectingSermonId,
     error,
     // Actions
     loadData,

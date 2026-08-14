@@ -33,6 +33,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
     searchQuery,
     setSearchQuery,
     loading,
+    selectingSermonId,
     error,
     loadData,
     handleSelectForFriday,
@@ -254,6 +255,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
                 sermon={sermon}
                 upcomingSelection={upcomingSelection}
                 playingId={playingId}
+                isSelecting={selectingSermonId === sermon.id}
                 onToggleAudio={toggleAudioPlay}
                 onViewDetails={onViewDetails}
                 onSelectForFriday={handleSelectForFriday}

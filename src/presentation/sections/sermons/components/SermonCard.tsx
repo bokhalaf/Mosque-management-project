@@ -1,16 +1,12 @@
-// ==============================
-// Sermons — SermonCard Component
-// بطاقة الخطبة الواحدة في شبكة المكتبة
-// ==============================
-
 import React from 'react';
-import { User, Play, Pause, FileText, Send } from 'lucide-react';
+import { User, Play, Pause, FileText, Send, RefreshCw } from 'lucide-react';
 import { Sermon, SermonSelection } from '../../../../domain/entities/Sermon';
 
 interface SermonCardProps {
   sermon: Sermon;
   upcomingSelection: SermonSelection | null;
   playingId: string | number | null;
+  isSelecting?: boolean;
   onToggleAudio: (id: string | number, content: string) => void;
   onViewDetails?: (id: string | number) => void;
   onSelectForFriday: (sermon: Sermon) => void;
@@ -20,6 +16,7 @@ export function SermonCard({
   sermon,
   upcomingSelection,
   playingId,
+  isSelecting = false,
   onToggleAudio,
   onViewDetails,
   onSelectForFriday,
@@ -90,10 +87,11 @@ export function SermonCard({
           {!isSelectedFriday && (
             <button
               onClick={() => onSelectForFriday(sermon)}
-              className="flex items-center gap-1 px-3 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all border border-primary/20"
+              disabled={isSelecting}
+              className="flex items-center gap-1 px-3 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all border border-primary/20 disabled:opacity-50"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>اعتماد للجمعة</span>
+              {isSelecting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              <span>{isSelecting ? 'جاري الاعتماد...' : 'اعتماد للجمعة'}</span>
             </button>
           )}
         </div>

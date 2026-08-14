@@ -196,8 +196,7 @@ export function Sidebar({
       )}
 
       <aside
-        onWheel={handleWheel}
-        className={`fixed inset-y-0 right-0 z-50 w-[280px] lg:sticky lg:top-0 lg:h-screen lg:flex shrink-0 flex-col bg-card border-l border-border transition-transform duration-300 ${
+        className={`fixed inset-y-0 right-0 z-50 w-[285px] max-w-[85vw] h-[100dvh] max-h-[100dvh] lg:sticky lg:top-0 lg:h-screen lg:max-h-screen flex shrink-0 flex-col bg-card border-l border-border transition-transform duration-300 shadow-2xl lg:shadow-none overflow-hidden ${
           isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
         }`}
         role="navigation"
@@ -220,7 +219,7 @@ export function Sidebar({
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1.5 scrollbar-thin" aria-label="أقسام النظام">
+        <nav className="flex-1 overflow-y-auto min-h-0 p-4 space-y-1.5 scrollbar-thin touch-auto" aria-label="أقسام النظام">
           {NAV.map((section) => {
             const isActive = section.href === pathname || section.items.some(i => pathname.startsWith(i.href));
             const isExpanded = expanded.includes(section.id);
@@ -231,6 +230,7 @@ export function Sidebar({
                 {section.items.length === 0 ? (
                   <Link
                     href={section.href || "/"}
+                    onClick={onClose}
                     className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-200 ${isActive
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -270,6 +270,7 @@ export function Sidebar({
                         <Link
                           key={item.id}
                           href={item.href}
+                          onClick={onClose}
                           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] transition-all duration-200 ${isItemActive
                               ? "text-primary font-black bg-primary/5"
                               : "text-muted-foreground font-medium hover:text-foreground hover:bg-muted"

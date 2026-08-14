@@ -105,7 +105,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={isDark ? "dark" : ""} style={{ fontFamily: "'Cairo', sans-serif" }}>
       <div
-        className="flex min-h-screen bg-background text-foreground transition-colors duration-300 relative overflow-hidden"
+        className="flex h-[100dvh] w-full bg-background text-foreground transition-colors duration-300 relative overflow-hidden"
         dir="rtl"
       >
         {/* Background glow effects */}
@@ -121,14 +121,10 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           user={currentUser}
           onLogout={handleLogout}
           logoutLoading={logoutLoading}
-          onWheelScroll={handleSidebarWheelScroll}
         />
 
         {/* Main Content Container */}
-        <main
-          className="flex-1 flex flex-col min-w-0 overflow-x-hidden"
-          style={{ height: "100dvh" }}
-        >
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           <TopBar
             onMenuClick={() => setIsSidebarOpen(true)}
             user={
@@ -142,14 +138,12 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
             }
           />
 
-          <div ref={mainRef} className="flex-1 overflow-y-auto scroll-smooth">
-            <div className="px-4 lg:px-8 py-6 relative z-10 w-full max-w-[1600px] mx-auto min-h-full flex flex-col">
-              <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500 relative z-0">
-                {children}
-              </div>
+          <main ref={mainRef} className="flex-1 overflow-y-auto scroll-smooth px-3 sm:px-6 lg:px-8 py-4 sm:py-6 relative z-10 w-full max-w-[1600px] mx-auto min-h-0">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 relative z-0 pb-10">
+              {children}
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );
