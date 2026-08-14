@@ -1,20 +1,24 @@
-'use client';
+// ==============================
+// Presentation — SermonDetailsSection Component
+// عرض تفاصيل خطبة مع زر اعتماد للجمعة / إلغاء الاعتماد في الهيدر العلوي، القارئ الصوتي المتقدم، والمرفقات
+// ==============================
+
 import React from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   BookOpen, Calendar, User, Clock, CheckCircle2,
   Printer, Copy, Volume2, Paperclip,
-  FileText, RefreshCw, AlertCircle, Send, Check, ShieldCheck, Square
+  FileText, RefreshCw, AlertCircle, Send, Check, ShieldCheck, X
 } from 'lucide-react';
 import { useSermonDetails } from '../../hooks/useSermonDetails';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const getStatusBadge = (status?: string) => {
+const getStatusBadge = (status?: string, isScheduledForFriday?: boolean) => {
+  if (isScheduledForFriday || status === 'Scheduled' || status === 'scheduled_for_friday') {
+    return { label: 'معتمدة للجمعة القادمة', style: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black' };
+  }
   switch (status) {
-    case 'Scheduled':
-    case 'scheduled_for_friday':
-      return { label: 'معتمدة للجمعة القادمة', style: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black' };
     case 'approved':
       return { label: 'معتمدة في المكتبة', style: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
     case 'pending':
@@ -24,7 +28,7 @@ const getStatusBadge = (status?: string) => {
     case 'completed':
       return { label: 'تمت إلقاؤها', style: 'bg-slate-500/10 text-slate-500 border-slate-500/20' };
     default:
-      return { label: status || 'معتمدة', style: 'bg-muted text-muted-foreground border-border' };
+      return { label: 'مؤرشفة في المكتبة', style: 'bg-muted text-muted-foreground border-border' };
   }
 };
 
@@ -43,29 +47,59 @@ interface SermonDetailsSectionProps {
   sermonId: string | number;
   onBack: () => void;
   onSelectForFriday?: (id: string | number) => void;
+  onCancelFridaySelection?: (id: string | number) => void;
 }
 
-export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: SermonDetailsSectionProps) {
+export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday, onCancelFridaySelection }: SermonDetailsSectionProps) {
   const {
     sermon,
     loading,
+    actionLoading,
     error,
     copied,
     isSpeaking,
     isSpeechPaused,
+    isScheduledForFriday,
     fetchDetails,
     toggleSermonSpeech,
     stopSpeech,
     copyContent,
+    handleSelectForFriday,
+    handleCancelFridaySelection,
   } = useSermonDetails(sermonId);
 
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
         <PageHeader title={`تفاصيل الخطبة #${sermonId}`} onBack={onBack} />
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
-          <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm font-bold">جاري تحميل معلومات الخطبة من الـ API...</p>
+        
+        <div className="px-4 md:px-8 py-4 grid grid-cols-1 xl:grid-cols-12 gap-8">
+          {/* Main Skeleton */}
+          <div className="xl:col-span-8 space-y-6">
+            <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-6 animate-pulse">
+              <div className="h-6 w-32 bg-muted rounded-full" />
+              <div className="h-8 w-3/4 bg-muted rounded-md" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-border">
+                <div className="h-12 bg-muted rounded-xl" />
+                <div className="h-12 bg-muted rounded-xl" />
+                <div className="h-12 bg-muted rounded-xl" />
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-4 animate-pulse">
+              <div className="h-6 w-40 bg-muted rounded-md" />
+              <div className="h-40 bg-muted/60 rounded-2xl" />
+            </div>
+          </div>
+
+          {/* Side Skeleton */}
+          <div className="xl:col-span-4">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6 animate-pulse">
+              <div className="h-6 w-32 bg-muted rounded-md" />
+              <div className="h-16 bg-muted/60 rounded-xl" />
+              <div className="h-12 bg-muted/60 rounded-xl" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -84,15 +118,29 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
     );
   }
 
-  const badge = getStatusBadge(sermon.status);
+  const badge = getStatusBadge(sermon.status, isScheduledForFriday);
   const speakerName = sermon.speaker_name || sermon.preacher || 'الشيخ الخطيب';
   const sermonTextContent = sermon.content || (sermon as any).description || sermon.notes || 'لا يوجد نص مكتوب مسجل لهذه الخطبة.';
+
+  const onCancelClick = async () => {
+    await handleCancelFridaySelection();
+    if (onCancelFridaySelection) {
+      onCancelFridaySelection(sermon.id);
+    }
+  };
+
+  const onAdoptClick = async () => {
+    await handleSelectForFriday();
+    if (onSelectForFriday) {
+      onSelectForFriday(sermon.id);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader
         title={`تفاصيل خطبة: ${sermon.title}`}
-        description="استعراض النص الكامل وعناصر الخطبة والقارئ الصوتي والمرفقات."
+        description="استعراض النص الكامل وعناصر الخطبة والقارئ الصوتي وإدارة الاعتماد للجمعة القادمة."
         onBack={onBack}
         breadcrumbs={[{ label: 'إدارة المسجد' }, { label: 'خطب المسجد' }, { label: 'تفاصيل الخطبة', active: true }]}
         actions={
@@ -115,10 +163,26 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
               <Printer className="w-4 h-4" />
             </button>
 
-            {sermon.status !== 'Scheduled' && (
-              <button onClick={() => { if (onSelectForFriday) onSelectForFriday(sermon.id); else alert(`تم تحديد خطبة "${sermon.title}" كخطبة الجمعة القادمة!`); }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
-                <Send className="w-4 h-4" /><span>اعتماد للجمعة القادمة</span>
+            {/* Adopt vs Cancel Selection Action Button (Header Only) */}
+            {isScheduledForFriday ? (
+              <button
+                onClick={onCancelClick}
+                disabled={actionLoading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                title="إلغاء اعتماد هذه الخطبة للجمعة القادمة"
+              >
+                {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                <span>إلغاء الاعتماد</span>
+              </button>
+            ) : (
+              <button
+                onClick={onAdoptClick}
+                disabled={actionLoading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
+                title="اعتماد هذه الخطبة للجمعة القادمة"
+              >
+                {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                <span>اعتماد للجمعة القادمة</span>
               </button>
             )}
           </div>
@@ -224,15 +288,11 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
         {/* Side Column */}
         <div className="xl:col-span-4 space-y-6">
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24 space-y-6">
-            <div className="border-b border-border pb-4"><h3 className="text-base font-black text-foreground">معلومات الاعتماد</h3></div>
+            <div className="border-b border-border pb-4"><h3 className="text-base font-black text-foreground">معلومات الخطبة</h3></div>
             <div className="space-y-4">
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">الجامع / المسجد</span>
                 <p className="text-sm font-bold text-foreground">المسجد الرئيسي</p>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">الحالة الرسمية</span>
-                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border inline-block ${badge.style}`}>{badge.label}</span>
               </div>
               {sermon.notes && (
                 <div className="pt-2 border-t border-border/60">
@@ -241,7 +301,9 @@ export function SermonDetailsSection({ sermonId, onBack, onSelectForFriday }: Se
                 </div>
               )}
             </div>
-            <div className="pt-4 border-t border-border">
+
+            {/* Side Verification Badge */}
+            <div className="pt-4 border-t border-border space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
                 <span>مراجعة ومعتمدة من إدارة المساجد</span>

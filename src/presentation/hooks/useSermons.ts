@@ -8,6 +8,7 @@ import { SermonRepositoryImpl, BASE_URL } from '../../data/repositories/SermonRe
 import { Sermon, SermonSelection } from '../../domain/entities/Sermon';
 import { GetSermonsUseCase } from '../../domain/usecases/sermons/GetSermonsUseCase';
 import { SelectFridaySermonUseCase } from '../../domain/usecases/sermons/SelectFridaySermonUseCase';
+import { useToast } from '../../app/components/ui/Toast';
 
 const sermonRepo = new SermonRepositoryImpl();
 const getSermonsUseCase = new GetSermonsUseCase(sermonRepo);
@@ -22,6 +23,7 @@ export interface ApiDebugLog {
 }
 
 export function useSermons() {
+  const { showToast } = useToast();
   const [archivedSermons, setArchivedSermons] = useState<Sermon[]>([]);
   const [pendingSermons, setPendingSermons] = useState<Sermon[]>([]);
   const [upcomingSelection, setUpcomingSelection] = useState<SermonSelection | null>(null);
@@ -50,6 +52,12 @@ export function useSermons() {
     try {
       const data = await getSermonsUseCase.execute();
 
+      addDebugLog(
+        'GET /api/sermon-selections/my',
+        `${BASE_URL}/sermon-selections/my`,
+        200,
+        data.selectionsHistory
+      );
       addDebugLog(
         'GET /api/sermon-selections/upcoming',
         `${BASE_URL}/sermon-selections/upcoming`,
@@ -118,15 +126,14 @@ export function useSermons() {
         newSelection
       );
       setUpcomingSelection(newSelection);
-      alert(`تم اختيار وحفظ خطبة "${sermon.title}" كخطبة الجمعة القادمة بنجاح!`);
+      showToast('تم اعتماد خطبة الجمعة القادمة بنجاح', 'success');
     } catch (e: any) {
       console.error('Error setting Friday sermon:', e);
-      alert(e.message || 'تعذر اختيار خطبة الجمعة');
+      showToast(e.message || 'تعذر اختيار خطبة الجمعة', 'error');
     }
-  }, [addDebugLog]);
+  }, [addDebugLog, showToast]);
 
   const handleCancelFridaySelection = useCallback(async (selectionId: string | number) => {
-    if (!confirm('هل أنت تأكد من إلغاء اعتماد وتحديد هذه الخطبة للجمعة القادمة؟')) return;
     try {
       await selectFridayUseCase.cancel(selectionId);
       addDebugLog(
@@ -136,12 +143,13 @@ export function useSermons() {
         { status: 'deleted' }
       );
       setUpcomingSelection(null);
-      alert('تم إلغاء اعتماد وتحديد خطبة الجمعة بنجاح.');
+      showToast('تم إلغاء اعتماد خطبة الجمعة بنجاح', 'success');
       loadData();
     } catch (e: any) {
       console.error('Error canceling selection:', e);
+      showToast(e.message || 'حدث خطأ أثناء إلغاء الاعتماد', 'error');
     }
-  }, [addDebugLog, loadData]);
+  }, [addDebugLog, loadData, showToast]);
 
   const filteredSermons = archivedSermons.filter(s => {
     if (selectedCategory !== 'all' && s.category !== selectedCategory) return false;
@@ -175,6 +183,7 @@ export function useSermons() {
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
+    addDebugLog,
     clearDebugLogs,
   };
 }

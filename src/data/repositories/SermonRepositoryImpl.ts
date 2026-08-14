@@ -22,70 +22,6 @@ export interface SermonCreateApiResponse {
   rawResponse: any;
 }
 
-// Default fallback sermons library to guarantee 100% catalog visibility even if backend returns 401 Unauthenticated
-const DEFAULT_ARCHIVED_SERMONS: Sermon[] = [
-  {
-    id: 101,
-    title: "فضل الاستغفار وأثره في دفع البلاء وتفريج الكروب",
-    speaker_name: "الشيخ د. عبد الرحمن السديس",
-    preacher: "الشيخ د. عبد الرحمن السديس",
-    sermon_date: "2026-08-01",
-    date: "2026-08-01",
-    category: "faith",
-    duration: "25 دقيقة",
-    content: "إن الاستغفار هو باب الفرج الأعظم وسبب تنزل الرحمات والبركات من السماء. قال الله تعالى: ﴿فَقُلْتُ اسْتَغْفِرُوا رَبَّكُمْ إِنَّهُ كَانَ غَفَّارًا﴾. واعلموا رحمكم الله أن ملازمة الاستغفار تمحو الذنوب وتطهر القلوب وتجلب الرزق الرغد.",
-    status: "archived",
-  },
-  {
-    id: 102,
-    title: "أحكام التجارة والأمانة في المعاملات المالية الحديثة",
-    speaker_name: "الشيخ د. صالح بن حميد",
-    preacher: "الشيخ د. صالح بن حميد",
-    sermon_date: "2026-07-25",
-    date: "2026-07-25",
-    category: "fiqh",
-    duration: "30 دقيقة",
-    content: "إن الصدق والأمانة في المعاملات البيعية هما قوام المجتمع المسلم الفاضل. النبي صلى الله عليه وسلم قال: 'التاجر الصدوق الأمين مع النبيين والصديقين والشهداء'. تجنب الغش والمماطلة وأداء الحقوق إلى أهلها.",
-    status: "archived",
-  },
-  {
-    id: 103,
-    title: "حسن الخلق وبر الوالدين وأثره في صلاح الأسرة",
-    speaker_name: "الشيخ د. ماهر المعيقلي",
-    preacher: "الشيخ د. ماهر المعيقلي",
-    sermon_date: "2026-07-18",
-    date: "2026-07-18",
-    category: "ethics",
-    duration: "22 دقيقة",
-    content: "إن البر بالوالدين أعظم القربات بعد توحيد الله عز وجل. قال تعالى: ﴿وَقَضَى رَبُّكَ أَلاَّ تَعْبُدُواْ إِلاَّ إِيَّاهُ وَبِالْوَالِدَيْنِ إِحْسَانًا﴾. فاحرصوا على رضاهم والتودد إليهم بالقول اللين والعمل الصالح.",
-    status: "archived",
-  },
-  {
-    id: 104,
-    title: "تربية الأبناء في زمن الوسائط الرقمية والشاشات",
-    speaker_name: "الشيخ د. سعود الشريم",
-    preacher: "الشيخ د. سعود الشريم",
-    sermon_date: "2026-07-11",
-    date: "2026-07-11",
-    category: "contemporary",
-    duration: "28 دقيقة",
-    content: "مسؤولية الآباء والأمهات في هذا العصر مضاعفة في حماية عقول الناشئة من المؤثرات السلبية، وغرس حب المسجد والقرآن الكريم والأخلاق الفاضلة في نفوسهم.",
-    status: "archived",
-  },
-  {
-    id: 105,
-    title: "شكر النعم وحفظ نعم الله بالعمل الصالح والتكافل",
-    speaker_name: "الشيخ د. فيصل غزاوي",
-    preacher: "الشيخ د. فيصل غزاوي",
-    sermon_date: "2026-07-04",
-    date: "2026-07-04",
-    category: "faith",
-    duration: "24 دقيقة",
-    content: "بالشكر تدوم النعم وتزيد، قال تعالى: ﴿لَئِن شَكَرْتُمْ لأَزِيدَنَّكُمْ﴾. والشكر يكون باللسان والقلب والجوارح بتسخير النعم في طاعة الله ونفع عباده.",
-    status: "archived",
-  }
-];
-
 export class SermonRepositoryImpl implements ISermonRepository {
 
   private getAuthHeaders(isFormData: boolean = false): HeadersInit {
@@ -130,7 +66,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
     } catch (e) {
       console.warn("Failed fetching sermons from API:", e);
     }
-    return DEFAULT_ARCHIVED_SERMONS;
+    return [];
   }
 
   // ── 2. getArchivedSermons (GET /api/sermons/archived) ───────────────
@@ -156,9 +92,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
       console.warn("Failed fetching archived sermons:", e);
     }
 
-    // Try fallback to getSermons or default library
-    const fallbackSermons = await this.getSermons();
-    return fallbackSermons.length > 0 ? fallbackSermons : DEFAULT_ARCHIVED_SERMONS;
+    return [];
   }
 
   // ── 3. getPendingSermons (GET /api/sermons/pending) ─────────────────
@@ -182,20 +116,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
       console.warn("Failed fetching pending sermons:", e);
     }
 
-    return [
-      {
-        id: 991,
-        title: "منهاج المسلم في استقبال شهر رمضان المبارك والعمل فيه",
-        speaker_name: "الشيخ د. أحمد الحذيفي",
-        preacher: "الشيخ د. أحمد الحذيفي",
-        sermon_date: "2026-08-10",
-        date: "2026-08-10",
-        category: "faith",
-        duration: "20 دقيقة",
-        content: "مسودة خطبة مقترحة قيد المراجعة حول كيفية استغلال مواسم الخيرات وتصفية النفوس وتعهد التلاوة والصيام والقيام.",
-        status: "pending",
-      }
-    ];
+    return [];
   }
 
   // ── 4. searchSermons (GET /api/sermons/search?q={query}) ───────────
@@ -348,16 +269,39 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
   // ── 7. SERMON SELECTIONS API IMPLEMENTATION ─────────────────────────
 
-  // 7.1 GET /api/sermon-selections (Index Sermon Selections)
-  async getSermonSelections(): Promise<SermonSelection[]> {
+  // 7.1 GET /api/sermon-selections/my (mySermonSelections) with fallback to /api/sermon-selections (indexSermonSelections)
+  async getSermonSelections(params?: { from_date?: string; to_date?: string }): Promise<SermonSelection[]> {
     try {
-      const response = await fetch(`${BASE_URL}/sermon-selections`, {
+      const queryParams = new URLSearchParams();
+      if (params?.from_date) queryParams.append("from_date", params.from_date);
+      if (params?.to_date) queryParams.append("to_date", params.to_date);
+
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+      
+      // Try mySermonSelections endpoint first (/api/sermon-selections/my)
+      let response = await fetch(`${BASE_URL}/sermon-selections/my${queryString}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
 
-      const json = await response.json().catch(() => null);
-      console.log("GET /api/sermon-selections Response:", json);
+      let json = await response.json().catch(() => null);
+      console.log(`GET /api/sermon-selections/my${queryString} Response:`, json);
+
+      // Fallback to indexSermonSelections endpoint (/api/sermon-selections) if /my returns empty or error
+      if (!response.ok || !json || json.status === false || (Array.isArray(json.data) && json.data.length === 0)) {
+        const fallbackRes = await fetch(`${BASE_URL}/sermon-selections${queryString}`, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const fallbackJson = await fallbackRes.json().catch(() => null);
+        console.log(`Fallback GET /api/sermon-selections${queryString} Response:`, fallbackJson);
+        if (fallbackRes.ok && fallbackJson && fallbackJson.status !== false) {
+          response = fallbackRes;
+          json = fallbackJson;
+        }
+      }
+
+      let selectionsList: SermonSelection[] = [];
 
       if (response.ok && json && json.status !== false) {
         const items: any[] = Array.isArray(json)
@@ -365,7 +309,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
 
         if (items.length > 0) {
-          const mapped = items.map((item: any) => ({
+          selectionsList = items.map((item: any) => ({
             id: item.id,
             sermon_id: item.sermon_id || item.sermon?.id,
             selection_date: item.selection_date || item.date || item.created_at?.split('T')[0],
@@ -374,27 +318,37 @@ export class SermonRepositoryImpl implements ISermonRepository {
             created_at: item.created_at,
           }));
 
-          if (typeof window !== "undefined") {
-            localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(mapped));
+          if (typeof window !== "undefined" && !queryString) {
+            localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(selectionsList));
           }
-          return mapped;
         }
       }
+
+      if (selectionsList.length === 0 && typeof window !== "undefined") {
+        const savedHistory = localStorage.getItem(STORAGE_KEY_HISTORY);
+        if (savedHistory) {
+          try {
+            selectionsList = JSON.parse(savedHistory);
+          } catch (e) {}
+        }
+      }
+
+      // Filter by date range if provided
+      if (params?.from_date || params?.to_date) {
+        selectionsList = selectionsList.filter(item => {
+          const itemDate = item.selection_date;
+          if (!itemDate) return true;
+          if (params.from_date && itemDate < params.from_date) return false;
+          if (params.to_date && itemDate > params.to_date) return false;
+          return true;
+        });
+      }
+
+      return selectionsList;
     } catch (e) {
       console.warn("Error fetching sermon selections from API:", e);
+      return [];
     }
-
-    // Fallback to localStorage history
-    if (typeof window !== "undefined") {
-      const savedHistory = localStorage.getItem(STORAGE_KEY_HISTORY);
-      if (savedHistory) {
-        try {
-          return JSON.parse(savedHistory);
-        } catch (e) {}
-      }
-    }
-
-    return [];
   }
 
   // 7.2 GET /api/sermon-selections/upcoming (Upcoming Sermon Selection)

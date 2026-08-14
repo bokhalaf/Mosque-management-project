@@ -11,8 +11,7 @@ export default function SermonDetailsPage() {
     <SermonDetailsSection 
       sermonId={id} 
       onBack={() => router.push('/sermons')}
-      onSelectForFriday={(selectedId) => {
-        alert("تم اعتماد هذه الخطبة بنجاح كخطبة الجمعة القادمة!");
+      onSelectForFriday={() => {
         router.push('/sermons');
       }}
     />

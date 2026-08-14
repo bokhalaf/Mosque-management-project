@@ -40,6 +40,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
+    addDebugLog,
     clearDebugLogs,
   } = useSermons();
 
@@ -93,13 +94,13 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
 
             <button
               onClick={() => setShowPendingModal(true)}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-600 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm relative"
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm relative"
               title="عرض الخطب المنتظرة للاعتماد"
             >
               <Clock className="w-4 h-4 text-amber-500" />
-              <span>الخطب قيد الانتظار</span>
+              <span>قيد الانتظار</span>
               {pendingSermons.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500 text-white font-black animate-pulse">
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-black">
                   {pendingSermons.length}
                 </span>
               )}
@@ -111,7 +112,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
               title="عرض سجل الخطب المختارة للجمعة"
             >
               <History className="w-4 h-4 text-primary" />
-              <span>سجل الخطب المختارة ({selectionsHistory.length})</span>
+              <span>السجل ({selectionsHistory.length})</span>
             </button>
 
             <button
@@ -193,11 +194,34 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
           onSetCategory={setSelectedCategory}
         />
 
-        {/* Sermons Grid */}
+        {/* Sermons Grid / Skeleton Scan */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-            <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm font-bold">جاري تحميل مكتبة الخطب المؤرشفة المباشرة من السيرفر...</p>
+          <div className="space-y-6">
+            {/* Banner Skeleton Scan */}
+            <div className="bg-card border border-border rounded-3xl p-8 animate-pulse space-y-4 shadow-sm">
+              <div className="h-5 w-48 bg-muted rounded-md" />
+              <div className="h-8 w-2/3 bg-muted rounded-md" />
+              <div className="h-4 w-1/3 bg-muted rounded-md" />
+            </div>
+
+            {/* Grid Cards Skeleton Scan */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="bg-card border border-border rounded-2xl p-6 animate-pulse space-y-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="h-4 w-24 bg-muted rounded-md" />
+                    <div className="h-6 w-20 bg-muted rounded-full" />
+                  </div>
+                  <div className="h-6 w-5/6 bg-muted rounded-md" />
+                  <div className="h-4 w-full bg-muted rounded-md" />
+                  <div className="h-4 w-2/3 bg-muted rounded-md" />
+                  <div className="pt-4 border-t border-border flex justify-between items-center">
+                    <div className="h-9 w-24 bg-muted rounded-xl" />
+                    <div className="h-9 w-28 bg-muted rounded-xl" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-4">
@@ -254,6 +278,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
         <HistoryModal
           selectionsHistory={selectionsHistory}
           onClose={() => setShowHistoryModal(false)}
+          onDebugLog={addDebugLog}
         />
       )}
     </div>

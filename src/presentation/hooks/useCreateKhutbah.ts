@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { SermonRepositoryImpl, SermonCreateApiResponse } from '../../data/repositories/SermonRepositoryImpl';
 import { createWorker } from 'tesseract.js';
 import { ArabicTTSPlayer } from '../utils/arabicTTS';
+import { useToast } from '../../app/components/ui/Toast';
 
 const sermonRepo = new SermonRepositoryImpl();
 const ttsPlayer = ArabicTTSPlayer.getInstance();
@@ -20,6 +21,7 @@ export interface CreateKhutbahDebugResponse {
 }
 
 export function useCreateKhutbah(onSuccess: () => void) {
+  const { showToast } = useToast();
   // Form fields
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
@@ -246,6 +248,10 @@ export function useCreateKhutbah(onSuccess: () => void) {
         rawResponse: debugRes.rawResponse,
         isSuccess: true,
       });
+      showToast('تم إضافة الخطبة الجديدة بنجاح', 'success');
+      setTimeout(() => {
+        onSuccess();
+      }, 1000);
     } catch (err: any) {
       const dbg = err.debugInfo;
       setDebugResponse({
@@ -259,7 +265,7 @@ export function useCreateKhutbah(onSuccess: () => void) {
     } finally {
       setSubmitting(false);
     }
-  }, [title, preacher, content, category, publishForFriday]);
+  }, [title, preacher, content, category, publishForFriday, showToast, onSuccess]);
 
   const copyDebugJson = useCallback(() => {
     if (debugResponse) {
