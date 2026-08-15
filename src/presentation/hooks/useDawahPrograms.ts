@@ -8,16 +8,21 @@ import {
   ProgramSchedule,
   DawahProgramStats,
   CreateDawahProgramPayload,
+  UpdateDawahProgramPayload,
   CreateProgramSchedulePayload,
+  UpdateProgramSchedulePayload,
   MosqueSpace,
   MyMosqueDetails,
 } from '../../domain/entities/DawahProgram';
 import { DawahProgramRepositoryImpl } from '../../data/repositories/DawahProgramRepositoryImpl';
 import { GetDawahProgramsUseCase } from '../../domain/usecases/dawah/GetDawahProgramsUseCase';
 import { CreateDawahProgramUseCase } from '../../domain/usecases/dawah/CreateDawahProgramUseCase';
+import { UpdateDawahProgramUseCase } from '../../domain/usecases/dawah/UpdateDawahProgramUseCase';
 import { GetDawahProgramByIdUseCase } from '../../domain/usecases/dawah/GetDawahProgramByIdUseCase';
 import { DeleteDawahProgramUseCase } from '../../domain/usecases/dawah/DeleteDawahProgramUseCase';
+import { GetProgramSchedulesUseCase } from '../../domain/usecases/dawah/GetProgramSchedulesUseCase';
 import { AddProgramScheduleUseCase } from '../../domain/usecases/dawah/AddProgramScheduleUseCase';
+import { UpdateProgramScheduleUseCase } from '../../domain/usecases/dawah/UpdateProgramScheduleUseCase';
 import { DeleteProgramScheduleUseCase } from '../../domain/usecases/dawah/DeleteProgramScheduleUseCase';
 import { GetDawahStatsUseCase } from '../../domain/usecases/dawah/GetDawahStatsUseCase';
 import { GetMyMosqueUseCase } from '../../domain/usecases/dawah/GetMyMosqueUseCase';
@@ -59,9 +64,12 @@ export function useDawahPrograms() {
 
   const getProgramsUC = useMemo(() => new GetDawahProgramsUseCase(repository), [repository]);
   const createProgramUC = useMemo(() => new CreateDawahProgramUseCase(repository), [repository]);
+  const updateProgramUC = useMemo(() => new UpdateDawahProgramUseCase(repository), [repository]);
   const getProgramByIdUC = useMemo(() => new GetDawahProgramByIdUseCase(repository), [repository]);
   const deleteProgramUC = useMemo(() => new DeleteDawahProgramUseCase(repository), [repository]);
+  const getSchedulesUC = useMemo(() => new GetProgramSchedulesUseCase(repository), [repository]);
   const addScheduleUC = useMemo(() => new AddProgramScheduleUseCase(repository), [repository]);
+  const updateScheduleUC = useMemo(() => new UpdateProgramScheduleUseCase(repository), [repository]);
   const deleteScheduleUC = useMemo(() => new DeleteProgramScheduleUseCase(repository), [repository]);
   const getStatsUC = useMemo(() => new GetDawahStatsUseCase(repository), [repository]);
   const getMyMosqueUC = useMemo(() => new GetMyMosqueUseCase(repository), [repository]);
@@ -99,8 +107,8 @@ export function useDawahPrograms() {
       }
 
       addDebugLog(
-        "GET /api/program/dawah_programs",
-        "https://mms-backend-rose.vercel.app/api/program/dawah_programs",
+        "GET /api/program/mosques/{mosque}/dawah_programs",
+        `https://mms-backend-rose.vercel.app/api/program/mosques/${mosqueData?.id || 1}/dawah_programs`,
         200,
         {
           status: true,
@@ -134,11 +142,23 @@ export function useDawahPrograms() {
     return created;
   };
 
+  const updateProgram = async (id: number | string, payload: UpdateDawahProgramPayload): Promise<DawahProgram> => {
+    const updated = await updateProgramUC.execute(id, payload);
+    addDebugLog(
+      "POST /api/program/mosques/dawah_programs/{id}",
+      `https://mms-backend-rose.vercel.app/api/program/mosques/${updated.mosque_id}/dawah_programs/${id}`,
+      200,
+      updated
+    );
+    await loadData();
+    return updated;
+  };
+
   const deleteProgram = async (id: number | string): Promise<boolean> => {
     const success = await deleteProgramUC.execute(id);
     addDebugLog(
-      "DELETE /api/program/mosques/dawah_programs",
-      `https://mms-backend-rose.vercel.app/api/program/dawah_programs/${id}`,
+      "DELETE /api/program/mosques/dawah_programs/{id}",
+      `https://mms-backend-rose.vercel.app/api/program/mosques/dawah_programs/${id}`,
       200,
       { deleted_id: id }
     );
@@ -146,11 +166,15 @@ export function useDawahPrograms() {
     return success;
   };
 
+  const getSchedules = async (programId: number | string): Promise<ProgramSchedule[]> => {
+    return await getSchedulesUC.execute(programId);
+  };
+
   const addSchedule = async (programId: number | string, schedule: CreateProgramSchedulePayload): Promise<ProgramSchedule> => {
     const added = await addScheduleUC.execute(programId, schedule);
     addDebugLog(
-      "POST /api/program/dawah_programs/schedules",
-      `https://mms-backend-rose.vercel.app/api/program/dawah_programs/${programId}/schedules`,
+      "POST /api/program/mosques/dawah_programs/schedules",
+      `https://mms-backend-rose.vercel.app/api/program/mosques/dawah_programs/${programId}/schedules`,
       200,
       added
     );
@@ -158,11 +182,23 @@ export function useDawahPrograms() {
     return added;
   };
 
+  const updateSchedule = async (programId: number | string, scheduleId: number | string, schedule: UpdateProgramSchedulePayload): Promise<ProgramSchedule> => {
+    const updated = await updateScheduleUC.execute(programId, scheduleId, schedule);
+    addDebugLog(
+      "PUT /api/program/mosques/dawah_programs/schedules/{id}",
+      `https://mms-backend-rose.vercel.app/api/program/mosques/dawah_programs/${programId}/schedules/${scheduleId}`,
+      200,
+      updated
+    );
+    await loadData();
+    return updated;
+  };
+
   const deleteSchedule = async (programId: number | string, scheduleId: number | string): Promise<boolean> => {
     const success = await deleteScheduleUC.execute(programId, scheduleId);
     addDebugLog(
-      "DELETE /api/program/dawah_programs/schedules",
-      `https://mms-backend-rose.vercel.app/api/program/dawah_programs/${programId}/schedules/${scheduleId}`,
+      "DELETE /api/program/mosques/dawah_programs/schedules/{id}",
+      `https://mms-backend-rose.vercel.app/api/program/mosques/dawah_programs/${programId}/schedules/${scheduleId}`,
       200,
       { program_id: programId, schedule_id: scheduleId }
     );
@@ -187,8 +223,11 @@ export function useDawahPrograms() {
     setSearchQuery,
     loadData,
     createProgram,
+    updateProgram,
     deleteProgram,
+    getSchedules,
     addSchedule,
+    updateSchedule,
     deleteSchedule,
     getMosqueSpaces,
     getProgramById: getProgramByIdUC.execute.bind(getProgramByIdUC),

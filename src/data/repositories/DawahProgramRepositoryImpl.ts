@@ -290,12 +290,33 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
   async updateDawahProgram(id: number | string, payload: UpdateDawahProgramPayload): Promise<DawahProgram> {
     const mosqueId = payload.mosque_id || this.getMosqueId();
 
+    const requestBody: Record<string, any> = { ...payload };
+    if (typeof payload.is_featured === 'boolean') {
+      requestBody.is_featured = payload.is_featured ? 'true' : 'false';
+    }
+
     try {
-      await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
+      const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
         method: "POST",
         headers: this.getAuthHeaders(),
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestBody),
       });
+      const json = await response.json().catch(() => null);
+      console.log("updateDawahProgram response:", response.status, json);
+      if (response.ok && json && (json.status || json.data)) {
+        const item = json.data || json;
+        const currentList = this.getLocalPrograms();
+        const index = currentList.findIndex(p => String(p.id) === String(id));
+        if (index !== -1) {
+          currentList[index] = {
+            ...currentList[index],
+            ...item,
+            updated_at: new Date().toISOString(),
+          };
+          this.saveLocalPrograms(currentList);
+          return currentList[index];
+        }
+      }
     } catch (e) {
       console.warn("API updateDawahProgram failed:", e);
     }
@@ -342,7 +363,17 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
       });
       if (response.ok) {
         const json = await response.json();
-        return json.data || json || [];
+        let items: any[] = [];
+        if (Array.isArray(json.data)) {
+          items = json.data;
+        } else if (json.data && Array.isArray(json.data.data)) {
+          items = json.data.data;
+        } else if (Array.isArray(json)) {
+          items = json;
+        }
+        if (items.length > 0) {
+          return items;
+        }
       }
     } catch (e) {
       console.warn("API getSchedules failed:", e);
@@ -362,8 +393,8 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
         headers: this.getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-      if (response.ok) {
-        const json = await response.json();
+      const json = await response.json().catch(() => null);
+      if (response.ok && json) {
         newSchedule = json.data || json;
       }
     } catch (e) {
@@ -398,11 +429,29 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
     const mosqueId = this.getMosqueId();
 
     try {
-      await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
+      const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
         method: "PUT",
         headers: this.getAuthHeaders(),
         body: JSON.stringify(payload),
       });
+      const json = await response.json().catch(() => null);
+      if (response.ok && json && (json.status || json.data)) {
+        const item = json.data || json;
+        const currentList = this.getLocalPrograms();
+        const program = currentList.find(p => String(p.id) === String(programId));
+        if (program && program.schedules) {
+          const sIndex = program.schedules.findIndex(s => String(s.id) === String(scheduleId));
+          if (sIndex !== -1) {
+            program.schedules[sIndex] = {
+              ...program.schedules[sIndex],
+              ...item,
+              updated_at: new Date().toISOString(),
+            };
+            this.saveLocalPrograms(currentList);
+            return program.schedules[sIndex];
+          }
+        }
+      }
     } catch (e) {
       console.warn("API updateSchedule failed:", e);
     }
