@@ -285,7 +285,7 @@ export class ArabicTTSPlayer {
 
   public resume() {
     if (this.currentAudio) {
-      this.currentAudio.play().catch(() => {});
+      this.currentAudio.play().catch(() => { });
       this.isPaused = false;
       this.notifyState();
       return;

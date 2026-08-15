@@ -1,16 +1,14 @@
 // ==============================
 // Presentation — Hook
-// useCreateKhutbah: إدارة نموذج إضافة خطبة + OCR + إملاء صوتي + TTS + إرسال
+// useCreateKhutbah: إدارة نموذج إضافة خطبة + OCR + إملاء صوتي + إرسال
 // ==============================
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { SermonRepositoryImpl, SermonCreateApiResponse } from '../../data/repositories/SermonRepositoryImpl';
 import { createWorker } from 'tesseract.js';
-import { ArabicTTSPlayer } from '../utils/arabicTTS';
 import { useToast } from '../../app/components/ui/Toast';
 
 const sermonRepo = new SermonRepositoryImpl();
-const ttsPlayer = ArabicTTSPlayer.getInstance();
 
 export interface CreateKhutbahDebugResponse {
   httpStatus: number;
@@ -25,17 +23,13 @@ export function useCreateKhutbah(onSuccess: () => void) {
   // Form fields
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
-  const [category, setCategory] = useState('ethics');
+  const [category, setCategory] = useState('ethics_conduct');
   const [content, setContent] = useState('');
   const [publishForFriday, setPublishForFriday] = useState(true);
 
   // Speech-to-Text dictation
   const [isDictating, setIsDictating] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-
-  // Text-to-Speech voice reader
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isSpeechPaused, setIsSpeechPaused] = useState(false);
 
   // Image OCR
   const [isScanningImage, setIsScanningImage] = useState(false);
@@ -53,12 +47,6 @@ export function useCreateKhutbah(onSuccess: () => void) {
 
   const recognitionRef = useRef<any>(null);
   const baseContentRef = useRef<string>('');
-
-  useEffect(() => {
-    return () => {
-      ttsPlayer.stop();
-    };
-  }, []);
 
   // ── 1. Speech-to-Text Dictation ──────────────────────────────────────
   const startDictation = useCallback(() => {
@@ -137,27 +125,6 @@ export function useCreateKhutbah(onSuccess: () => void) {
     if (recognitionRef.current) { recognitionRef.current.stop(); }
     setIsDictating(false);
     setIsPaused(false);
-  }, []);
-
-  // ── 2. Text-to-Speech Voice Reader ──────────────────────────────────
-  const toggleReadContentAloud = useCallback(() => {
-    if (!content.trim()) {
-      alert('يرجى كتابة نص أو محاور الخطبة في المربع أولاً لقراءته بصوت القارئ.');
-      return;
-    }
-    if (isSpeaking) {
-      if (isSpeechPaused) { ttsPlayer.resume(); } else { ttsPlayer.pause(); }
-    } else {
-      ttsPlayer.speak(content, (speaking, paused) => {
-        setIsSpeaking(speaking);
-        setIsSpeechPaused(paused ?? false);
-      });
-    }
-  }, [content, isSpeaking, isSpeechPaused]);
-
-  const stopTTS = useCallback(() => {
-    ttsPlayer.stop();
-    setIsSpeaking(false);
   }, []);
 
   // ── 3. Image OCR ───────────────────────────────────────────────────
@@ -289,11 +256,6 @@ export function useCreateKhutbah(onSuccess: () => void) {
     pauseDictation,
     resumeDictation,
     stopDictation,
-    // TTS
-    isSpeaking,
-    isSpeechPaused,
-    toggleReadContentAloud,
-    stopTTS,
     // OCR
     isScanningImage,
     ocrProgress,

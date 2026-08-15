@@ -17,6 +17,8 @@ import {
   DawahProgramStatus,
 } from "../../domain/entities/DawahProgram";
 
+import { CreateDawahProgramSection } from "./CreateDawahProgramSection";
+
 const repository = new DawahProgramRepositoryImpl();
 
 interface ApiDebugLog {
@@ -27,7 +29,12 @@ interface ApiDebugLog {
   time: string;
 }
 
-export function DawahProgramsSection() {
+interface DawahProgramsSectionProps {
+  onNavigateToAdd?: () => void;
+}
+
+export function DawahProgramsSection({ onNavigateToAdd }: DawahProgramsSectionProps = {}) {
+  const [isCreating, setIsCreating] = useState<boolean>(false);
   const [programs, setPrograms] = useState<DawahProgram[]>([]);
   const [stats, setStats] = useState<DawahProgramStats>({
     total_programs: 0,
@@ -307,6 +314,17 @@ export function DawahProgramsSection() {
     }
   };
 
+  if (isCreating) {
+    return (
+      <CreateDawahProgramSection
+        onBack={() => {
+          setIsCreating(false);
+          loadData();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader
@@ -335,7 +353,10 @@ export function DawahProgramsSection() {
             </button>
 
             <button
-              onClick={handleOpenCreate}
+              onClick={() => {
+                if (onNavigateToAdd) onNavigateToAdd();
+                else setIsCreating(true);
+              }}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -380,24 +401,68 @@ export function DawahProgramsSection() {
           </div>
         )}
 
-        {/* ── KPI Stats Grid ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'إجمالي البرامج', value: stats.total_programs, Icon: BookOpen, iconStyle: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-            { label: 'المحاضرات والدروس', value: stats.total_lectures, Icon: Mic, iconStyle: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-            { label: 'الدورات العلمية', value: stats.total_courses, Icon: GraduationCap, iconStyle: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
-            { label: 'المسابقات والأنشطة', value: stats.total_competitions, Icon: Trophy, iconStyle: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-          ].map(({ label, value, Icon, iconStyle }) => (
-            <div key={label} className="bg-card border border-border rounded-2xl p-4 shadow-sm flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-muted-foreground">{label}</span>
-                <h3 className="text-xl font-black text-foreground">{value}</h3>
+        {/* ── KPI Stats Grid (Unified Design System) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-[1.5rem] p-5 shadow-sm overflow-hidden">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="h-12 w-12 rounded-xl bg-muted animate-pulse" />
+                </div>
+                <div className="space-y-2.5">
+                  <div className="h-8 w-20 rounded-lg bg-muted animate-pulse" />
+                  <div className="h-4 w-28 rounded-lg bg-muted animate-pulse opacity-70" />
+                </div>
               </div>
-              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${iconStyle}`}>
-                <Icon className="w-5 h-5" />
+            ))
+          ) : (
+            [
+              {
+                title: 'إجمالي البرامج',
+                value: stats.total_programs,
+                icon: BookOpen,
+                colorStyle: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+                subtitle: 'كافة الأنشطة والدورات',
+              },
+              {
+                title: 'المحاضرات والدروس',
+                value: stats.total_lectures,
+                icon: Mic,
+                colorStyle: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+                subtitle: 'دروس ولقاءات إيمانية',
+              },
+              {
+                title: 'الدورات العلمية',
+                value: stats.total_courses,
+                icon: GraduationCap,
+                colorStyle: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+                subtitle: 'برامج شرعية وأكاديمية',
+              },
+              {
+                title: 'المسابقات والأنشطة',
+                value: stats.total_competitions,
+                icon: Trophy,
+                colorStyle: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+                subtitle: 'منافسات حفظ وتجويد',
+              },
+            ].map(({ title, value, icon: Icon, colorStyle, subtitle }) => (
+              <div
+                key={title}
+                className="bg-card border border-border rounded-[1.5rem] p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-3 rounded-xl border ${colorStyle} transition-transform group-hover:scale-105`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-foreground mb-1">{value}</h3>
+                  <p className="text-sm font-bold text-muted-foreground">{title}</p>
+                  {subtitle && <p className="text-[10px] text-muted-foreground/80 mt-1">{subtitle}</p>}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* ── Toolbar: Filter & Search ── */}

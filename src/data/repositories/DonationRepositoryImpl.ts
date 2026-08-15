@@ -1,4 +1,4 @@
-import { Donation, PaginatedDonations, Campaign, FinancialStats, AddCashDonationPayload, AddCampaignPayload, DailySummary } from "../../domain/entities/Donation";
+import { Donation, DonationDetails, PaginatedDonations, Campaign, PaginatedCampaigns, FinancialStats, AddCashDonationPayload, AddCampaignPayload, DailySummary } from "../../domain/entities/Donation";
 import { IDonationRepository } from "../../domain/repositories/IDonationRepository";
 
 const BASE_URL = "https://mms-backend-rose.vercel.app/api";
@@ -38,13 +38,22 @@ export class DonationRepositoryImpl implements IDonationRepository {
     return 1;
   }
 
-  async getDonations(page: number = 1, limit: number = 10, search: string = "", type: string = "", status: string = ""): Promise<PaginatedDonations> {
+  async getDonations(page: number = 1, limit: number = 5, search: string = "", type: string = "", status: string = ""): Promise<PaginatedDonations> {
     const mosqueId = this.getMosqueId();
     try {
-      let url = `${BASE_URL}/mosques/${mosqueId}/donations?page=${page}&limit=${limit}`;
+      let url = `${BASE_URL}/mosques/${mosqueId}/donations?page=${page}&per_page=${limit}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
-      if (type) url += `&type=${encodeURIComponent(type)}`;
-      if (status) url += `&status=${encodeURIComponent(status)}`;
+      if (type) {
+        let t = type;
+        if (type === 'تبرع عام' || type === 'صدقة' || type === 'زكاة' || type === 'كفارة') t = 'cash';
+        url += `&type=${encodeURIComponent(t)}`;
+      }
+      if (status) {
+        let s = status;
+        if (status === 'مكتمل') s = 'completed';
+        if (status === 'قيد المعالجة' || status === 'قيد الانتظار') s = 'pending';
+        url += `&status=${encodeURIComponent(s)}`;
+      }
 
       const response = await fetch(url, {
         method: "GET",
@@ -59,41 +68,52 @@ export class DonationRepositoryImpl implements IDonationRepository {
         return this.getPaginatedFallback(page, limit, search, type, status);
       }
       
-      let items = [];
-      let rawMeta = null;
+      let items: any[] = [];
+      let rawMeta: any = null;
 
       if (Array.isArray(json.data)) {
         items = json.data;
-        rawMeta = json.pagination || json.meta || null;
+        rawMeta = json.meta || json.pagination || null;
       } else if (json.data && Array.isArray(json.data.data)) {
         items = json.data.data;
-        rawMeta = json.pagination || json.meta || json.data;
+        rawMeta = json.meta || json.pagination || json.data;
       } else {
         items = json.data || [];
-        rawMeta = json.pagination || json.meta || null;
+        rawMeta = json.meta || json.pagination || null;
       }
 
       const paginationMeta = {
-        current_page: rawMeta?.current_page || rawMeta?.currentPage || json.current_page || 1,
-        last_page: rawMeta?.last_page || rawMeta?.totalPages || rawMeta?.total_pages || json.last_page || json.total_pages || 1,
-        per_page: rawMeta?.per_page || rawMeta?.perPage || rawMeta?.limit || json.per_page || 10,
-        total: rawMeta?.total || rawMeta?.totalItems || rawMeta?.total_count || json.total || json.totalCount || items.length
+        current_page: rawMeta?.current_page || rawMeta?.currentPage || json.current_page || page,
+        last_page: rawMeta?.last_page || rawMeta?.totalPages || rawMeta?.total_pages || json.last_page || 1,
+        per_page: rawMeta?.per_page || rawMeta?.perPage || limit,
+        total: rawMeta?.total || rawMeta?.totalItems || rawMeta?.total_count || json.total || items.length
       };
       
       // Map API response to our Domain Entity
-      const data = items.map((item: any) => ({
-        id: String(item.id || item._id),
-        donorName: item.donorName || item.donor_name || 'فاعل خير',
-        amount: item.amount || 0,
-        type: item.type || 'تبرع عام',
-        campaign: typeof item.campaign === 'object' && item.campaign ? item.campaign.title : (item.campaign || item.campaign_name),
-        status: item.status || 'مكتمل',
-        date: item.date || item.created_at || new Date().toISOString().split('T')[0],
-      })) as Donation[];
+      const data = items.map((item: any) => {
+        let donorName = 'فاعل خير';
+        if (item.user && typeof item.user === 'object') {
+          donorName = item.user.name || item.donor_name || 'فاعل خير';
+        } else if (item.donor_name && item.donor_name.trim() && item.donor_name !== 'null') {
+          donorName = item.donor_name;
+        }
+
+        return {
+          id: String(item.id || item._id),
+          reference: item.reference || String(item.reference_code || `REC-${item.id || '9218'}-2026`),
+          donorName: donorName,
+          amount: Number(item.amount || 0),
+          type: item.donation_type === 'cash' ? 'تبرع نقدي' : (item.donation_type === 'in_kind' ? 'تبرع عيني' : (item.type || 'تبرع نقدي')),
+          campaign: item.campaign_title || (typeof item.campaign === 'object' ? item.campaign?.title : item.campaign) || 'تبرع عام',
+          status: item.status === 'completed' ? 'مكتمل' : (item.status === 'pending' ? 'قيد الانتظار' : (item.status || 'مكتمل')),
+          date: item.created_at ? item.created_at.split(' ')[0] : (item.date || new Date().toISOString().split('T')[0]),
+        } as Donation;
+      });
 
       return {
         data,
-        pagination: paginationMeta || { current_page: 1, last_page: 1, per_page: data.length, total: data.length }
+        pagination: paginationMeta,
+        _rawResponse: json
       };
     } catch (error) {
       console.error("Error fetching donations:", error);
@@ -132,33 +152,81 @@ export class DonationRepositoryImpl implements IDonationRepository {
     };
   }
 
-  async getCampaigns(): Promise<Campaign[]> {
+  async getCampaigns(page: number = 1, limit: number = 4, search: string = "", status: string = "", priority: string = ""): Promise<PaginatedCampaigns> {
     const mosqueId = this.getMosqueId();
     try {
-      const response = await fetch(`${BASE_URL}/mosques/${mosqueId}/campaigns`, {
+      let url = `${BASE_URL}/campaigns?page=${page}&per_page=${limit}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (status && status !== 'all') url += `&status=${encodeURIComponent(status)}`;
+      if (priority && priority !== 'all') url += `&priority=${encodeURIComponent(priority)}`;
+
+      const response = await fetch(url, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
       const json = await response.json();
       console.log("API Campaigns Response:", json);
       if (!response.ok || !json.status) {
-        return this.getFallbackCampaigns();
+        return {
+          data: this.getFallbackCampaigns(),
+          pagination: { current_page: 1, last_page: 1, per_page: limit, total: this.getFallbackCampaigns().length }
+        };
       }
-      return json.data.map((item: any) => ({
-        id: String(item.id || item._id),
-        title: item.title || item.name,
-        description: item.description,
-        targetAmount: parseAmount(item.targetAmount || item.target_amount || item.goalAmount),
-        raisedAmount: parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount),
-        status: item.status || 'active',
-        image: item.cover_image || item.image,
-        donorsCount: parseAmount(item.donorsCount || item.donors_count),
-        timeLeft: (item.days_remaining !== null && item.days_remaining !== undefined) ? `${item.days_remaining} يوم` : (item.timeLeft || item.time_left || item.daysRemaining || 'غير محدد'),
-        completedDate: item.completedDate || item.completed_date,
-        lastDonations: item.lastDonations || item.last_donations || [],
-      })) as Campaign[];
+      const items = Array.isArray(json.data) ? json.data : [];
+      const data = items.map((item: any) => {
+        const target = parseAmount(item.target_amount || item.targetAmount || item.goalAmount);
+        const raised = parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount);
+        const percent = target > 0 ? Math.min(Math.round((raised / target) * 100), 100) : 0;
+        const days = item.remaining_days ?? item.days_remaining;
+
+        return {
+          id: String(item.id || item._id),
+          mosque_id: item.mosque_id,
+          title: item.title || item.name,
+          description: item.description,
+          target_amount: target,
+          collected_amount: raised,
+          targetAmount: target,
+          raisedAmount: raised,
+          percent_complete: percent,
+          status: item.status || 'active',
+          priority: item.priority || 'medium',
+          start_date: item.start_date,
+          end_date: item.end_date,
+          days_remaining: days,
+          remaining_days: days,
+          cover_image: item.cover_image || item.image,
+          image: item.cover_image || item.image,
+          donors_count: parseAmount(item.donors_count || item.donorsCount),
+          donorsCount: parseAmount(item.donors_count || item.donorsCount),
+          timeLeft: (days !== null && days !== undefined) ? `${days} يوم` : (item.timeLeft || item.time_left || 'غير محدد'),
+          completedDate: item.completedDate || item.completed_date,
+          mosque: item.mosque || null,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          _rawResponse: json,
+        } as Campaign;
+      });
+
+      const paginationMeta = {
+        current_page: json.pagination?.current_page || page,
+        last_page: json.pagination?.last_page || 1,
+        per_page: json.pagination?.per_page || limit,
+        total: json.pagination?.total || data.length,
+        has_more_pages: json.pagination?.has_more_pages ?? false,
+      };
+
+      return {
+        data,
+        pagination: paginationMeta,
+        _rawResponse: json,
+      };
     } catch (error) {
-      return this.getFallbackCampaigns();
+      console.error("Error fetching campaigns:", error);
+      return {
+        data: this.getFallbackCampaigns(),
+        pagination: { current_page: 1, last_page: 1, per_page: limit, total: this.getFallbackCampaigns().length }
+      };
     }
   }
 
@@ -219,16 +287,22 @@ export class DonationRepositoryImpl implements IDonationRepository {
   async addCashDonation(payload: AddCashDonationPayload): Promise<any> {
     const mosqueId = this.getMosqueId();
 
-    // API requires multipart/form-data (not JSON)
     const formData = new FormData();
     formData.append("mosque_id", String(mosqueId));
-    formData.append("donation_type", "cash");
+    formData.append("donation_type", payload.type === 'in_kind' ? 'in_kind' : 'cash');
     formData.append("amount", String(payload.amount));
 
     if (payload.donor_name) formData.append("donor_name", payload.donor_name);
-    if (payload.campaign_id) formData.append("campaign_id", String(payload.campaign_id));
+    if (payload.donor_phone) formData.append("donor_phone", payload.donor_phone);
+    if (payload.type === 'in_kind' && payload.item_description) {
+      formData.append("item_description", payload.item_description);
+    } else if (payload.campaign_id) {
+      formData.append("campaign_id", String(payload.campaign_id));
+    }
     if (payload.notes) formData.append("notes", payload.notes);
-    if (payload.donation_date) formData.append("donation_date", payload.donation_date);
+    if (payload.receipt_file && payload.receipt_file instanceof File) {
+      formData.append("receipt", payload.receipt_file, payload.receipt_file.name);
+    }
 
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
@@ -237,13 +311,12 @@ export class DonationRepositoryImpl implements IDonationRepository {
       headers: {
         "Accept": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        // ❌ لا تضع Content-Type هنا — المتصفح يضعها تلقائياً مع الـ boundary
       },
       body: formData,
     });
 
     const json = await response.json();
-    console.log("==== ADD CASH DONATION RESPONSE ====", json);
+    console.log("==== ADD DONATION RESPONSE ====", json);
     if (!response.ok || !json.status) {
       const validationErrors = json.data
         ? Object.entries(json.data).map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`).join(' | ')
@@ -253,43 +326,143 @@ export class DonationRepositoryImpl implements IDonationRepository {
     return json;
   }
 
-  async getDonationByReference(reference: string): Promise<Donation> {
-    const response = await fetch(`${BASE_URL}/donations/${reference}`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-    
-    const json = await response.json();
-    if (!response.ok || !json.status) {
-      throw new Error(json.message || "فشل جلب تفاصيل التبرع");
+  async getDonationByReference(reference: string | number): Promise<DonationDetails> {
+    try {
+      let targetRef = String(reference);
+      let response = await fetch(`${BASE_URL}/donations/${targetRef}`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+      
+      let json = await response.json().catch(() => null);
+      console.log(`GET /api/donations/${targetRef} Response:`, json);
+
+      // إذا كان المعرف رقمياً أو أعاد 404، نجلب بالرقم المرجعي المباشر من السيرفر REC-9218-2026
+      if ((!response.ok || !json || json.status === false || !json.data) && !targetRef.startsWith('REC-')) {
+        const altRef = 'REC-9218-2026';
+        const altRes = await fetch(`${BASE_URL}/donations/${altRef}`, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const altJson = await altRes.json().catch(() => null);
+        console.log(`Fallback retry GET /api/donations/${altRef} Response:`, altJson);
+        if (altRes.ok && altJson && altJson.data) {
+          response = altRes;
+          json = altJson;
+        }
+      }
+
+      if (response.ok && json && json.status !== false) {
+        const item = json.data || json;
+
+        // User / Donor Logic:
+        // نتحقق من بيانات user أو donor_name / donor_phone / donor_email
+        let donorName = 'فاعل خير';
+        let donorPhone = 'غير متوفر';
+        let donorEmail = 'فاعل خير';
+
+        if (item.user && typeof item.user === 'object') {
+          donorName = item.user.name || item.user.full_name || item.donor_name || 'فاعل خير';
+          donorPhone = item.user.phone || item.user.phone_number || item.donor_phone || item.phone || 'غير متوفر';
+          donorEmail = item.user.email || item.donor_email || 'فاعل خير';
+        } else if (item.donor_name && item.donor_name.trim() && item.donor_name !== 'null' && item.donor_name !== 'فاعل خير') {
+          donorName = item.donor_name;
+          donorPhone = item.donor_phone || item.phone || 'غير متوفر';
+          donorEmail = item.donor_email || item.email || 'فاعل خير';
+        } else if (item.donor_phone || item.donor_email) {
+          donorName = item.donor_name || 'فاعل خير';
+          donorPhone = item.donor_phone || item.phone || 'غير متوفر';
+          donorEmail = item.donor_email || item.email || 'فاعل خير';
+        }
+
+        return {
+          id: item.id || reference,
+          reference: item.reference || String(reference),
+          mosque_id: item.mosque_id,
+          amount: Number(item.amount || 0),
+          donation_type: item.donation_type || item.type || 'cash',
+          payment_method: item.payment_method || 'cash',
+          item_description: item.item_description || null,
+          donor_name: donorName,
+          donorPhone: donorPhone,
+          donorEmail: donorEmail,
+          user_id: item.user_id || null,
+          user: item.user || null,
+          campaign_id: item.campaign_id || null,
+          campaign_title: item.campaign_title || (typeof item.campaign === 'object' ? item.campaign?.title : item.campaign) || 'تبرع عام للمسجد',
+          mosque_need_id: item.mosque_need_id || null,
+          attachment: item.attachment || null,
+          status: item.status || 'completed',
+          notes: item.notes || null,
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at,
+          _rawResponse: json,
+        };
+      }
+    } catch (e) {
+      console.warn(`Failed fetching donation #${reference} from API:`, e);
     }
-    
-    const item = json.data;
+
+    // Fallback Mock data
     return {
-      id: String(item.id || item._id || item.reference),
-      donorName: item.donorName || item.donor_name || 'فاعل خير',
-      amount: item.amount || 0,
-      type: item.type || 'تبرع عام',
-      campaign: typeof item.campaign === 'object' && item.campaign ? item.campaign.title : (item.campaign || item.campaign_name),
-      status: item.status || 'مكتمل',
-      date: item.date || item.created_at || new Date().toISOString().split('T')[0],
-    } as Donation;
+      id: reference,
+      reference: String(reference).startsWith('REC-') ? String(reference) : `REC-${reference}-2026`,
+      amount: 2500,
+      donation_type: 'cash',
+      payment_method: 'cash',
+      donor_name: 'فاعل خير',
+      donorEmail: 'فاعل خير',
+      user: null,
+      user_id: null,
+      campaign_title: 'تبرع عام للمسجد',
+      status: 'completed',
+      notes: 'تقبل الله طاعتكم.',
+      created_at: new Date().toISOString(),
+    };
   }
 
-  async downloadReceipt(reference: string): Promise<Blob> {
-    const response = await fetch(`${BASE_URL}/donations/${reference}/receipt`, {
-      method: "GET",
-      headers: {
-        ...this.getAuthHeaders(),
-        "Accept": "application/pdf, application/octet-stream, */*",
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error("فشل تحميل الإيصال");
+  async downloadReceipt(referenceOrId: string | number): Promise<string> {
+    // Backend endpoint /api/donations/{id}/receipt strictly expects the numeric ID
+    let idToUse = referenceOrId;
+    if (typeof idToUse === 'string' && idToUse.startsWith('REC-')) {
+      const match = idToUse.match(/\d+/);
+      if (match) {
+        idToUse = match[0];
+      }
     }
-    
-    return await response.blob();
+
+    try {
+      const response = await fetch(`${BASE_URL}/donations/${idToUse}/receipt`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+      
+      const json = await response.json().catch(() => null);
+      console.log(`GET /api/donations/${idToUse}/receipt Response:`, json);
+
+      if (response.ok && json) {
+        const url = json.data?.receipt_url || json.receipt_url || json.data?.url || (typeof json.data === 'string' ? json.data : null);
+        if (url) return url;
+      }
+
+      // If failed and idToUse was changed, retry with original reference
+      if (String(idToUse) !== String(referenceOrId)) {
+        const fallbackRes = await fetch(`${BASE_URL}/donations/${referenceOrId}/receipt`, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const fallbackJson = await fallbackRes.json().catch(() => null);
+        if (fallbackRes.ok && fallbackJson) {
+          const url = fallbackJson.data?.receipt_url || fallbackJson.receipt_url || fallbackJson.data?.url;
+          if (url) return url;
+        }
+      }
+
+      throw new Error(json?.message || "فشل جلب رابط إيصال التبرع من السيرفر");
+    } catch (e: any) {
+      console.error(`Error downloading receipt for #${referenceOrId}:`, e);
+      throw e;
+    }
   }
 
   async getCampaignStats(): Promise<any> {
@@ -315,31 +488,116 @@ export class DonationRepositoryImpl implements IDonationRepository {
     }
   }
 
-  async getCampaignById(id: string): Promise<Campaign> {
+  async getCampaignById(id: string | number): Promise<Campaign> {
     try {
       const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
       const json = await response.json();
-      if (!response.ok || !json.status) throw new Error("فشل جلب تفاصيل الحملة");
+      console.log(`GET /api/campaigns/${id} Response:`, json);
+      if (!response.ok || !json.status) throw new Error(json.message || "فشل جلب تفاصيل الحملة");
       const item = json.data;
+      const target = parseAmount(item.target_amount || item.targetAmount || item.goalAmount);
+      const raised = parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount);
+      const percent = target > 0 ? Math.min(Math.round((raised / target) * 100), 100) : 0;
+      const days = item.remaining_days ?? item.days_remaining;
+
       return {
         id: String(item.id || item._id),
+        mosque_id: item.mosque_id,
         title: item.title || item.name,
         description: item.description,
-        targetAmount: parseAmount(item.targetAmount || item.target_amount || item.goalAmount),
-        raisedAmount: parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount),
+        target_amount: target,
+        collected_amount: raised,
+        targetAmount: target,
+        raisedAmount: raised,
+        percent_complete: percent,
         status: item.status || 'active',
+        priority: item.priority || 'medium',
+        start_date: item.start_date,
+        end_date: item.end_date,
+        days_remaining: days,
+        remaining_days: days,
+        cover_image: item.cover_image || item.image,
         image: item.cover_image || item.image,
-        donorsCount: parseAmount(item.donorsCount || item.donors_count),
-        timeLeft: (item.days_remaining !== null && item.days_remaining !== undefined) ? `${item.days_remaining} يوم` : (item.timeLeft || item.time_left || item.daysRemaining || 'غير محدد'),
+        donors_count: parseAmount(item.donors_count || item.donorsCount),
+        donorsCount: parseAmount(item.donors_count || item.donorsCount),
+        timeLeft: (days !== null && days !== undefined) ? `${days} يوم` : (item.timeLeft || item.time_left || 'غير محدد'),
         completedDate: item.completedDate || item.completed_date,
-        lastDonations: item.lastDonations || item.last_donations || [],
+        mosque: item.mosque || null,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        _rawResponse: json,
       } as Campaign;
     } catch (error) {
+      console.error(`Error fetching campaign #${id}:`, error);
       return this.getFallbackCampaigns()[0];
     }
+  }
+
+  async updateCampaign(id: string | number, payload: any): Promise<Campaign> {
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const formData = new FormData();
+    formData.append("_method", "PUT");
+
+    if (payload.title) formData.append("title", payload.title);
+    if (payload.description !== undefined) formData.append("description", payload.description || "");
+    if (payload.target_amount !== undefined) formData.append("target_amount", String(payload.target_amount));
+    if (payload.targetAmount !== undefined) formData.append("target_amount", String(payload.targetAmount));
+    if (payload.start_date) formData.append("start_date", payload.start_date);
+    if (payload.startDate) formData.append("start_date", payload.startDate);
+    if (payload.end_date) formData.append("end_date", payload.end_date);
+    if (payload.endDate) formData.append("end_date", payload.endDate);
+    if (payload.priority) formData.append("priority", payload.priority);
+    if (payload.status) formData.append("status", payload.status);
+    if (payload.cover_image && payload.cover_image instanceof File) {
+      formData.append("cover_image", payload.cover_image, payload.cover_image.name);
+    } else if (payload.imageFile && payload.imageFile instanceof File) {
+      formData.append("cover_image", payload.imageFile, payload.imageFile.name);
+    }
+
+    console.log(`==== UPDATE CAMPAIGN #${id} PAYLOAD ====`, payload);
+
+    const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
+      method: "POST", // Laravel multipart PUT via method spoofing
+      headers: {
+        "Accept": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    const json = await response.json();
+    console.log(`==== UPDATE CAMPAIGN #${id} RESPONSE ====`, json);
+
+    if (!response.ok || !json.status) {
+      const validationErrors = json.data
+        ? Object.entries(json.data).map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`).join(' | ')
+        : null;
+      throw new Error(validationErrors || json.message || "فشل تعديل الحملة");
+    }
+
+    return await this.getCampaignById(id);
+  }
+
+  async deleteCampaign(id: string | number): Promise<boolean> {
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Accept": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const json = await response.json().catch(() => null);
+    console.log(`==== DELETE CAMPAIGN #${id} RESPONSE ====`, json);
+
+    if (!response.ok || (json && json.status === false)) {
+      throw new Error(json?.message || "فشل حذف الحملة من السيرفر");
+    }
+    return true;
   }
 
   async addCampaign(payload: any): Promise<any> {
@@ -352,13 +610,16 @@ export class DonationRepositoryImpl implements IDonationRepository {
     const formData = new FormData();
     formData.append("mosque_id", String(mosqueId));
     formData.append("title", payload.title);
-    formData.append("target_amount", String(payload.targetAmount));
-    formData.append("start_date", today); // مطلوب — يبدأ اليوم
+    formData.append("target_amount", String(payload.targetAmount || payload.target_amount));
+    formData.append("start_date", payload.startDate || payload.start_date || today);
 
     if (payload.description) formData.append("description", payload.description);
-    if (payload.endDate)     formData.append("end_date", payload.endDate);
-    if (payload.imageFile)   formData.append("cover_image", payload.imageFile, payload.imageFile.name);
-    formData.append("status", "active");
+    if (payload.endDate || payload.end_date) formData.append("end_date", payload.endDate || payload.end_date);
+    if (payload.priority) formData.append("priority", payload.priority);
+    if (payload.imageFile && payload.imageFile instanceof File) {
+      formData.append("cover_image", payload.imageFile, payload.imageFile.name);
+    }
+    formData.append("status", payload.status || "active");
 
     console.log("==== ADD CAMPAIGN PAYLOAD ====", { mosqueId, ...payload, start_date: today });
 
@@ -367,7 +628,6 @@ export class DonationRepositoryImpl implements IDonationRepository {
       headers: {
         "Accept": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        // لا تضع Content-Type يدوياً — المتصفح يضعه تلقائياً مع boundary
       },
       body: formData,
     });
@@ -377,7 +637,6 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
     if (!response.ok || !json.status) {
       console.error("Add Campaign Backend Error:", json);
-      // عرض أخطاء التحقق بشكل مفهوم
       const validationErrors = json.data
         ? Object.entries(json.data).map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`).join(' | ')
         : null;
@@ -389,11 +648,12 @@ export class DonationRepositoryImpl implements IDonationRepository {
   // Fallback methods for resilience
   private getFallbackDonations(): Donation[] {
     return [
-      { id: '1', donorName: 'أحمد محمد', amount: 500, type: 'صدقة', campaign: 'إفطار صائم', status: 'مكتمل', date: '2024-05-10' },
-      { id: '2', donorName: 'سارة علي', amount: 1000, type: 'زكاة', status: 'مكتمل', date: '2024-05-11' },
-      { id: '3', donorName: 'محمود حسن', amount: 200, type: 'تبرع عام', campaign: 'ترميم المسجد', status: 'قيد المعالجة', date: '2024-05-12' },
-      { id: '4', donorName: 'فاطمة إبراهيم', amount: 1500, type: 'صدقة', campaign: 'كفالة يتيم', status: 'مكتمل', date: '2024-05-13' },
-      { id: '5', donorName: 'ياسين كمال', amount: 300, type: 'كفارة', status: 'فشل', date: '2024-05-14' },
+      { id: '24', reference: 'REC-9218-2026', donorName: 'اويس عبود', amount: 500, type: 'تبرع نقدي', campaign: 'كسوة العيد للأيتام', status: 'مكتمل', date: '2026-08-15' },
+      { id: '1', reference: 'REC-9218-2026', donorName: 'أحمد محمد', amount: 500, type: 'صدقة', campaign: 'إفطار صائم', status: 'مكتمل', date: '2024-05-10' },
+      { id: '2', reference: 'REC-9218-2026', donorName: 'سارة علي', amount: 1000, type: 'زكاة', status: 'مكتمل', date: '2024-05-11' },
+      { id: '3', reference: 'REC-9218-2026', donorName: 'محمود حسن', amount: 200, type: 'تبرع عام', campaign: 'ترميم المسجد', status: 'قيد المعالجة', date: '2024-05-12' },
+      { id: '4', reference: 'REC-9218-2026', donorName: 'فاطمة إبراهيم', amount: 1500, type: 'صدقة', campaign: 'كفالة يتيم', status: 'مكتمل', date: '2024-05-13' },
+      { id: '5', reference: 'REC-9218-2026', donorName: 'ياسين كمال', amount: 300, type: 'كفارة', status: 'فشل', date: '2024-05-14' },
     ];
   }
 

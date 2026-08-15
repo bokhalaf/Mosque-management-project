@@ -1,21 +1,17 @@
 'use client';
 // ==============================
-// KhutbahsListSection — Wrapper (Clean)
-// يستخدم useSermons hook ويرتّب الـ components الفرعية
+// KhutbahsListSection — Wrapper (Clean & Design System Aligned)
 // ==============================
 
 import React, { useState } from 'react';
-import { Plus, Terminal, Clock, History, RefreshCw, BookOpen, AlertCircle } from 'lucide-react';
+import { Plus, Terminal, Clock, History, RefreshCw, BookOpen, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import { PageHeader } from '../../../app/components/PageHeader';
-import { ArabicTTSPlayer } from '../../utils/arabicTTS';
 import { useSermons } from '../../hooks/useSermons';
 import { FridaySermonBanner } from './components/FridaySermonBanner';
 import { SermonFilterBar } from './components/SermonFilterBar';
 import { SermonCard } from './components/SermonCard';
 import { PendingModal } from './components/PendingModal';
 import { HistoryModal } from './components/HistoryModal';
-
-const ttsPlayer = ArabicTTSPlayer.getInstance();
 
 interface KhutbahsListSectionProps {
   onNavigateToAdd?: () => void;
@@ -28,6 +24,10 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
     upcomingSelection,
     selectionsHistory,
     filteredSermons,
+    archivedPagination,
+    setArchivedPage,
+    pendingPagination,
+    setPendingPage,
     selectedCategory,
     setSelectedCategory,
     searchQuery,
@@ -38,6 +38,8 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
     loadData,
     handleSelectForFriday,
     handleCancelFridaySelection,
+    handleDeletePendingSermon,
+    deletingSermonId,
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
@@ -45,33 +47,16 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
     clearDebugLogs,
   } = useSermons();
 
-  const [playingId, setPlayingId] = useState<string | number | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
 
-  const toggleAudioPlay = (id: string | number, textContent: string) => {
-    if (playingId === id) {
-      // نفس الخطبة — إيقاف القراءة
-      ttsPlayer.stop();
-      setPlayingId(null);
-      return;
-    }
+  const totalItems = archivedPagination.totalItems || filteredSermons.length;
+  const currentPage = archivedPagination.currentPage || 1;
+  const itemsPerPage = archivedPagination.itemsPerPage || 6;
+  const totalPages = Math.max(1, archivedPagination.totalPages || Math.ceil(totalItems / itemsPerPage));
 
-    // خطبة مختلفة أو لا يوجد نص قيد التشغيل — إيقاف أي قراءة سابقة ثم ابدأ
-    ttsPlayer.stop();
-
-    if (!textContent || !textContent.trim()) {
-      alert('لا يوجد نص مسجل لهذه الخطبة للقراءة.');
-      return;
-    }
-
-    console.log('[TTS] قراءة خطبة:', id, '— النص (أول 60 حرف):', textContent.substring(0, 60));
-
-    ttsPlayer.speak(textContent.trim(), (speaking) => {
-      setPlayingId(speaking ? id : null);
-    });
-  };
-
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
@@ -95,14 +80,14 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
 
             <button
               onClick={() => setShowPendingModal(true)}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm relative"
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/15 rounded-xl text-xs font-bold transition-all shadow-sm relative"
               title="عرض الخطب المنتظرة للاعتماد"
             >
-              <Clock className="w-4 h-4 text-amber-500" />
+              <Clock className="w-4 h-4 text-primary" />
               <span>قيد الانتظار</span>
-              {pendingSermons.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-black">
-                  {pendingSermons.length}
+              {pendingPagination.totalItems > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-primary-foreground font-black">
+                  {pendingPagination.totalItems}
                 </span>
               )}
             </button>
@@ -179,8 +164,6 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
         {upcomingSelection && (
           <FridaySermonBanner
             upcomingSelection={upcomingSelection}
-            playingId={playingId}
-            onToggleAudio={toggleAudioPlay}
             onViewDetails={onViewDetails}
             onCancelSelection={handleCancelFridaySelection}
           />
@@ -190,7 +173,6 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
         <SermonFilterBar
           searchQuery={searchQuery}
           selectedCategory={selectedCategory}
-          filteredCount={filteredSermons.length}
           onSetSearchQuery={setSearchQuery}
           onSetCategory={setSelectedCategory}
         />
@@ -207,7 +189,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
 
             {/* Grid Cards Skeleton Scan */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
+              {[1, 2, 3, 4, 5].map((n) => (
                 <div key={n} className="bg-card border border-border rounded-2xl p-6 animate-pulse space-y-4 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="h-4 w-24 bg-muted rounded-md" />
@@ -248,19 +230,61 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredSermons.map(sermon => (
-              <SermonCard
-                key={sermon.id}
-                sermon={sermon}
-                upcomingSelection={upcomingSelection}
-                playingId={playingId}
-                isSelecting={selectingSermonId === sermon.id}
-                onToggleAudio={toggleAudioPlay}
-                onViewDetails={onViewDetails}
-                onSelectForFriday={handleSelectForFriday}
-              />
-            ))}
+          <div className="space-y-6">
+            {/* Grid of Sermon Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredSermons.map(sermon => (
+                <SermonCard
+                  key={sermon.id}
+                  sermon={sermon}
+                  upcomingSelection={upcomingSelection}
+                  isSelecting={selectingSermonId === sermon.id}
+                  onViewDetails={onViewDetails}
+                  onSelectForFriday={handleSelectForFriday}
+                />
+              ))}
+            </div>
+
+            {/* Pagination Controls Bar — Aligned 100% with Maintenance & Donations Design System */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border border-border bg-card rounded-2xl shadow-sm">
+              <p className="text-xs font-bold text-muted-foreground">
+                عرض {startItem} - {endItem} من أصل {totalItems} خطبة مؤرشفة
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setArchivedPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="px-3.5 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  السابق
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setArchivedPage(p)}
+                      className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                        currentPage === p
+                          ? 'bg-primary text-primary-foreground font-black shadow-md shadow-primary/20'
+                          : 'bg-card border border-border text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setArchivedPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  className="px-3.5 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  التالي
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -270,8 +294,10 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
       {showPendingModal && (
         <PendingModal
           pendingSermons={pendingSermons}
-          playingId={playingId}
-          onToggleAudio={toggleAudioPlay}
+          pendingPagination={pendingPagination}
+          deletingSermonId={deletingSermonId}
+          onPageChange={setPendingPage}
+          onDeleteSermon={handleDeletePendingSermon}
           onClose={() => setShowPendingModal(false)}
         />
       )}

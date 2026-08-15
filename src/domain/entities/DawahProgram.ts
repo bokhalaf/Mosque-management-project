@@ -69,6 +69,21 @@ export interface CreateProgramSchedulePayload {
 
 export interface UpdateProgramSchedulePayload extends Partial<CreateProgramSchedulePayload> {}
 
+export interface MosqueSpace {
+  id: number;
+  mosque_id?: number;
+  name: string;
+  capacity?: number;
+}
+
+export interface MyMosqueDetails {
+  id: number;
+  name: string;
+  city?: string;
+  district?: string;
+  spaces?: MosqueSpace[];
+}
+
 export interface DawahProgramStats {
   total_programs: number;
   active_programs: number;

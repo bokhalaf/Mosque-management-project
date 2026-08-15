@@ -1,10 +1,10 @@
 // ==============================
 // Sermons — SermonFilterBar Component
-// شريط البحث + filter pills للتصنيفات
+// شريط البحث + filter pills للتصنيفات (مع دعم تصنيف غير ذلك وبحث الـ API)
 // ==============================
 
 import React from 'react';
-import { Archive, Search } from 'lucide-react';
+import { BookOpen, Search } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -12,17 +12,18 @@ interface Category {
 }
 
 const categoriesList: Category[] = [
-  { id: 'all', label: 'جميع الخطب المؤرشفة' },
-  { id: 'faith', label: 'عقيدة وإيمانيات' },
-  { id: 'fiqh', label: 'فقه وأحكام' },
-  { id: 'ethics', label: 'أخلاق وسلوك' },
-  { id: 'contemporary', label: 'قضايا معاصرة' },
+  { id: 'all', label: 'جميع الخطب' },
+  { id: 'creed_faith', label: 'عقيدة وإيمانيات' },
+  { id: 'jurisprudence_rulings', label: 'فقه وأحكام' },
+  { id: 'ethics_conduct', label: 'أخلاق وسلوك' },
+  { id: 'contemporary_issues', label: 'قضايا معاصرة' },
+  { id: 'occasions_seasons', label: 'مناسبات ومواسم' },
+  { id: 'other', label: 'غير ذلك' },
 ];
 
 interface SermonFilterBarProps {
   searchQuery: string;
   selectedCategory: string;
-  filteredCount: number;
   onSetSearchQuery: (v: string) => void;
   onSetCategory: (v: string) => void;
 }
@@ -30,20 +31,16 @@ interface SermonFilterBarProps {
 export function SermonFilterBar({
   searchQuery,
   selectedCategory,
-  filteredCount,
   onSetSearchQuery,
   onSetCategory,
 }: SermonFilterBarProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4 font-['Cairo']">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
         <div className="flex items-center gap-2">
-          <Archive className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-black text-foreground">مكتبة الخطب المؤرشفة</h3>
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-muted border border-border text-muted-foreground">
-            {filteredCount} خطبة مؤرشفة
-          </span>
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h3 className="text-base font-black text-foreground">مكتبة الخطب</h3>
         </div>
 
         <div className="relative w-full md:w-80">
@@ -52,8 +49,8 @@ export function SermonFilterBar({
             type="text"
             value={searchQuery}
             onChange={(e) => onSetSearchQuery(e.target.value)}
-            placeholder="ابحث في الخطب المؤرشفة أو اسم الخطيب..."
-            className="w-full pl-4 pr-10 py-2.5 bg-muted/60 border border-border focus:border-primary rounded-xl text-xs font-bold outline-none text-foreground"
+            placeholder="ابحث في مكتبة الخطب أو اسم الخطيب..."
+            className="w-full pl-4 pr-10 py-2.5 bg-muted/60 border border-border focus:border-primary rounded-xl text-xs font-bold outline-none text-foreground placeholder:text-muted-foreground/70"
           />
         </div>
       </div>

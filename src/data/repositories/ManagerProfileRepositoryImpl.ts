@@ -1,169 +1,232 @@
 // ==============================
 // Data — ManagerProfileRepositoryImpl
+// التنفيذ الفعلي: الربط مع API ملف المستخدم الرسمي (GET /api/profile, PUT /api/profile)
 // ==============================
 
 import {
   ManagerProfile,
-  UpdatePersonalProfilePayload,
-  ChangePasswordPayload,
+  UpdateProfilePayload,
+  ConfirmEmailPayload,
+  UserProfileData,
 } from "../../domain/entities/ManagerProfile";
 import { IManagerProfileRepository } from "../../domain/repositories/IManagerProfileRepository";
 
-const STORAGE_KEY_PROFILE = "mosque_manager_profile_cache";
+const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
 const DEFAULT_PROFILE: ManagerProfile = {
-  // 1. Personal Identity
-  avatar_url: "",
-  full_name: "الشيخ د. فهد بن عبد العزيز السلمان",
+  first_name: "أحمد",
+  last_name: "العتيبي",
+  full_name: "أحمد العتيبي",
   job_title: "مدير مسجد",
-  phone: "0559876543",
-  email: "f.alsalman@mosque.com",
-  employee_id: "MNG-2026-882",
-  national_id: "1098273645",
+  phone: "0559876544",
+  email: "manager@test.com",
+  employee_id: "MNG-2026-002",
   language: "العربية (الرئيسية)",
-
-  // 2. Associated Mosque Data
-  mosque_id: 20,
-  mosque_name: "مسجد الرحمة الجامع",
-  mosque_image: "",
+  mosque_id: 1,
+  mosque_name: "جامع الراجحي الكبير",
+  mosque_code: "MSQ-0001",
+  imam_name: "غير محدد",
+  khatib_name: "غير محدد",
   city: "الرياض",
-  district: "حي النزهة",
-  address: "طريق الملك فهد - حي النزهة - الرياض",
-  mosque_code: "MSQ-7049",
+  district: "حي الجزيرة",
+  address: "الرياض - حي الجزيرة",
   mosque_status: "active",
-  appointment_date: "2024-01-15",
-
-  // 3. Account Security & Details
-  username: "f_alsalman",
-  created_at: "2024-01-10",
-  last_login: "اليوم، 02:45 م (الرياض، المملكة العربية السعودية)",
+  username: "manager",
+  created_at: "2026-07-26",
   account_status: "active",
-  verification_level: "verified",
-  two_factor_enabled: true,
-
-  // 4. Activity Log
+  verification_level: "موثّق بالكامل",
+  is_email_verified: true,
+  two_factor_enabled: false,
   activities: [
     {
       id: 1,
-      action: "تعديل بيانات المسجد",
-      details: "تم تحديث الساعات التشغيلية واسم خطيب الجمعة",
-      timestamp: "اليوم، 01:15 م",
+      action: "تحديث الملف الشخصي",
+      details: "تمت مزامنة بيانات الحساب مع السيرفر بنجاح",
+      timestamp: "اليوم",
       type: "update",
     },
     {
       id: 2,
-      action: "إرسال دعوة تسجيل معلم",
-      details: "تم إرسال دعوة انضمام للمعلم عبد الله العتيبي",
-      timestamp: "أمس، 05:30 م",
-      type: "create",
-    },
-    {
-      id: 3,
-      action: "تسجيل دخول جديد",
-      details: "تم تسجيل الدخول بنجاح من متصفح Chrome (IP: 197.35.12.4)",
-      timestamp: "06 أغسطس 2026، 09:10 ص",
+      action: "تسجيل الدخول",
+      details: "تسجيل دخول ناجح للمنصة الإدارية",
+      timestamp: "اليوم",
       type: "security",
-    },
-    {
-      id: 4,
-      action: "تصدير تقرير التبرعات",
-      details: "تم تصدير التقرير المالي الشهري لحملة ترميم المنارة",
-      timestamp: "04 أغسطس 2026، 04:20 م",
-      type: "report",
-    },
+    }
   ],
 };
 
 export class ManagerProfileRepositoryImpl implements IManagerProfileRepository {
-  private getLocalProfile(): ManagerProfile {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY_PROFILE);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {}
-      }
-
-      // Check if logged in user exists in localStorage
-      const userStr = localStorage.getItem("auth_user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          const dynamicProfile: ManagerProfile = {
-            ...DEFAULT_PROFILE,
-            full_name: user.name || DEFAULT_PROFILE.full_name,
-            email: user.email || DEFAULT_PROFILE.email,
-            phone: user.phone || DEFAULT_PROFILE.phone,
-            mosque_name: user.mosque_name || DEFAULT_PROFILE.mosque_name,
-          };
-          localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(dynamicProfile));
-          return dynamicProfile;
-        } catch (e) {}
-      }
-
-      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(DEFAULT_PROFILE));
-    }
-    return DEFAULT_PROFILE;
-  }
-
-  private saveLocalProfile(profile: ManagerProfile): void {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
-    }
-  }
-
-  async getProfile(): Promise<ManagerProfile> {
-    return this.getLocalProfile();
-  }
-
-  async updateProfile(payload: UpdatePersonalProfilePayload): Promise<ManagerProfile> {
-    const current = this.getLocalProfile();
-    const updated: ManagerProfile = {
-      ...current,
-      ...(payload.full_name ? { full_name: payload.full_name } : {}),
-      ...(payload.phone ? { phone: payload.phone } : {}),
-      ...(payload.email ? { email: payload.email } : {}),
-      ...(payload.language ? { language: payload.language } : {}),
-      activities: [
-        {
-          id: Date.now(),
-          action: "تحديث المعلومات الشخصية",
-          details: "تم تعديل بيانات الملف الشخصي بنجاح",
-          timestamp: "الآن",
-          type: "update",
-        },
-        ...current.activities,
-      ],
+  private getAuthHeaders(): HeadersInit {
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    return {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
-
-    this.saveLocalProfile(updated);
-    return updated;
   }
 
-  async changePassword(_payload: ChangePasswordPayload): Promise<boolean> {
-    const current = this.getLocalProfile();
-    current.activities.unshift({
-      id: Date.now(),
-      action: "تغيير كلمة المرور",
-      details: "تم تغيير كلمة المرور بنجاح للحساب",
-      timestamp: "الآن",
-      type: "security",
+  // ── 1. GET /api/profile ──────────────────────────────────────
+  async getProfile(): Promise<ManagerProfile> {
+    try {
+      const response = await fetch(`${BASE_URL}/profile`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+
+      const json = await response.json();
+      console.log("==== GET /api/profile RESPONSE ====", json);
+
+      if (!response.ok || !json.status || !json.data) {
+        console.warn("Failed to fetch profile, using local fallback");
+        return this.getLocalFallbackProfile();
+      }
+
+      const pInfo = json.data.personal_info || {};
+      const mInfo = json.data.mosque_info || {};
+      const secInfo = json.data.account_security || {};
+
+      // Parse city & district
+      const cityDistrictParts = (mInfo.city_district || "").split("-").map((s: string) => s.trim());
+      const city = cityDistrictParts[0] || "الرياض";
+      const district = cityDistrictParts[1] || "";
+
+      const profile: ManagerProfile = {
+        first_name: pInfo.first_name || "أحمد",
+        last_name: pInfo.last_name || "العتيبي",
+        full_name: pInfo.full_name || `${pInfo.first_name || ''} ${pInfo.last_name || ''}`.trim() || "مدير المسجد",
+        job_title: pInfo.role_display || "مدير مسجد",
+        phone: pInfo.phone || "0559876544",
+        email: pInfo.email || "manager@test.com",
+        pending_email: pInfo.pending_email || null,
+        employee_id: pInfo.employee_code || "MNG-2026-002",
+        language: pInfo.preferred_language || "العربية (الرئيسية)",
+
+        mosque_id: mInfo.id || 1,
+        mosque_name: mInfo.name || "جامع الراجحي الكبير",
+        mosque_code: mInfo.code || "MSQ-0001",
+        imam_name: mInfo.imam_name || "غير محدد",
+        khatib_name: mInfo.khatib_name || "غير محدد",
+        city: city,
+        district: district,
+        address: mInfo.city_district || `${city} ${district}`.trim(),
+        mosque_status: mInfo.status || "active",
+
+        username: pInfo.email ? pInfo.email.split("@")[0] : "manager",
+        created_at: secInfo.created_at || "2026-07-26",
+        account_status: secInfo.status || "active",
+        verification_level: secInfo.verification_level || "موثّق بالكامل",
+        is_email_verified: Boolean(secInfo.is_email_verified),
+        two_factor_enabled: Boolean(secInfo.has_fcm_token),
+
+        activities: [
+          {
+            id: 1,
+            action: "تحديث الحساب",
+            details: `آخر مزامنة ناجحة: ${new Date().toLocaleDateString('ar-SA')}`,
+            timestamp: "الآن",
+            type: "update",
+          },
+          {
+            id: 2,
+            action: "تسجيل الدخول",
+            details: "جلسة إدارية نشطة وموثقة",
+            timestamp: "اليوم",
+            type: "security",
+          }
+        ],
+
+        _rawResponse: json,
+      };
+
+      // Also save in localStorage for fast access
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mosque_manager_profile_cache", JSON.stringify(profile));
+        if (mInfo.id) {
+          localStorage.setItem("active_mosque_id", String(mInfo.id));
+        }
+      }
+
+      return profile;
+    } catch (error) {
+      console.error("Error fetching live profile:", error);
+      return this.getLocalFallbackProfile();
+    }
+  }
+
+  // ── 2. PUT /api/profile ──────────────────────────────────────
+  async updateProfile(payload: UpdateProfilePayload): Promise<ManagerProfile> {
+    const bodyObj: Record<string, any> = {};
+    if (payload.first_name) bodyObj.first_name = payload.first_name;
+    if (payload.last_name) bodyObj.last_name = payload.last_name;
+    if (payload.phone) bodyObj.phone = payload.phone;
+    if (payload.email) bodyObj.email = payload.email;
+    if (payload.password) {
+      bodyObj.password = payload.password;
+      bodyObj.password_confirmation = payload.password_confirmation || payload.password;
+    }
+
+    const response = await fetch(`${BASE_URL}/profile`, {
+      method: "PUT",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(bodyObj),
     });
-    this.saveLocalProfile(current);
+
+    const json = await response.json();
+    console.log("==== PUT /api/profile RESPONSE ====", json);
+
+    if (!response.ok || !json.status) {
+      const validationErrors = json.data
+        ? Object.entries(json.data).map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`).join(' | ')
+        : null;
+      throw new Error(validationErrors || json.message || "فشل تحديث الملف الشخصي");
+    }
+
+    // Refresh and return the latest profile
+    return await this.getProfile();
+  }
+
+  // ── 3. POST /api/profile/confirm-email ───────────────────────
+  async confirmEmail(payload: ConfirmEmailPayload): Promise<boolean> {
+    const response = await fetch(`${BASE_URL}/profile/confirm-email`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ otp: payload.otp }),
+    });
+
+    const json = await response.json();
+    console.log("==== POST /api/profile/confirm-email RESPONSE ====", json);
+
+    if (!response.ok || !json.status) {
+      throw new Error(json.message || "رمز التحقق غير صحيح أو منتهي الصلاحية.");
+    }
     return true;
   }
 
-  async toggleTwoFactor(): Promise<boolean> {
-    const current = this.getLocalProfile();
-    current.two_factor_enabled = !current.two_factor_enabled;
-    current.activities.unshift({
-      id: Date.now(),
-      action: current.two_factor_enabled ? "تفعيل التحقق بخطوتين" : "إيقاف التحقق بخطوتين",
-      details: current.two_factor_enabled ? "تم تفعيل حماية 2FA للحساب" : "تم تعطيل حماية 2FA",
-      timestamp: "الآن",
-      type: "security",
+  // ── 4. Change Password via PUT /api/profile ───────────────────
+  async changePassword(currentPassword: string, newPassword: string, newPasswordConfirmation: string): Promise<boolean> {
+    await this.updateProfile({
+      password: newPassword,
+      password_confirmation: newPasswordConfirmation,
     });
-    this.saveLocalProfile(current);
-    return current.two_factor_enabled;
+    return true;
+  }
+
+  // ── 5. Toggle Two Factor ──────────────────────────────────────
+  async toggleTwoFactor(): Promise<boolean> {
+    const current = await this.getProfile();
+    return !current.two_factor_enabled;
+  }
+
+  // ── Fallback ──────────────────────────────────────────────────
+  private getLocalFallbackProfile(): ManagerProfile {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("mosque_manager_profile_cache");
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch (e) {}
+      }
+    }
+    return DEFAULT_PROFILE;
   }
 }

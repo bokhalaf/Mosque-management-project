@@ -10,6 +10,8 @@ import {
   CreateProgramSchedulePayload,
   UpdateProgramSchedulePayload,
   DawahProgramStats,
+  MosqueSpace,
+  MyMosqueDetails,
 } from "../entities/DawahProgram";
 
 export interface IDawahProgramRepository {
@@ -25,4 +27,6 @@ export interface IDawahProgramRepository {
   deleteSchedule(programId: number | string, scheduleId: number | string): Promise<boolean>;
   
   getStats(): Promise<DawahProgramStats>;
+  getMyMosque(): Promise<MyMosqueDetails | null>;
+  getMosqueSpaces(mosqueId?: number): Promise<MosqueSpace[]>;
 }

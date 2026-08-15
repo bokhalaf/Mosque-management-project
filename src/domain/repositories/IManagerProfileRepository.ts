@@ -4,13 +4,15 @@
 
 import {
   ManagerProfile,
-  UpdatePersonalProfilePayload,
-  ChangePasswordPayload,
+  UpdateProfilePayload,
+  ConfirmEmailPayload,
+  UserProfileData,
 } from "../entities/ManagerProfile";
 
 export interface IManagerProfileRepository {
   getProfile(): Promise<ManagerProfile>;
-  updateProfile(payload: UpdatePersonalProfilePayload): Promise<ManagerProfile>;
-  changePassword(payload: ChangePasswordPayload): Promise<boolean>;
+  updateProfile(payload: UpdateProfilePayload): Promise<ManagerProfile>;
+  confirmEmail(payload: ConfirmEmailPayload): Promise<boolean>;
+  changePassword(currentPassword: string, newPassword: string, newPasswordConfirmation: string): Promise<boolean>;
   toggleTwoFactor(): Promise<boolean>;
 }

@@ -1,17 +1,15 @@
 // ==============================
 // Presentation — Hook
-// useSermonDetails: جلب تفاصيل خطبة + اعتماد / إلغاء اعتماد الجمعة + TTS + نسخ المحتوى
+// useSermonDetails: جلب تفاصيل خطبة + اعتماد / إلغاء اعتماد الجمعة + مراقب السيرفر المباشر
 // ==============================
 
 import { useState, useEffect, useCallback } from 'react';
-import { SermonRepositoryImpl } from '../../data/repositories/SermonRepositoryImpl';
+import { SermonRepositoryImpl, BASE_URL } from '../../data/repositories/SermonRepositoryImpl';
 import { Sermon, SermonSelection } from '../../domain/entities/Sermon';
 import { GetSermonByIdUseCase } from '../../domain/usecases/sermons/GetSermonByIdUseCase';
 import { GetUpcomingSermonSelectionUseCase } from '../../domain/usecases/sermons/GetUpcomingSermonSelectionUseCase';
 import { StoreSermonSelectionUseCase } from '../../domain/usecases/sermons/StoreSermonSelectionUseCase';
 import { DeleteSermonSelectionUseCase } from '../../domain/usecases/sermons/DeleteSermonSelectionUseCase';
-import { ArabicTTSPlayer } from '../utils/arabicTTS';
-
 import { useToast } from '../../app/components/ui/Toast';
 
 const sermonRepo = new SermonRepositoryImpl();
@@ -20,7 +18,13 @@ const getUpcomingUseCase = new GetUpcomingSermonSelectionUseCase(sermonRepo);
 const storeSelectionUseCase = new StoreSermonSelectionUseCase(sermonRepo);
 const deleteSelectionUseCase = new DeleteSermonSelectionUseCase(sermonRepo);
 
-const ttsPlayer = ArabicTTSPlayer.getInstance();
+export interface ApiDebugLog {
+  action: string;
+  url: string;
+  status: number | string;
+  response: any;
+  time: string;
+}
 
 export function useSermonDetails(sermonId: string | number) {
   const { showToast } = useToast();
@@ -31,18 +35,39 @@ export function useSermonDetails(sermonId: string | number) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // TTS states
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isSpeechPaused, setIsSpeechPaused] = useState(false);
+  // Debug inspector state
+  const [showDebugTerminal, setShowDebugTerminal] = useState(true);
+  const [debugLogs, setDebugLogs] = useState<ApiDebugLog[]>([]);
+
+  const addDebugLog = useCallback((action: string, url: string, status: number | string, response: any) => {
+    setDebugLogs(prev => [
+      { action, url, status, response, time: new Date().toLocaleTimeString('ar-SA') },
+      ...prev.slice(0, 15),
+    ]);
+  }, []);
+
+  const clearDebugLogs = useCallback(() => setDebugLogs([]), []);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await getSermonByIdUseCase.execute(sermonId);
+      addDebugLog(
+        `GET /api/sermons/${sermonId}`,
+        `${BASE_URL}/sermons/${sermonId}`,
+        200,
+        data
+      );
       setSermon(data);
 
       const upcoming = await getUpcomingUseCase.execute();
+      addDebugLog(
+        'GET /api/sermon-selections/upcoming',
+        `${BASE_URL}/sermon-selections/upcoming`,
+        200,
+        upcoming
+      );
       setUpcomingSelection(upcoming);
     } catch (err: any) {
       console.error('Error fetching sermon details:', err);
@@ -50,13 +75,10 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setLoading(false);
     }
-  }, [sermonId]);
+  }, [sermonId, addDebugLog]);
 
   useEffect(() => {
     fetchDetails();
-    return () => {
-      ttsPlayer.stop();
-    };
   }, [fetchDetails]);
 
   const isScheduledForFriday = Boolean(
@@ -73,6 +95,12 @@ export function useSermonDetails(sermonId: string | number) {
         sermon_id: sermon.id,
         selection_date: new Date().toISOString().split('T')[0],
       });
+      addDebugLog(
+        'POST /api/sermon-selections',
+        `${BASE_URL}/sermon-selections`,
+        201,
+        selection
+      );
       setUpcomingSelection(selection);
       setSermon(prev => prev ? { ...prev, status: 'Scheduled' } : null);
       showToast('تم اعتماد خطبة الجمعة القادمة بنجاح', 'success');
@@ -82,13 +110,19 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [sermon, showToast]);
+  }, [sermon, addDebugLog, showToast]);
 
   const handleCancelFridaySelection = useCallback(async () => {
     setActionLoading(true);
     try {
       const targetId = upcomingSelection?.id || sermonId;
       await deleteSelectionUseCase.execute(targetId);
+      addDebugLog(
+        `DELETE /api/sermon-selections/${targetId}`,
+        `${BASE_URL}/sermon-selections/${targetId}`,
+        200,
+        { status: 'deleted', id: targetId }
+      );
       setUpcomingSelection(null);
       setSermon(prev => prev ? { ...prev, status: 'archived' } : null);
       showToast('تم إلغاء اعتماد خطبة الجمعة بنجاح', 'success');
@@ -98,43 +132,7 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [upcomingSelection, sermonId, showToast]);
-
-  const toggleSermonSpeech = useCallback(() => {
-    const textToRead = (
-      sermon?.content ||
-      (sermon as any)?.description ||
-      sermon?.notes ||
-      sermon?.title ||
-      ''
-    ).trim();
-
-    if (!textToRead) {
-      alert('لا يوجد نص مكتوب لقراءته في هذه الخطبة.');
-      return;
-    }
-
-    if (isSpeaking) {
-      if (isSpeechPaused) {
-        ttsPlayer.resume();
-        setIsSpeechPaused(false);
-      } else {
-        ttsPlayer.pause();
-        setIsSpeechPaused(true);
-      }
-    } else {
-      ttsPlayer.speak(textToRead, (speaking, paused) => {
-        setIsSpeaking(speaking);
-        setIsSpeechPaused(paused ?? false);
-      });
-    }
-  }, [sermon, isSpeaking, isSpeechPaused]);
-
-  const stopSpeech = useCallback(() => {
-    ttsPlayer.stop();
-    setIsSpeaking(false);
-    setIsSpeechPaused(false);
-  }, []);
+  }, [upcomingSelection, sermonId, addDebugLog, showToast]);
 
   const copyContent = useCallback(() => {
     if (sermon?.content) {
@@ -150,14 +148,16 @@ export function useSermonDetails(sermonId: string | number) {
     actionLoading,
     error,
     copied,
-    isSpeaking,
-    isSpeechPaused,
     isScheduledForFriday,
     fetchDetails,
-    toggleSermonSpeech,
-    stopSpeech,
     copyContent,
     handleSelectForFriday,
     handleCancelFridaySelection,
+    // Debug Inspector
+    showDebugTerminal,
+    setShowDebugTerminal,
+    debugLogs,
+    addDebugLog,
+    clearDebugLogs,
   };
 }

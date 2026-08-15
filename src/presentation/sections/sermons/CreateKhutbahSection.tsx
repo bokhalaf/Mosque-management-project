@@ -3,18 +3,19 @@ import React from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   BookOpen, Plus, Mic, Square, Play, Pause, Send, FileText, CheckCircle2,
-  AlertTriangle, RefreshCw, X, ScanText, Volume2, Terminal, Copy
+  AlertTriangle, RefreshCw, X, ScanText, Terminal, Copy
 } from 'lucide-react';
 import { useCreateKhutbah } from '../../hooks/useCreateKhutbah';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { id: 'faith', label: 'عقيدة وإيمانيات' },
-  { id: 'fiqh', label: 'فقه وأحكام' },
-  { id: 'ethics', label: 'أخلاق وسلوك' },
-  { id: 'contemporary', label: 'قضايا معاصرة' },
-  { id: 'occasions', label: 'مناسبات ومواسم' },
+  { id: 'creed_faith', label: 'عقيدة وإيمانيات' },
+  { id: 'jurisprudence_rulings', label: 'فقه وأحكام' },
+  { id: 'ethics_conduct', label: 'أخلاق وسلوك' },
+  { id: 'contemporary_issues', label: 'قضايا معاصرة' },
+  { id: 'occasions_seasons', label: 'مناسبات ومواسم' },
+  { id: 'other', label: 'غير ذلك' },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -32,8 +33,6 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
     publishForFriday, setPublishForFriday,
     isDictating, isPaused,
     startDictation, pauseDictation, resumeDictation, stopDictation,
-    isSpeaking, isSpeechPaused,
-    toggleReadContentAloud, stopTTS,
     isScanningImage, ocrProgress, ocrStatusText, imageInputRef, handleImageOCR,
     submitting, error, setError,
     handleSubmit,
@@ -163,16 +162,6 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
               </h3>
               {/* Action Toolbar */}
               <div className="flex items-center gap-2">
-                {/* TTS */}
-                <button type="button" onClick={toggleReadContentAloud}
-                  className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all ${
-                    isSpeaking ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-muted border-border hover:border-primary/50 text-foreground'
-                  }`} title="القارئ الصوتي">
-                  <Volume2 className={`w-4 h-4 ${isSpeaking && !isSpeechPaused ? 'animate-bounce text-white' : 'text-primary'}`} />
-                </button>
-
-                <div className="w-px h-6 bg-border mx-0.5" />
-
                 {/* OCR */}
                 <input type="file" ref={imageInputRef} onChange={handleImageOCR} accept="image/*" className="hidden" />
                 <button type="button" onClick={() => imageInputRef.current?.click()} disabled={isScanningImage}
@@ -202,15 +191,6 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
             </div>
 
             {/* Status bars */}
-            {isSpeaking && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between text-xs font-bold text-emerald-600 animate-in fade-in">
-                <div className="flex items-center gap-2"><Volume2 className="w-4 h-4 animate-bounce shrink-0" /><span>القارئ الصوتي يقرأ نص الخطبة الآن...</span></div>
-                <div className="flex items-center gap-1.5">
-                  <button type="button" onClick={toggleReadContentAloud} className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px]">{isSpeechPaused ? 'استكمال' : 'مؤقت'}</button>
-                  <button type="button" onClick={stopTTS} className="px-2.5 py-1 bg-red-500 text-white rounded-lg text-[11px]">إيقاف</button>
-                </div>
-              </div>
-            )}
 
             {isScanningImage && (
               <div className="p-3.5 bg-primary/10 border border-primary/20 rounded-xl text-primary text-xs font-bold space-y-2 animate-in fade-in">

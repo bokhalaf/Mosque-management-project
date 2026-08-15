@@ -4,12 +4,12 @@
 // ==============================
 
 import { ISermonRepository } from "../../repositories/ISermonRepository";
-import { Sermon } from "../../entities/Sermon";
+import { PaginatedSermons } from "../../entities/Sermon";
 
 export class SearchSermonsUseCase {
   constructor(private sermonRepository: ISermonRepository) {}
 
-  async execute(query: string): Promise<Sermon[]> {
-    return this.sermonRepository.searchSermons(query);
+  async execute(query?: string, page: number = 1, limit: number = 6, category?: string): Promise<PaginatedSermons> {
+    return this.sermonRepository.searchSermons(query, page, limit, category);
   }
 }

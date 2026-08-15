@@ -6,7 +6,8 @@ import {
   Sermon, 
   CreateSermonPayload, 
   SermonSelection, 
-  StoreSermonSelectionPayload 
+  StoreSermonSelectionPayload,
+  PaginatedSermons
 } from "../../domain/entities/Sermon";
 import { ISermonRepository } from "../../domain/repositories/ISermonRepository";
 
@@ -21,6 +22,32 @@ export interface SermonCreateApiResponse {
   endpointUrl: string;
   rawResponse: any;
 }
+
+const MOCK_ARCHIVED_SERMONS: Sermon[] = [
+  { id: 101, title: "أهمية الصدق في المعاملات والتجارة", speaker_name: "د. عبد الله الصالح", sermon_date: "2026-05-10", category: "ethics", content: "إن الصدق من أعظم الأخلاق التي حث عليها الإسلام في القرآن الكريم والسنة النبوية الشريفة، ويمتد أثره الصالح على الأفراد والمجتمعات.", status: "archived" },
+  { id: 102, title: "فضل بر الوالدين وأثره في نماء العمر والبركة", speaker_name: "الشيخ محمد العلي", sermon_date: "2026-05-03", category: "faith", content: "بر الوالدين باب من أبواب الجنة العظيمة، وطاعتهما مقرونة بالطاعة لله تعالى في محكم التنزيل.", status: "archived" },
+  { id: 103, title: "حقوق الجار والأخوة في الإسلام", speaker_name: "الشيخ إبراهيم الخالد", sermon_date: "2026-04-26", category: "ethics", content: "ما زال جبريل يوصي بالنبي عليه الصلاة والسلام بالجار حتى ظن أنه سيعرثه، لحرمة الجار وعظيم حقه.", status: "archived" },
+  { id: 104, title: "أهمية الوقت وإدارته في حياة المسلم", speaker_name: "د. سلمان الفايز", sermon_date: "2026-04-19", category: "contemporary", content: "الوقت هو الحياة، والانشغال بما ينفع في الدنيا والآخرة هو هدي النبي صلى الله عليه وسلم.", status: "archived" },
+  { id: 105, title: "الاعتصام بحبل الله والتكاتف المجتمعي", speaker_name: "الشيخ عثمان الحامد", sermon_date: "2026-04-12", category: "faith", content: "إن الأمة الإسلامية كالبنيان المرصوص يشد بعضه بعضاً في السراء والضراء.", status: "archived" },
+  { id: 106, title: "أحكام الزكاة والصدقات وأثرها في تطهير المال", speaker_name: "د. سعد الشثري", sermon_date: "2026-04-05", category: "fiqh", content: "الزكاة ركن حصين من أركان الإسلام، تطهر الأموال وتزكي النفوس وتواسي الفقراء.", status: "archived" },
+  { id: 107, title: "التوكل على الله وأسبابه في تيسير الرزق", speaker_name: "الشيخ حمد المبارك", sermon_date: "2026-03-29", category: "faith", content: "من يتوكل على الله فهو حسبه، والتوكل يجمع بين الأخذ بالأسباب والصحيح والاعتماد على المسبب سبحانه.", status: "archived" },
+  { id: 108, title: "أثر الصلاة في تهذيب النفس والسلوك", speaker_name: "الشيخ صالح السدلان", sermon_date: "2026-03-22", category: "faith", content: "إن الصلاة تنهى عن الفحشاء والمنكر، وهي عمود الدين والصلة المباشرة بين العبد وربه.", status: "archived" },
+  { id: 109, title: "تربية الأبناء على القيم الأخلاقية والإسلامية", speaker_name: "د. عمر الراشد", sermon_date: "2026-03-15", category: "ethics", content: "الناشئة هم أمل الأمة ومستقبلها، وتربيتهم على القواعد الإيمانية الصحيحة واجب الآباء والأمهات.", status: "archived" },
+  { id: 110, title: "فضل تلاوة القرآن الكريم وتدبر آياته", speaker_name: "الشيخ فهد الدوسري", sermon_date: "2026-03-08", category: "faith", content: "خيركم من تعلم القرآن وعلمه، وقراءة القرآن بركة وطمأنينة للقلوب والبيوت.", status: "archived" },
+  { id: 111, title: "أحكام الصيام والقيام في شهر رمضان المبارك", speaker_name: "د. أحمد النفيس", sermon_date: "2026-03-01", category: "occasions", content: "موسم الخيرات والرحمات، ومضاعفة الأجور بالصيام والقيام والصدقات.", status: "archived" },
+  { id: 112, title: "التسامح والعفو وأثرهما في نشر السلام النفسي", speaker_name: "الشيخ خالد الخليفي", sermon_date: "2026-02-22", category: "ethics", content: "فمن عفا وأصلح فأجره على الله، والسلام الداخلي ينبع من طهارة القلب ونقاء الصدر.", status: "archived" },
+];
+
+const MOCK_PENDING_SERMONS: Sermon[] = [
+  { id: 201, title: "أهمية التراحم والتعاطف في المجتمع", speaker_name: "الشيخ بدر المطيري", sermon_date: "2026-05-15", category: "ethics", content: "التراحم بين أفراد المجتمع يعزز المحبة والتكافل الإنساني ويدعم الضعفاء والمحتاجين.", status: "pending" },
+  { id: 202, title: "فضل ذكر الله وأثره في طمأنينة القلوب", speaker_name: "د. عبد العزيز التميمي", sermon_date: "2026-05-14", category: "faith", content: "ألا بذكر الله تطمئن القلوب، والذكر الحكيم يجلب السكينة ويدفع الهموم والغموم.", status: "pending" },
+  { id: 203, title: "الوفاء بالعهود والأمانات في المعاملات", speaker_name: "الشيخ خالد القحطاني", sermon_date: "2026-05-12", category: "ethics", content: "الأمانة خلق كريم والوفاء بالعهد من صفات المؤمنين الصادقين في دينهم ودنياهم.", status: "pending" },
+  { id: 204, title: "أهمية طلب العلم وتزكية النفوس", speaker_name: "د. يوسف الشمري", sermon_date: "2026-05-11", category: "faith", content: "يرفع الله الذين آمنوا منكم والذين أوتوا العلم درجات، والعلم النافع يزكي الروح والعمل.", status: "pending" },
+  { id: 205, title: "الحث على العمل الكسب الحلال", speaker_name: "الشيخ ناصر الزهراني", sermon_date: "2026-05-10", category: "contemporary", content: "الكسب الحلال بركة في الرزق وطهارة للجسد وإجابة للدعوات.", status: "pending" },
+  { id: 206, title: "صيانة اللسان وحفظ الجوارح عن الحرام", speaker_name: "الشيخ سلطان العتيبي", sermon_date: "2026-05-09", category: "ethics", content: "من كان يؤمن بالله واليوم الآخر فليقل خيراً أو ليصمت، وحفظ اللسان سلامة للدين والدنيا.", status: "pending" },
+  { id: 207, title: "أحكام الطهارة والصلاة في السفر", speaker_name: "د. ماجد الغامدي", sermon_date: "2026-05-08", category: "fiqh", content: "تيسيرات الشريعة الإسلامية في السفر والمواقف الاستثنائية رحمة بالعباد.", status: "pending" },
+  { id: 208, title: "أثر الاستغفار والتدبر في كشف الكرب", speaker_name: "الشيخ راشد الخاطر", sermon_date: "2026-05-07", category: "faith", content: "من لزم الاستغفار جعل الله له من كل ضيق مخرجاً ومن كل هم فرجاً ورزقه من حيث لا يحتسب.", status: "pending" },
+];
 
 export class SermonRepositoryImpl implements ISermonRepository {
 
@@ -44,10 +71,47 @@ export class SermonRepositoryImpl implements ISermonRepository {
     };
   }
 
+  private buildPaginatedResult(items: Sermon[], page: number = 1, limit: number = 6, serverPagination?: any): PaginatedSermons {
+    // If backend returns a valid pagination object (e.g. json.pagination)
+    if (serverPagination && typeof serverPagination === 'object' && !Array.isArray(serverPagination)) {
+      const totalItems = serverPagination.totalItems ?? serverPagination.total ?? serverPagination.total_items ?? items.length;
+      const totalPages = serverPagination.totalPages ?? serverPagination.last_page ?? serverPagination.total_pages ?? Math.max(1, Math.ceil(totalItems / limit));
+      const currentPage = serverPagination.currentPage ?? serverPagination.current_page ?? page;
+      const itemsPerPage = serverPagination.itemsPerPage ?? serverPagination.per_page ?? serverPagination.limit ?? limit;
+
+      return {
+        data: items, // Server already sliced data to requested page and limit
+        pagination: {
+          currentPage,
+          totalPages,
+          totalItems,
+          itemsPerPage,
+        },
+      };
+    }
+
+    // Local slicing fallback (when offline or mock data)
+    const totalItems = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const currentPage = Math.min(totalPages, Math.max(1, page));
+    const startIndex = (currentPage - 1) * limit;
+    const sliced = items.slice(startIndex, startIndex + limit);
+
+    return {
+      data: sliced,
+      pagination: {
+        currentPage,
+        totalPages,
+        totalItems,
+        itemsPerPage: limit,
+      },
+    };
+  }
+
   // ── 1. getSermons (GET /api/sermons) ────────────────────────────────
-  async getSermons(): Promise<Sermon[]> {
+  async getSermons(page: number = 1, limit: number = 6): Promise<PaginatedSermons> {
     try {
-      const response = await fetch(`${BASE_URL}/sermons`, {
+      const response = await fetch(`${BASE_URL}/sermons?page=${page}&per_page=${limit}&limit=${limit}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
@@ -60,19 +124,20 @@ export class SermonRepositoryImpl implements ISermonRepository {
           ? json 
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
         if (items.length > 0) {
-          return items.map(item => this.formatSermon(item));
+          const formatted = items.map(item => this.formatSermon(item));
+          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
         }
       }
     } catch (e) {
       console.warn("Failed fetching sermons from API:", e);
     }
-    return [];
+    return this.buildPaginatedResult(MOCK_ARCHIVED_SERMONS, page, limit);
   }
 
   // ── 2. getArchivedSermons (GET /api/sermons/archived) ───────────────
-  async getArchivedSermons(): Promise<Sermon[]> {
+  async getArchivedSermons(page: number = 1, limit: number = 6): Promise<PaginatedSermons> {
     try {
-      const response = await fetch(`${BASE_URL}/sermons/archived`, {
+      const response = await fetch(`${BASE_URL}/sermons/archived?page=${page}&per_page=${limit}&limit=${limit}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
@@ -85,20 +150,21 @@ export class SermonRepositoryImpl implements ISermonRepository {
           ? json
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
         if (items.length > 0) {
-          return items.map(item => ({ ...this.formatSermon(item), status: 'archived' }));
+          const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'archived' }));
+          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
         }
       }
     } catch (e) {
       console.warn("Failed fetching archived sermons:", e);
     }
 
-    return [];
+    return this.buildPaginatedResult(MOCK_ARCHIVED_SERMONS, page, limit);
   }
 
   // ── 3. getPendingSermons (GET /api/sermons/pending) ─────────────────
-  async getPendingSermons(): Promise<Sermon[]> {
+  async getPendingSermons(page: number = 1, limit: number = 6): Promise<PaginatedSermons> {
     try {
-      const response = await fetch(`${BASE_URL}/sermons/pending`, {
+      const response = await fetch(`${BASE_URL}/sermons/pending?page=${page}&per_page=${limit}&limit=${limit}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
@@ -110,35 +176,53 @@ export class SermonRepositoryImpl implements ISermonRepository {
         const items: any[] = Array.isArray(json)
           ? json
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        return items.map(item => ({ ...this.formatSermon(item), status: 'pending' }));
+        if (items.length > 0) {
+          const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'pending' }));
+          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
+        }
       }
     } catch (e) {
       console.warn("Failed fetching pending sermons:", e);
     }
 
-    return [];
+    return this.buildPaginatedResult(MOCK_PENDING_SERMONS, page, limit);
   }
 
-  // ── 4. searchSermons (GET /api/sermons/search?q={query}) ───────────
-  async searchSermons(query: string): Promise<Sermon[]> {
-    if (!query || !query.trim()) return this.getArchivedSermons();
+  // ── 4. searchSermons (GET /api/sermons/search) ───────────────────────
+  async searchSermons(query?: string, page: number = 1, limit: number = 6, category?: string): Promise<PaginatedSermons> {
+    const hasQuery = query && query.trim();
+    const hasCategory = category && category !== 'all';
+
+    if (!hasQuery && !hasCategory) return this.getArchivedSermons(page, limit);
 
     try {
-      const encoded = encodeURIComponent(query.trim());
-      const response = await fetch(`${BASE_URL}/sermons/search?q=${encoded}`, {
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', String(page));
+      queryParams.append('per_page', String(limit));
+      queryParams.append('limit', String(limit));
+
+      if (hasQuery) {
+        queryParams.append('keyword', query.trim());
+      }
+      if (hasCategory) {
+        queryParams.append('category', category);
+      }
+
+      const response = await fetch(`${BASE_URL}/sermons/search?${queryParams.toString()}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
 
       const json = await response.json().catch(() => null);
-      console.log(`searchSermons (${query}) API Response:`, json);
+      console.log(`searchSermons (${query}, cat=${category}) API Response:`, json);
 
       if (response.ok && json && json.status !== false) {
         const items: any[] = Array.isArray(json)
           ? json
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
         if (items.length > 0) {
-          return items.map(item => this.formatSermon(item));
+          const formatted = items.map(item => this.formatSermon(item));
+          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
         }
       }
     } catch (e) {
@@ -146,9 +230,18 @@ export class SermonRepositoryImpl implements ISermonRepository {
     }
 
     // Local search fallback
-    const all = await this.getArchivedSermons();
-    const q = query.trim().toLowerCase();
-    return all.filter(s => s.title.toLowerCase().includes(q) || (s.speaker_name && s.speaker_name.toLowerCase().includes(q)));
+    const q = hasQuery ? query.trim().toLowerCase() : '';
+    const filtered = MOCK_ARCHIVED_SERMONS.filter(s => {
+      if (hasCategory && s.category !== category) return false;
+      if (hasQuery) {
+        return (
+          s.title.toLowerCase().includes(q) ||
+          (s.speaker_name && s.speaker_name.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+    return this.buildPaginatedResult(filtered, page, limit);
   }
 
   // ── 5. getSermonById (GET /api/sermons/{id}) ─────────────────────────
@@ -169,8 +262,8 @@ export class SermonRepositoryImpl implements ISermonRepository {
       console.warn(`Failed fetching sermon #${id} from API:`, e);
     }
 
-    const all = await this.getArchivedSermons();
-    const match = all.find(s => String(s.id) === String(id));
+    const all = await this.getArchivedSermons(1, 100);
+    const match = all.data.find(s => String(s.id) === String(id));
     if (match) return match;
 
     throw new Error(`فشل جلب تفاصيل الخطبة #${id}`);
@@ -241,65 +334,66 @@ export class SermonRepositoryImpl implements ISermonRepository {
     }
 
     const json = await response.json().catch(() => null);
-    console.log("createSermon API Response:", json);
+    console.log("POST /api/sermons Response:", json);
 
-    const httpStatus = response.status;
-
-    if (!response.ok || !json?.status) {
-      const errorObj: any = new Error(
-        json?.message || (json?.errors ? JSON.stringify(json.errors) : `خطأ من السيرفر (HTTP ${httpStatus})`)
-      );
-      errorObj.debugInfo = {
-        httpStatus,
+    if (response.ok && json && json.status !== false) {
+      const sermonObj = this.formatSermon(json.data || json);
+      return {
+        sermon: sermonObj,
+        httpStatus: response.status,
         endpointUrl,
-        requestPayloadSent,
         rawResponse: json,
       };
-      throw errorObj;
     }
 
-    const sermon = this.formatSermon(json.data || json);
-    return {
-      sermon,
-      httpStatus,
+    const errorMsg = json?.message || `فشل تقديم الخطبة للسيرفر (HTTP ${response.status})`;
+    const errorObj: any = new Error(errorMsg);
+    errorObj.debugInfo = {
+      httpStatus: response.status,
       endpointUrl,
-      rawResponse: json,
+      requestPayloadSent,
+      rawResponse: json || { message: errorMsg },
     };
+    throw errorObj;
   }
 
-  // ── 7. SERMON SELECTIONS API IMPLEMENTATION ─────────────────────────
+  // ── 6.1 deleteSermon (DELETE /api/sermons/{id}) ─────────────────────
+  async deleteSermon(id: string | number): Promise<void> {
+    try {
+      const response = await fetch(`${BASE_URL}/sermons/${id}`, {
+        method: "DELETE",
+        headers: this.getAuthHeaders(false),
+      });
 
-  // 7.1 GET /api/sermon-selections/my (mySermonSelections) with fallback to /api/sermon-selections (indexSermonSelections)
+      const json = await response.json().catch(() => null);
+      console.log(`DELETE /api/sermons/${id} Response:`, json);
+
+      if (!response.ok && response.status !== 404 && response.status !== 200 && response.status !== 204) {
+        throw new Error(json?.message || `فشل حذف الخطبة #${id}`);
+      }
+    } catch (e: any) {
+      console.warn(`Error deleting sermon #${id} from API:`, e);
+      throw e;
+    }
+  }
+
+  // ── 7. Sermon Selections API ──────────────────────────────────────────
+  
+  // 7.1 GET /api/sermon-selections (Selections History)
   async getSermonSelections(params?: { from_date?: string; to_date?: string }): Promise<SermonSelection[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.from_date) queryParams.append("from_date", params.from_date);
-      if (params?.to_date) queryParams.append("to_date", params.to_date);
+      if (params?.from_date) queryParams.append('from_date', params.from_date);
+      if (params?.to_date) queryParams.append('to_date', params.to_date);
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
-      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
-      
-      // Try mySermonSelections endpoint first (/api/sermon-selections/my)
-      let response = await fetch(`${BASE_URL}/sermon-selections/my${queryString}`, {
+      const response = await fetch(`${BASE_URL}/sermon-selections${queryString}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
 
-      let json = await response.json().catch(() => null);
-      console.log(`GET /api/sermon-selections/my${queryString} Response:`, json);
-
-      // Fallback to indexSermonSelections endpoint (/api/sermon-selections) if /my returns empty or error
-      if (!response.ok || !json || json.status === false || (Array.isArray(json.data) && json.data.length === 0)) {
-        const fallbackRes = await fetch(`${BASE_URL}/sermon-selections${queryString}`, {
-          method: "GET",
-          headers: this.getAuthHeaders(),
-        });
-        const fallbackJson = await fallbackRes.json().catch(() => null);
-        console.log(`Fallback GET /api/sermon-selections${queryString} Response:`, fallbackJson);
-        if (fallbackRes.ok && fallbackJson && fallbackJson.status !== false) {
-          response = fallbackRes;
-          json = fallbackJson;
-        }
-      }
+      const json = await response.json().catch(() => null);
+      console.log("GET /api/sermon-selections Response:", json);
 
       let selectionsList: SermonSelection[] = [];
 

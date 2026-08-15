@@ -1,13 +1,11 @@
 import React from 'react';
-import { User, Play, Pause, FileText, Send, RefreshCw } from 'lucide-react';
+import { User, FileText, Send, RefreshCw } from 'lucide-react';
 import { Sermon, SermonSelection } from '../../../../domain/entities/Sermon';
 
 interface SermonCardProps {
   sermon: Sermon;
   upcomingSelection: SermonSelection | null;
-  playingId: string | number | null;
   isSelecting?: boolean;
-  onToggleAudio: (id: string | number, content: string) => void;
   onViewDetails?: (id: string | number) => void;
   onSelectForFriday: (sermon: Sermon) => void;
 }
@@ -15,14 +13,11 @@ interface SermonCardProps {
 export function SermonCard({
   sermon,
   upcomingSelection,
-  playingId,
   isSelecting = false,
-  onToggleAudio,
   onViewDetails,
   onSelectForFriday,
 }: SermonCardProps) {
   const isSelectedFriday = upcomingSelection && String(upcomingSelection.sermon_id) === String(sermon.id);
-  const isPlaying = playingId === sermon.id;
   const speakerName = sermon.speaker_name || sermon.preacher || 'الشيخ الخطيب';
 
   return (
@@ -63,38 +58,27 @@ export function SermonCard({
       </div>
 
       <div className="pt-4 border-t border-border flex items-center justify-between gap-2">
-        <button
-          onClick={() => onToggleAudio(sermon.id, sermon.content)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-            isPlaying ? 'bg-amber-500 text-white' : 'bg-muted text-foreground hover:bg-primary/10 hover:text-primary'
-          }`}
-        >
-          {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          <span>{isPlaying ? 'إيقاف القارئ' : 'القارئ الصوتي'}</span>
-        </button>
+        {onViewDetails && (
+          <button
+            onClick={() => onViewDetails(sermon.id)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-muted text-foreground hover:bg-muted/80 rounded-xl text-xs font-bold transition-all"
+            title="تفاصيل الخطبة"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>عرض التفاصيل</span>
+          </button>
+        )}
 
-        <div className="flex items-center gap-2">
-          {onViewDetails && (
-            <button
-              onClick={() => onViewDetails(sermon.id)}
-              className="p-2 bg-muted text-muted-foreground hover:text-foreground rounded-xl transition-all"
-              title="تفاصيل الخطبة"
-            >
-              <FileText className="w-4 h-4" />
-            </button>
-          )}
-
-          {!isSelectedFriday && (
-            <button
-              onClick={() => onSelectForFriday(sermon)}
-              disabled={isSelecting}
-              className="flex items-center gap-1 px-3 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all border border-primary/20 disabled:opacity-50"
-            >
-              {isSelecting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              <span>{isSelecting ? 'جاري الاعتماد...' : 'اعتماد للجمعة'}</span>
-            </button>
-          )}
-        </div>
+        {!isSelectedFriday && (
+          <button
+            onClick={() => onSelectForFriday(sermon)}
+            disabled={isSelecting}
+            className="flex items-center gap-1 px-3.5 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 mr-auto"
+          >
+            {isSelecting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            <span>{isSelecting ? 'جاري الاعتماد...' : 'اعتماد للجمعة'}</span>
+          </button>
+        )}
       </div>
     </div>
   );

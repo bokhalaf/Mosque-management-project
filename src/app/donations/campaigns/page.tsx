@@ -8,6 +8,7 @@ export default function CampaignsPage() {
   return (
     <CampaignsSection 
       onCreateCampaign={() => router.push("/donations/campaigns/create")}
+      onViewCampaignDetails={(id) => router.push(`/donations/campaigns/${id}`)}
     />
   );
 }

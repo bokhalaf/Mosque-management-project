@@ -4,21 +4,17 @@
 // ==============================
 
 import React from 'react';
-import { Radio, User, Play, Pause, Eye, X, Volume2 } from 'lucide-react';
+import { Radio, User, Eye, X } from 'lucide-react';
 import { SermonSelection } from '../../../../domain/entities/Sermon';
 
 interface FridaySermonBannerProps {
   upcomingSelection: SermonSelection;
-  playingId: string | number | null;
-  onToggleAudio: (id: string | number, content: string) => void;
   onViewDetails?: (id: string | number) => void;
   onCancelSelection: (id: string | number) => void;
 }
 
 export function FridaySermonBanner({
   upcomingSelection,
-  playingId,
-  onToggleAudio,
   onViewDetails,
   onCancelSelection,
 }: FridaySermonBannerProps) {
@@ -50,26 +46,14 @@ export function FridaySermonBanner({
         </div>
 
         <div className="flex items-center gap-3">
-          {upcomingSelection.sermon && (
-            <button
-              onClick={() => onToggleAudio(upcomingSelection.sermon!.id, upcomingSelection.sermon!.content)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-2xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
-            >
-              {playingId === upcomingSelection.sermon.id ? (
-                <><Pause className="w-4 h-4" /> <span>إيقاف القارئ</span></>
-              ) : (
-                <><Play className="w-4 h-4 fill-current" /> <span>القارئ الصوتي</span></>
-              )}
-            </button>
-          )}
-
           {onViewDetails && upcomingSelection.sermon && (
             <button
               onClick={() => onViewDetails(upcomingSelection.sermon!.id)}
-              className="p-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-2xl transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-2xl text-xs font-bold transition-all shadow-sm"
               title="عرض التفاصيل"
             >
-              <Eye className="w-5 h-5" />
+              <Eye className="w-4 h-4" />
+              <span>عرض التفاصيل</span>
             </button>
           )}
 
@@ -83,15 +67,6 @@ export function FridaySermonBanner({
           </button>
         </div>
       </div>
-
-      {upcomingSelection.sermon && playingId === upcomingSelection.sermon.id && (
-        <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between gap-4 animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <Volume2 className="w-5 h-5 text-primary animate-bounce" />
-            <span className="text-xs font-bold text-primary">القارئ الصوتي يقرأ نص ومحاور خطبة الجمعة الآن...</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

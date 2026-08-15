@@ -24,10 +24,23 @@ export interface Sermon {
   notes?: string | null;
   attachments?: (string | SermonAttachment)[];
   isPublishedForFriday?: boolean;
-  mosque_manager_id?: number;
+  mosque_manager_id?: number | string | null;
+  region_manager_id?: number | string | null;
   created_at?: string;
   createdAt?: string;
   updated_at?: string;
+}
+
+export interface SermonPagination {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+}
+
+export interface PaginatedSermons {
+  data: Sermon[];
+  pagination: SermonPagination;
 }
 
 export interface CreateSermonPayload {

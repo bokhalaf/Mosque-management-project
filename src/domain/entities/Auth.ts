@@ -16,6 +16,13 @@ export interface AuthUser {
   email_verified_at: string;
   roles: string[];
   permissions: string[];
+  mosque_id?: number | null;
+  mosque?: {
+    id: number;
+    name: string;
+    city?: string;
+    image_url?: string | null;
+  } | null;
   created_at?: string;
 }
 
