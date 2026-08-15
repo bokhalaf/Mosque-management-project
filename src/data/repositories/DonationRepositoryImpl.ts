@@ -25,14 +25,16 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
   private getMosqueId(): number {
     if (typeof window !== "undefined") {
+      const activeMosque = localStorage.getItem("active_mosque_id");
+      if (activeMosque && !isNaN(Number(activeMosque))) return Number(activeMosque);
+
       const userStr = localStorage.getItem("auth_user");
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          return user.mosque_id || 1; 
-        } catch (e) {
-          return 1;
-        }
+          if (user.mosque_id) return Number(user.mosque_id);
+          if (user.mosque?.id) return Number(user.mosque.id);
+        } catch (e) {}
       }
     }
     return 1;
@@ -89,7 +91,6 @@ export class DonationRepositoryImpl implements IDonationRepository {
         total: rawMeta?.total || rawMeta?.totalItems || rawMeta?.total_count || json.total || items.length
       };
       
-      // Map API response to our Domain Entity
       const data = items.map((item: any) => {
         let donorName = 'فاعل خير';
         if (item.user && typeof item.user === 'object') {
@@ -98,15 +99,26 @@ export class DonationRepositoryImpl implements IDonationRepository {
           donorName = item.donor_name;
         }
 
+        const amt = parseAmount(item.amount);
+        const itemType = item.donation_type || item.type || 'تبرع عام';
+        let mappedType = itemType === 'in_kind' ? 'تبرع عيني' : 'تبرع عام';
+        if (item.campaign_id || item.campaign) mappedType = 'حملة تبرع';
+
         return {
-          id: String(item.id || item._id),
-          reference: item.reference || String(item.reference_code || `REC-${item.id || '9218'}-2026`),
+          id: String(item.id || item.reference || Math.random()),
+          reference: item.reference || `REC-${item.id || '0000'}`,
           donorName: donorName,
-          amount: Number(item.amount || 0),
-          type: item.donation_type === 'cash' ? 'تبرع نقدي' : (item.donation_type === 'in_kind' ? 'تبرع عيني' : (item.type || 'تبرع نقدي')),
-          campaign: item.campaign_title || (typeof item.campaign === 'object' ? item.campaign?.title : item.campaign) || 'تبرع عام',
-          status: item.status === 'completed' ? 'مكتمل' : (item.status === 'pending' ? 'قيد الانتظار' : (item.status || 'مكتمل')),
-          date: item.created_at ? item.created_at.split(' ')[0] : (item.date || new Date().toISOString().split('T')[0]),
+          amount: amt,
+          type: mappedType,
+          donation_type: item.donation_type || item.type || 'cash',
+          item_description: item.item_description || null,
+          campaign: item.campaign_title || item.campaign?.title || (item.campaign_id ? `حملة رقم ${item.campaign_id}` : undefined),
+          status: item.status === 'completed' ? 'مكتمل' : item.status === 'pending' ? 'قيد المعالجة' : item.status || 'مكتمل',
+          date: item.created_at ? item.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          rawDate: item.created_at,
+          paymentMethod: item.payment_method || 'نقدي',
+          notes: item.notes || null,
+          _rawResponse: json,
         } as Donation;
       });
 
@@ -116,36 +128,30 @@ export class DonationRepositoryImpl implements IDonationRepository {
         _rawResponse: json
       };
     } catch (error) {
-      console.error("Error fetching donations:", error);
+      console.error("Error fetching donations from API:", error);
       return this.getPaginatedFallback(page, limit, search, type, status);
     }
   }
 
   private getPaginatedFallback(page: number, limit: number, search: string, type: string, status: string): PaginatedDonations {
-    let fallback = this.getFallbackDonations();
-    
+    let all = this.getFallbackDonations();
     if (search) {
-      fallback = fallback.filter(d => d.donorName.includes(search) || String(d.amount).includes(search));
+      all = all.filter(d => d.donorName.includes(search) || d.reference.includes(search));
     }
-    if (type) {
-      const mappedType = type === 'cash' ? 'تبرع عام' : 'صدقة';
-      fallback = fallback.filter(d => d.type === mappedType || d.type === 'زكاة' || d.type === 'كفارة');
+    if (type && type !== 'all') {
+      all = all.filter(d => d.type === type);
     }
-    if (status) {
-      const mappedStatus = status === 'completed' ? 'مكتمل' : 'قيد المعالجة';
-      fallback = fallback.filter(d => d.status === mappedStatus);
+    if (status && status !== 'all') {
+      all = all.filter(d => d.status === status);
     }
-
-    const total = fallback.length;
-    const last_page = Math.max(1, Math.ceil(total / limit));
-    const start = (page - 1) * limit;
-    const paginated = fallback.slice(start, start + limit);
-
+    const total = all.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedItems = all.slice(startIndex, startIndex + limit);
     return {
-      data: paginated,
+      data: paginatedItems,
       pagination: {
         current_page: page,
-        last_page: last_page,
+        last_page: Math.ceil(total / limit) || 1,
         per_page: limit,
         total: total
       }
@@ -155,7 +161,7 @@ export class DonationRepositoryImpl implements IDonationRepository {
   async getCampaigns(page: number = 1, limit: number = 4, search: string = "", status: string = "", priority: string = ""): Promise<PaginatedCampaigns> {
     const mosqueId = this.getMosqueId();
     try {
-      let url = `${BASE_URL}/campaigns?page=${page}&per_page=${limit}`;
+      let url = `${BASE_URL}/mosques/${mosqueId}/campaigns?page=${page}&per_page=${limit}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
       if (status && status !== 'all') url += `&status=${encodeURIComponent(status)}`;
       if (priority && priority !== 'all') url += `&priority=${encodeURIComponent(priority)}`;
@@ -181,7 +187,7 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
         return {
           id: String(item.id || item._id),
-          mosque_id: item.mosque_id,
+          mosque_id: item.mosque_id || mosqueId,
           title: item.title || item.name,
           description: item.description,
           target_amount: target,
@@ -195,8 +201,8 @@ export class DonationRepositoryImpl implements IDonationRepository {
           end_date: item.end_date,
           days_remaining: days,
           remaining_days: days,
-          cover_image: item.cover_image || item.image,
-          image: item.cover_image || item.image,
+          cover_image: item.cover_image || item.image || item.image_url,
+          image: item.cover_image || item.image || item.image_url,
           donors_count: parseAmount(item.donors_count || item.donorsCount),
           donorsCount: parseAmount(item.donors_count || item.donorsCount),
           timeLeft: (days !== null && days !== undefined) ? `${days} يوم` : (item.timeLeft || item.time_left || 'غير محدد'),

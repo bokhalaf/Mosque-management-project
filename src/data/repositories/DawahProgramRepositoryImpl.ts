@@ -166,7 +166,6 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
   // ── 2. createDawahProgram (POST /api/program/mosques/{mosque_id}/dawah_programs) ─────
   async createDawahProgram(payload: CreateDawahProgramPayload): Promise<DawahProgram> {
     const mosqueId = payload.mosque_id || this.getMosqueId();
-    let createdProgram: DawahProgram | null = null;
 
     // Ensure type matches API OpenAPI enum: 'lecture' | 'course' | 'competition' | 'other'
     let apiType = payload.type;
@@ -217,68 +216,45 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
 
     console.log("POST DawahProgram Payload:", requestBody);
 
-    try {
-      const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(requestBody),
-      });
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(requestBody),
+    });
 
-      const json = await response.json().catch(() => null);
-      console.log("POST DawahProgram Response:", response.status, json);
+    const json = await response.json().catch(() => null);
+    console.log("POST DawahProgram Response:", response.status, json);
 
-      if (response.ok && json && (json.status || json.data)) {
-        const item = json.data || json;
-        createdProgram = {
-          id: item.id || Date.now(),
-          mosque_id: Number(mosqueId),
-          space_id: Number(spaceId),
-          program_name: item.program_name || payload.program_name,
-          description: item.description || payload.description,
-          type: item.type || payload.type,
-          presenter: item.presenter || payload.presenter,
-          is_featured: item.is_featured ?? payload.is_featured ?? false,
-          status: item.status || payload.status || "active",
-          level: item.level || payload.level || "beginner",
-          schedules: item.schedules || defaultSchedules,
-          created_at: item.created_at || new Date().toISOString(),
-        };
-      } else if (json) {
-        let errMsgs = "";
-        if (json.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-          errMsgs = Object.entries(json.data)
-            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-            .join(" | ");
-        } else if (json.errors && typeof json.errors === 'object') {
-          errMsgs = Object.entries(json.errors)
-            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-            .join(" | ");
-        }
-        throw new Error(errMsgs || json.message || "خطأ في التحقق من بيانات البرنامج الدعوي");
+    if (!response.ok || !json || (!json.status && !json.data)) {
+      let errMsgs = "";
+      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+        errMsgs = Object.entries(json.data)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
+      } else if (json?.errors && typeof json.errors === 'object') {
+        errMsgs = Object.entries(json.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
       }
-    } catch (e: any) {
-      console.warn("API createDawahProgram error:", e);
-      if (e.message && !e.message.includes("Failed to fetch") && !e.message.includes("fetch")) {
-        throw e;
-      }
+      throw new Error(errMsgs || json?.message || `فشل إنشاء البرنامج على السيرفر (HTTP ${response.status})`);
     }
 
-    if (!createdProgram) {
-      createdProgram = {
-        id: Date.now(),
-        mosque_id: Number(mosqueId),
-        space_id: Number(payload.space_id || 1),
-        program_name: payload.program_name,
-        description: payload.description,
-        type: payload.type,
-        presenter: payload.presenter,
-        is_featured: payload.is_featured ?? false,
-        status: payload.status || "active",
-        level: payload.level || "beginner",
-        schedules: defaultSchedules as any,
-        created_at: new Date().toISOString(),
-      };
-    }
+    const item = json.data || json;
+    const createdProgram: DawahProgram = {
+      id: item.id,
+      mosque_id: Number(item.mosque_id || mosqueId),
+      space_id: Number(item.space_id || spaceId),
+      program_name: item.program_name || payload.program_name,
+      description: item.description || payload.description,
+      type: item.type || payload.type,
+      presenter: item.presenter || payload.presenter,
+      is_featured: item.is_featured === true || item.is_featured === 'true' || item.is_featured === 1,
+      status: item.status || payload.status || "active",
+      level: item.level || payload.level || "beginner",
+      schedules: item.schedules || defaultSchedules,
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at,
+    };
 
     const currentList = this.getLocalPrograms();
     currentList.unshift(createdProgram);
@@ -295,58 +271,54 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
       requestBody.is_featured = payload.is_featured ? 'true' : 'false';
     }
 
-    try {
-      const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(requestBody),
-      });
-      const json = await response.json().catch(() => null);
-      console.log("updateDawahProgram response:", response.status, json);
-      if (response.ok && json && (json.status || json.data)) {
-        const item = json.data || json;
-        const currentList = this.getLocalPrograms();
-        const index = currentList.findIndex(p => String(p.id) === String(id));
-        if (index !== -1) {
-          currentList[index] = {
-            ...currentList[index],
-            ...item,
-            updated_at: new Date().toISOString(),
-          };
-          this.saveLocalPrograms(currentList);
-          return currentList[index];
-        }
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(requestBody),
+    });
+    const json = await response.json().catch(() => null);
+    console.log("updateDawahProgram response:", response.status, json);
+    if (!response.ok || !json || (!json.status && !json.data)) {
+      let errMsgs = "";
+      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+        errMsgs = Object.entries(json.data)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
+      } else if (json?.errors && typeof json.errors === 'object') {
+        errMsgs = Object.entries(json.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
       }
-    } catch (e) {
-      console.warn("API updateDawahProgram failed:", e);
+      throw new Error(errMsgs || json?.message || `فشل تعديل البرنامج على السيرفر (HTTP ${response.status})`);
     }
 
+    const item = json.data || json;
     const currentList = this.getLocalPrograms();
     const index = currentList.findIndex(p => String(p.id) === String(id));
     if (index !== -1) {
       currentList[index] = {
         ...currentList[index],
-        ...(payload as any),
+        ...item,
         updated_at: new Date().toISOString(),
       };
       this.saveLocalPrograms(currentList);
       return currentList[index];
     }
 
-    throw new Error("البرنامج الدعوي غير موجود");
+    return item;
   }
 
   // ── 4. deleteDawahProgram (DELETE /api/program/mosques/{mosque}/dawah_programs/{program}) ─
   async deleteDawahProgram(id: number | string): Promise<boolean> {
     const mosqueId = this.getMosqueId();
 
-    try {
-      await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders(),
-      });
-    } catch (e) {
-      console.warn("API deleteDawahProgram failed:", e);
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(json?.message || `فشل حذف البرنامج من السيرفر (HTTP ${response.status})`);
     }
 
     const currentList = this.getLocalPrograms();
@@ -385,34 +357,28 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
 
   async addSchedule(programId: number | string, payload: CreateProgramSchedulePayload): Promise<ProgramSchedule> {
     const mosqueId = this.getMosqueId();
-    let newSchedule: ProgramSchedule | null = null;
 
-    try {
-      const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const json = await response.json().catch(() => null);
-      if (response.ok && json) {
-        newSchedule = json.data || json;
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok || !json || (!json.status && !json.data && !json.id)) {
+      let errMsgs = "";
+      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+        errMsgs = Object.entries(json.data)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
+      } else if (json?.errors && typeof json.errors === 'object') {
+        errMsgs = Object.entries(json.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
       }
-    } catch (e) {
-      console.warn("API addSchedule failed:", e);
+      throw new Error(errMsgs || json?.message || `فشل إضافة الجلسة على السيرفر (HTTP ${response.status})`);
     }
 
-    if (!newSchedule) {
-      newSchedule = {
-        id: Date.now(),
-        dawah_program_id: programId,
-        title: payload.title || "جلسة جديدة",
-        notes: payload.notes,
-        date: payload.date,
-        start_time: payload.start_time,
-        end_time: payload.end_time,
-        created_at: new Date().toISOString(),
-      };
-    }
+    const newSchedule: ProgramSchedule = json.data || json;
 
     const currentList = this.getLocalPrograms();
     const program = currentList.find(p => String(p.id) === String(programId));
@@ -428,34 +394,27 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
   async updateSchedule(programId: number | string, scheduleId: number | string, payload: UpdateProgramSchedulePayload): Promise<ProgramSchedule> {
     const mosqueId = this.getMosqueId();
 
-    try {
-      const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
-        method: "PUT",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const json = await response.json().catch(() => null);
-      if (response.ok && json && (json.status || json.data)) {
-        const item = json.data || json;
-        const currentList = this.getLocalPrograms();
-        const program = currentList.find(p => String(p.id) === String(programId));
-        if (program && program.schedules) {
-          const sIndex = program.schedules.findIndex(s => String(s.id) === String(scheduleId));
-          if (sIndex !== -1) {
-            program.schedules[sIndex] = {
-              ...program.schedules[sIndex],
-              ...item,
-              updated_at: new Date().toISOString(),
-            };
-            this.saveLocalPrograms(currentList);
-            return program.schedules[sIndex];
-          }
-        }
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
+      method: "PUT",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok || !json || (!json.status && !json.data && !json.id)) {
+      let errMsgs = "";
+      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+        errMsgs = Object.entries(json.data)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
+      } else if (json?.errors && typeof json.errors === 'object') {
+        errMsgs = Object.entries(json.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(" | ");
       }
-    } catch (e) {
-      console.warn("API updateSchedule failed:", e);
+      throw new Error(errMsgs || json?.message || `فشل تحديث الجلسة على السيرفر (HTTP ${response.status})`);
     }
 
+    const item: ProgramSchedule = json.data || json;
     const currentList = this.getLocalPrograms();
     const program = currentList.find(p => String(p.id) === String(programId));
     if (program && program.schedules) {
@@ -463,7 +422,7 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
       if (sIndex !== -1) {
         program.schedules[sIndex] = {
           ...program.schedules[sIndex],
-          ...payload,
+          ...item,
           updated_at: new Date().toISOString(),
         };
         this.saveLocalPrograms(currentList);
@@ -471,19 +430,19 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
       }
     }
 
-    throw new Error("الجلسة غير موجودة");
+    return item;
   }
 
   async deleteSchedule(programId: number | string, scheduleId: number | string): Promise<boolean> {
     const mosqueId = this.getMosqueId();
 
-    try {
-      await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
-        method: "DELETE",
-        headers: this.getAuthHeaders(),
-      });
-    } catch (e) {
-      console.warn("API deleteSchedule failed:", e);
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(json?.message || `فشل حذف الجلسة من السيرفر (HTTP ${response.status})`);
     }
 
     const currentList = this.getLocalPrograms();

@@ -88,9 +88,10 @@ export function useCampaigns() {
         getCampaignStatsUC.execute(),
       ]);
 
-      const targetUrl = `${BASE_URL}/campaigns?page=${page}&per_page=4${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ''}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ''}${priorityFilter ? `&priority=${encodeURIComponent(priorityFilter)}` : ''}`;
-      addDebugLog('GET /api/campaigns (listAllCampaigns)', targetUrl, 200, paginatedRes._rawResponse || paginatedRes);
-      addDebugLog('GET /api/mosques/campaigns/stats', `${BASE_URL}/mosques/1/campaigns/stats`, 200, stats);
+      const mosqueId = typeof window !== "undefined" && localStorage.getItem("active_mosque_id") ? localStorage.getItem("active_mosque_id") : "1";
+      const targetUrl = `${BASE_URL}/mosques/${mosqueId}/campaigns?page=${page}&per_page=4${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ''}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ''}${priorityFilter ? `&priority=${encodeURIComponent(priorityFilter)}` : ''}`;
+      addDebugLog('GET /api/mosques/{mosque}/campaigns', targetUrl, 200, paginatedRes._rawResponse || paginatedRes);
+      addDebugLog('GET /api/mosques/{mosque}/campaigns/stats', `${BASE_URL}/mosques/${mosqueId}/campaigns/stats`, 200, stats);
 
       setCampaigns(paginatedRes.data || []);
       if (paginatedRes.pagination) {
