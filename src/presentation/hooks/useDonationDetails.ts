@@ -80,7 +80,8 @@ export function useDonationDetails(donationReferenceOrId: string | number) {
   const handleDownloadReceipt = useCallback(async () => {
     if (!donation) return;
     setDownloadingReceipt(true);
-    const targetId = donation.id || donation.reference;
+    // Use numeric id first (actual DB id), fallback to reference string
+    const targetId = donation.id;
     const targetUrl = `${BASE_URL}/donations/${targetId}/receipt`;
 
     try {

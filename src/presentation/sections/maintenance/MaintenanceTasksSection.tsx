@@ -51,6 +51,22 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
     copyDebugJson,
   } = useMaintenance();
 
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes('super_admin') || roles.includes('admin') || user.is_super_admin) {
+            setIsAdmin(true);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   const totalCount = stats.open_requests + stats.in_progress + stats.completed_this_month;
 
   const handleDeleteConfirm = async () => {
@@ -88,12 +104,14 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
               <span>تحديث</span>
             </button>
 
-            <button
-              onClick={onCreateTask}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-            >
-              <Plus className="w-4 h-4" /> طلب صيانة جديد
-            </button>
+            {!isAdmin && (
+              <button
+                onClick={onCreateTask}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+              >
+                <Plus className="w-4 h-4" /> طلب صيانة جديد
+              </button>
+            )}
           </div>
         }
       />

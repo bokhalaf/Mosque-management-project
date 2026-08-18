@@ -23,6 +23,21 @@ export interface ComplaintFilters {
 }
 
 export function useComplaints() {
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<{
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    has_more?: boolean;
+  }>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 5,
+    total: 0,
+    has_more: false,
+  });
+
   const [filters, setFilters] = useState<ComplaintFilters>({
     searchQuery: '',
     statusFilter: 'all',
@@ -81,6 +96,8 @@ export function useComplaints() {
         status: filters.statusFilter,
         priority: filters.priorityFilter,
         complaint_type: filters.typeFilter,
+        page,
+        per_page: 5,
       };
 
       const isSearchMode = Boolean(filters.searchQuery && filters.searchQuery.trim().length > 0);
@@ -89,6 +106,16 @@ export function useComplaints() {
         : await getAdminComplaintsUseCase.execute(params);
 
       setComplaints(paginatedResult.data || []);
+      if (paginatedResult.pagination) {
+        setPagination(paginatedResult.pagination);
+      } else {
+        setPagination(prev => ({
+          ...prev,
+          current_page: page,
+          total: paginatedResult.data?.length || 0,
+          last_page: Math.max(1, Math.ceil((paginatedResult.data?.length || 0) / 5)),
+        }));
+      }
 
       const resDebug = await complaintRepo.getAdminComplaintsWithDebug(params);
       setDebugData(resDebug.debug);
@@ -98,7 +125,7 @@ export function useComplaints() {
     } finally {
       setLoadingComplaints(false);
     }
-  }, [filters]);
+  }, [filters, page]);
 
   useEffect(() => {
     loadStats();
@@ -147,6 +174,10 @@ export function useComplaints() {
     // Data
     stats,
     complaints,
+    // Pagination
+    page,
+    setPage,
+    pagination,
     // Loading states
     loadingStats,
     loadingComplaints,

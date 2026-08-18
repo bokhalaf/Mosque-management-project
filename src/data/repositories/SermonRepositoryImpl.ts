@@ -38,7 +38,7 @@ const MOCK_ARCHIVED_SERMONS: Sermon[] = [
   { id: 112, title: "التسامح والعفو وأثرهما في نشر السلام النفسي", speaker_name: "الشيخ خالد الخليفي", sermon_date: "2026-02-22", category: "ethics", content: "فمن عفا وأصلح فأجره على الله، والسلام الداخلي ينبع من طهارة القلب ونقاء الصدر.", status: "archived" },
 ];
 
-const MOCK_PENDING_SERMONS: Sermon[] = [
+let MOCK_PENDING_SERMONS: Sermon[] = [
   { id: 201, title: "أهمية التراحم والتعاطف في المجتمع", speaker_name: "الشيخ بدر المطيري", sermon_date: "2026-05-15", category: "ethics", content: "التراحم بين أفراد المجتمع يعزز المحبة والتكافل الإنساني ويدعم الضعفاء والمحتاجين.", status: "pending" },
   { id: 202, title: "فضل ذكر الله وأثره في طمأنينة القلوب", speaker_name: "د. عبد العزيز التميمي", sermon_date: "2026-05-14", category: "faith", content: "ألا بذكر الله تطمئن القلوب، والذكر الحكيم يجلب السكينة ويدفع الهموم والغموم.", status: "pending" },
   { id: 203, title: "الوفاء بالعهود والأمانات في المعاملات", speaker_name: "الشيخ خالد القحطاني", sermon_date: "2026-05-12", category: "ethics", content: "الأمانة خلق كريم والوفاء بالعهد من صفات المؤمنين الصادقين في دينهم ودنياهم.", status: "pending" },
@@ -48,6 +48,8 @@ const MOCK_PENDING_SERMONS: Sermon[] = [
   { id: 207, title: "أحكام الطهارة والصلاة في السفر", speaker_name: "د. ماجد الغامدي", sermon_date: "2026-05-08", category: "fiqh", content: "تيسيرات الشريعة الإسلامية في السفر والمواقف الاستثنائية رحمة بالعباد.", status: "pending" },
   { id: 208, title: "أثر الاستغفار والتدبر في كشف الكرب", speaker_name: "الشيخ راشد الخاطر", sermon_date: "2026-05-07", category: "faith", content: "من لزم الاستغفار جعل الله له من كل ضيق مخرجاً ومن كل هم فرجاً ورزقه من حيث لا يحتسب.", status: "pending" },
 ];
+
+const processedSermonIds = new Set<string | number>();
 
 export class SermonRepositoryImpl implements ISermonRepository {
 
@@ -119,14 +121,12 @@ export class SermonRepositoryImpl implements ISermonRepository {
       const json = await response.json().catch(() => null);
       console.log("getSermons API Response:", json);
 
-      if (response.ok && json && (json.status || Array.isArray(json.data) || Array.isArray(json))) {
+      if (response.ok && json && json.status !== false) {
         const items: any[] = Array.isArray(json) 
           ? json 
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        if (items.length > 0) {
-          const formatted = items.map(item => this.formatSermon(item));
-          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
-        }
+        const formatted = items.map(item => this.formatSermon(item));
+        return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
       }
     } catch (e) {
       console.warn("Failed fetching sermons from API:", e);
@@ -149,10 +149,8 @@ export class SermonRepositoryImpl implements ISermonRepository {
         const items: any[] = Array.isArray(json)
           ? json
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        if (items.length > 0) {
-          const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'archived' }));
-          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
-        }
+        const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'archived' }));
+        return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
       }
     } catch (e) {
       console.warn("Failed fetching archived sermons:", e);
@@ -176,10 +174,8 @@ export class SermonRepositoryImpl implements ISermonRepository {
         const items: any[] = Array.isArray(json)
           ? json
           : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        if (items.length > 0) {
-          const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'pending' }));
-          return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
-        }
+        const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'pending' }));
+        return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
       }
     } catch (e) {
       console.warn("Failed fetching pending sermons:", e);
@@ -359,6 +355,9 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
   // ── 6.1 deleteSermon (DELETE /api/sermons/{id}) ─────────────────────
   async deleteSermon(id: string | number): Promise<void> {
+    processedSermonIds.add(id);
+    processedSermonIds.add(String(id));
+    MOCK_PENDING_SERMONS = MOCK_PENDING_SERMONS.filter(s => String(s.id) !== String(id));
     try {
       const response = await fetch(`${BASE_URL}/sermons/${id}`, {
         method: "DELETE",
@@ -374,6 +373,107 @@ export class SermonRepositoryImpl implements ISermonRepository {
     } catch (e: any) {
       console.warn(`Error deleting sermon #${id} from API:`, e);
       throw e;
+    }
+  }
+
+  // ── 6.2 getMostSelectedSermons (GET /api/sermons/most-selected) ────
+  async getMostSelectedSermons(): Promise<Sermon | Sermon[] | null> {
+    const urlsToTry = [
+      `${BASE_URL}/sermons/most-selected`,
+      `${BASE_URL}/sermons/most_selected`,
+      `${BASE_URL}/admin/sermons/most-selected`,
+    ];
+
+    for (const url of urlsToTry) {
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const json = await response.json().catch(() => null);
+        console.log(`GET ${url} Response:`, json);
+
+        if (response.ok && json && json.status !== false) {
+          const dataObj = json.data || json;
+          if (Array.isArray(dataObj)) {
+            if (dataObj.length > 0) {
+              return dataObj.map(item => this.formatSermon(item));
+            }
+          } else if (dataObj && (dataObj.id || dataObj.title)) {
+            return this.formatSermon(dataObj);
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed fetching most selected sermons from ${url}:`, e);
+      }
+    }
+
+    return null;
+  }
+
+  // ── 6.3 approveSermon (POST /api/sermons/{id}/approve) ──────────────
+  async approveSermon(id: string | number): Promise<void> {
+    const urlsToTry = [
+      { url: `${BASE_URL}/sermons/${id}/approve`, method: "POST" },
+      { url: `${BASE_URL}/sermons/${id}/approve`, method: "PUT" },
+      { url: `${BASE_URL}/sermons/${id}/approve`, method: "PATCH" },
+      { url: `${BASE_URL}/admin/sermons/${id}/approve`, method: "POST" },
+      { url: `${BASE_URL}/sermons/approve/${id}`, method: "POST" },
+    ];
+
+    let lastError: string | null = null;
+    for (const item of urlsToTry) {
+      try {
+        const response = await fetch(item.url, {
+          method: item.method,
+          headers: this.getAuthHeaders(),
+        });
+        const json = await response.json().catch(() => null);
+        console.log(`${item.method} ${item.url} Response:`, json);
+
+        if (response.ok && json?.status !== false) {
+          return;
+        }
+        if (json?.message) {
+          lastError = json.message;
+        }
+      } catch (e: any) {
+        console.warn(`Error calling approve endpoint ${item.url}:`, e);
+        lastError = e.message;
+      }
+    }
+  }
+
+  // ── 6.4 rejectSermon (POST /api/sermons/{id}/reject) ────────────────
+  async rejectSermon(id: string | number): Promise<void> {
+    const urlsToTry = [
+      { url: `${BASE_URL}/sermons/${id}/reject`, method: "POST" },
+      { url: `${BASE_URL}/sermons/${id}/reject`, method: "PUT" },
+      { url: `${BASE_URL}/sermons/${id}/reject`, method: "PATCH" },
+      { url: `${BASE_URL}/admin/sermons/${id}/reject`, method: "POST" },
+      { url: `${BASE_URL}/sermons/reject/${id}`, method: "POST" },
+    ];
+
+    let lastError: string | null = null;
+    for (const item of urlsToTry) {
+      try {
+        const response = await fetch(item.url, {
+          method: item.method,
+          headers: this.getAuthHeaders(),
+        });
+        const json = await response.json().catch(() => null);
+        console.log(`${item.method} ${item.url} Response:`, json);
+
+        if (response.ok && json?.status !== false) {
+          return;
+        }
+        if (json?.message) {
+          lastError = json.message;
+        }
+      } catch (e: any) {
+        console.warn(`Error calling reject endpoint ${item.url}:`, e);
+        lastError = e.message;
+      }
     }
   }
 

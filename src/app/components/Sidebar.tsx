@@ -8,7 +8,7 @@ import {
   Plus, Users, GraduationCap, Wrench, Activity, Coins,
   Settings, UserPlus, Target, FileText,
   ChevronLeft, MessageSquareWarning, CalendarDays, ListTodo,
-  LogOut, Loader2, BookOpen, Mic, HeartHandshake, Award, Clock
+  LogOut, Loader2, BookOpen, Mic, HeartHandshake, Award, Clock, Building2
 } from "lucide-react";
 import { AuthUser } from "../../domain/entities/Auth";
 
@@ -27,6 +27,22 @@ const NAV: NavSection[] = [
     label: "لوحة القيادة",
     icon: LayoutDashboard,
     href: "/",
+    items: [],
+  },
+  {
+    id: "mosques",
+    label: "دليل المساجد",
+    icon: Building2,
+    items: [
+      { id: "all-mosques", label: "كافة المساجد", href: "/mosques" },
+      { id: "create-mosque", label: "إضافة مسجد جديد", href: "/mosques/create" },
+    ],
+  },
+  {
+    id: "tameems",
+    label: "التعاميم والقرارات",
+    icon: FileText,
+    href: "/tameems",
     items: [],
   },
   {
@@ -112,6 +128,9 @@ const NAV: NavSection[] = [
 ];
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
+  // Mosques
+  "all-mosques": Building2,
+  "create-mosque": Plus,
   // Volunteers
   "all-opportunities": HeartHandshake,
   "create-opportunity": Plus,
@@ -136,11 +155,12 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
   // Complaints
   complaints: MessageSquareWarning,
   // Tasks
-  tasks: ListTodo,
+  tasks: CalendarDays,
   // Design System
   foundation: Gem,
   components: Layers,
 };
+
 
 interface SidebarProps {
   isDark?: boolean;
@@ -221,13 +241,19 @@ export function Sidebar({
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto min-h-0 p-4 space-y-1.5 scrollbar-thin touch-auto" aria-label="أقسام النظام">
           {NAV.map((section) => {
-            const isActive = section.href === pathname || section.items.some(i => pathname.startsWith(i.href));
+            const userRoles = user?.roles || (typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth_user") || "{}")?.roles : []) || [];
+            const isSuperAdmin = userRoles.includes("super_admin") || Boolean(typeof window !== "undefined" && JSON.parse(localStorage.getItem("auth_user") || "{}")?.is_super_admin);
+
+            if (section.id === "mosques" && !isSuperAdmin) return null;
+
+            const visibleItems = section.items.filter((i) => !(isSuperAdmin && i.id === "create-task"));
+            const isActive = section.href === pathname || visibleItems.some(i => pathname.startsWith(i.href));
             const isExpanded = expanded.includes(section.id);
             const Icon = section.icon;
 
             return (
               <div key={section.id}>
-                {section.items.length === 0 ? (
+                {visibleItems.length === 0 ? (
                   <Link
                     href={section.href || "/"}
                     onClick={onClose}
@@ -261,9 +287,9 @@ export function Sidebar({
                   </button>
                 )}
 
-                {section.items.length > 0 && isExpanded && (
+                {visibleItems.length > 0 && isExpanded && (
                   <div className="mr-6 mt-1 space-y-1 border-r border-border pr-4">
-                    {section.items.map((item) => {
+                    {visibleItems.map((item) => {
                       const isItemActive = pathname === item.href;
                       const ItemIcon = SECTION_ICONS[item.id];
                       return (

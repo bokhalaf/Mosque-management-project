@@ -56,6 +56,36 @@ export function CreateMaintenanceRequestSection({ onBack }: CreateMaintenanceReq
   const selectedCategoryObj = CATEGORIES.find(c => c.id === category) || CATEGORIES[0];
   const selectedPriorityObj = PRIORITIES.find(p => p.id === priority) || PRIORITIES[1];
 
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes('super_admin') || roles.includes('admin') || user.is_super_admin) {
+            setIsAdmin(true);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  if (isAdmin) {
+    return (
+      <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
+        <PageHeader title="إنشاء طلب صيانة جديد" onBack={onBack} />
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center space-y-4">
+          <AlertTriangle className="w-12 h-12 text-amber-500" />
+          <h3 className="text-lg font-bold text-foreground">إنشاء طلب الصيانة متاح لمدير المسجد فقط</h3>
+          <p className="text-sm text-muted-foreground max-w-md">حساب الأدمن مخصص لمعالجة ومتابعة طلبات الصيانة المرفوعة وليس لتقديم طلبات صيانة جديدة.</p>
+          <button onClick={onBack} className="px-5 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-md">الرجوع لقائمة الصيانة</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader
@@ -190,7 +220,7 @@ export function CreateMaintenanceRequestSection({ onBack }: CreateMaintenanceReq
             </div>
 
             <div>
-              <label className="block text-sm font-black text-foreground mb-2">ملاحظات إضافية للفني (اختياري)</label>
+              <label className="block text-sm font-black text-foreground mb-2">ملاحظات إضافية (اختياري)</label>
               <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
                 placeholder="مثال: يرجى الحضور بين صلاتي الظهر والعصر..."
                 className="w-full px-4 py-3 bg-muted/60 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-bold outline-none transition-all text-foreground placeholder:text-muted-foreground/70" />

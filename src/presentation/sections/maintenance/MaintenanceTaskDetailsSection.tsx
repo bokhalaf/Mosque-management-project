@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   CheckCircle2, Clock, AlertTriangle, Printer, Archive,
   MapPin, User, Activity, MessageSquare, Send, Paperclip, Wrench,
   Calendar, FileText, RefreshCw, AlertCircle, Zap, Droplets, Hammer, Sparkles, ShieldCheck,
-  Pencil, Trash2
+  Pencil, Trash2, X
 } from 'lucide-react';
 import { useMaintenanceTaskDetails, MaintenanceStatusKey } from '../../hooks/useMaintenanceTaskDetails';
 
@@ -98,7 +98,30 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
     newNote,
     setNewNote,
     submitNote,
+    handleProcessAdminStatus,
+    updatingStatus,
+    isSuperAdmin,
   } = useMaintenanceTaskDetails(taskId, refreshKey);
+
+  // Status Change Dialog State (معالجة طلب الصيانة - admin.maintenance.process)
+  const [targetStatusModal, setTargetStatusModal] = useState<MaintenanceStatusKey | null>(null);
+  const [modalActionNote, setModalActionNote] = useState('');
+
+  const openStatusModal = (status: MaintenanceStatusKey) => {
+    setTargetStatusModal(status);
+    setModalActionNote('');
+  };
+
+  const confirmStatusUpdate = async () => {
+    if (!targetStatusModal) return;
+    if (targetStatusModal === 'cancelled' && !modalActionNote.trim()) {
+      alert('ملاحظة الإلغاء إلزامية عند إلغاء طلب الصيانة.');
+      return;
+    }
+    await handleProcessAdminStatus(targetStatusModal as any, modalActionNote);
+    setTargetStatusModal(null);
+    setModalActionNote('');
+  };
 
   if (loading) {
     return (
@@ -175,7 +198,7 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
               <span className="hidden sm:inline">طباعة</span>
             </button>
 
-            {onEdit && (
+            {!isSuperAdmin && onEdit && (
               <button
                 onClick={() => onEdit(task)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
@@ -186,7 +209,7 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
               </button>
             )}
 
-            {onDelete && (
+            {!isSuperAdmin && onDelete && (
               <button
                 onClick={() => onDelete(task.id)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
@@ -249,12 +272,6 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
             <div className="p-6 bg-muted rounded-xl border border-border">
               <p className="text-sm text-foreground leading-loose whitespace-pre-wrap">{task.description || 'لا يوجد وصف مفصل.'}</p>
             </div>
-            {task.notes && (
-              <div className="mt-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
-                <p className="text-xs font-bold text-amber-600 mb-1">ملاحظات إضافية للفني:</p>
-                <p className="text-sm text-foreground leading-relaxed">{task.notes}</p>
-              </div>
-            )}
             {task.files && task.files.length > 0 && (
               <div className="mt-6">
                 <p className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-wider">المرفقات ({task.files.length})</p>
@@ -274,36 +291,88 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
             )}
           </div>
 
-          {/* Notes Thread */}
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-            <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-primary" /> سجل الملاحظات والاستفسارات</h3>
-            <div className="space-y-6 mb-6">
-              {(!task.status_logs || task.status_logs.length === 0) && (
-                <p className="text-xs text-muted-foreground text-center py-4">لا توجد تحديثات مسجلة بعد.</p>
-              )}
-              {task.status_logs?.map((log: any) => (
-                <div key={log.id} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-xs shrink-0 border border-border">{log.user?.name ? log.user.name[0] : 'م'}</div>
-                  <div className="flex-1 bg-muted p-4 rounded-xl border border-border">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-xs font-bold text-foreground">{log.user?.name || 'مدير المنطقة'}</p>
-                      <p className="text-[10px] text-muted-foreground">{formatDate(log.created_at)}</p>
-                    </div>
-                    <p className="text-xs font-bold text-primary mb-1">تحديث الحالة: {getStatusLabel(log.status)}</p>
-                    {log.note && <p className="text-sm text-foreground/90 leading-relaxed">{log.note}</p>}
+          {/* Enhanced Status Logs & Notes Thread (سجل_التحديثات كما في الشكاوي) */}
+          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" /> سجل التحديثات والملاحظات
+            </h3>
+
+            <div className="space-y-4">
+              {/* Admin / Initial Notes if present */}
+              {task.notes && task.notes.trim() && (
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs shrink-0 border border-amber-500/20 mt-1">م</div>
+                  <div className="flex-1 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20 space-y-1">
+                    <p className="text-xs font-bold text-amber-600">ملاحظات الطلب الأولية</p>
+                    <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{task.notes}</p>
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Status Logs List */}
+              {(() => {
+                const rawTask: any = task;
+                const logsList = (rawTask.status_logs && rawTask.status_logs.length > 0)
+                  ? rawTask.status_logs
+                  : (rawTask.logs || rawTask.history || trackingInfo?.status_logs || trackingInfo?.logs || trackingInfo?.history || []);
+
+                if (logsList.length === 0 && (!task.notes || !task.notes.trim())) {
+                  return (
+                    <p className="text-xs text-muted-foreground text-center py-6 border border-dashed border-border rounded-xl">
+                      لا توجد تحديثات مسجلة على طلب الصيانة هذا بعد.
+                    </p>
+                  );
+                }
+
+                return logsList.map((log: any, idx: number) => {
+                  const logStatusKey = log.new_status || log.status || log.old_status || 'pending';
+                  const statusText = getStatusLabel(logStatusKey);
+                  const userName = log.user?.name || log.created_by || 'إدارة الصيانة';
+                  const logNote = log.note || log.notes || log.comment || log.description;
+
+                  return (
+                    <div key={log.id || idx} className="flex gap-4 items-start">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0 border border-primary/20 mt-1">
+                        {userName[0] || 'م'}
+                      </div>
+                      <div className="flex-1 bg-muted/50 p-4 rounded-xl border border-border space-y-2">
+                        <div className="flex justify-between items-center flex-wrap gap-2 border-b border-border/50 pb-2">
+                          <span className="text-xs font-bold text-foreground">{userName}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{formatDate(log.created_at || log.updated_at)}</span>
+                        </div>
+
+                        {/* Explicit Status Display */}
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="text-xs font-bold text-muted-foreground">الحالة:</span>
+                          <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${getStatusBadgeStyles(logStatusKey)}`}>
+                            {statusText}
+                          </span>
+                        </div>
+
+                        {/* Note Below Status */}
+                        <div className="pt-1">
+                          <span className="text-[11px] font-bold text-muted-foreground block mb-1">الملاحظة / الإجراء المتخذ:</span>
+                          <div className="p-3 bg-card rounded-lg border border-border/70 text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                            {logNote && logNote.trim() ? logNote : <span className="text-muted-foreground italic">لا توجد ملاحظة مدخلة في هذا التحديث</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
-            <div className="flex gap-3 items-end">
+
+            {/* Quick Add Note Input */}
+            <div className="flex gap-3 items-end pt-4 border-t border-border">
               <div className="flex-1">
                 <textarea rows={2} value={newNote} onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="أضف استفساراً أو ملاحظة لإدارة المنطقة حول هذا الطلب..."
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm resize-none text-foreground placeholder:text-muted-foreground" />
+                  placeholder="أضف استفساراً أو ملاحظة سريعة حول طلب الصيانة..."
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground" />
               </div>
-              <button onClick={submitNote}
-                className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0 h-11 flex items-center justify-center">
-                <Send className="w-5 h-5" />
+              <button onClick={submitNote} disabled={updatingStatus}
+                className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0 h-11 flex items-center justify-center disabled:opacity-50">
+                <Send className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -375,10 +444,150 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
               </div>
             )}
 
+            {/* Interactive Action Buttons for Admin Status Update — (admin.maintenance.process) */}
+            <div className="border-t border-border pt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">معالجة الطلب (إدارة النظام / Super Admin)</p>
+              </div>
+
+              {/* Case 1: Pending (قيد الانتظار) */}
+              {currentStatus === 'pending' && (
+                <div className="space-y-2.5">
+                  <button
+                    onClick={() => openStatusModal('in_progress')}
+                    disabled={updatingStatus}
+                    className="w-full flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-500" />
+                      <span>تحويل إلى (قيد التنفيذ)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => openStatusModal('cancelled')}
+                    disabled={updatingStatus}
+                    className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Archive className="w-4 h-4 text-red-500" />
+                      <span>إلغاء طلب الصيانة</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Case 2: In Progress (قيد التنفيذ) */}
+              {currentStatus === 'in_progress' && (
+                <div className="space-y-2.5">
+                  <button
+                    onClick={() => openStatusModal('completed')}
+                    disabled={updatingStatus}
+                    className="w-full flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span>تحديد الطلب كـ (مكتملة)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => openStatusModal('cancelled')}
+                    disabled={updatingStatus}
+                    className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Archive className="w-4 h-4 text-red-500" />
+                      <span>إلغاء طلب الصيانة</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Case 3: Terminal Status (مكتملة / ملغاة) */}
+              {(currentStatus === 'completed' || currentStatus === 'cancelled') && (
+                <div className={`p-4 rounded-xl border text-xs font-bold space-y-1.5 ${currentStatus === 'completed'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'
+                  }`}>
+                  <div className="flex items-center gap-2">
+                    {currentStatus === 'completed' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <Archive className="w-4 h-4 text-red-500 shrink-0" />
+                    )}
+                    <span>
+                      {currentStatus === 'completed'
+                        ? 'تم إكمال أعمال الصيانة بنجاح (حالة نهائية).'
+                        : 'تم إلغاء هذا الطلب (حالة نهائية).'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] opacity-80 leading-relaxed font-normal">
+                    يمكن الاطلاع على السجل والملاحظات من قائمة التحديثات.
+                  </p>
+                </div>
+              )}
+            </div>
 
           </div>
         </div>
       </div>
+
+      {/* Interactive Process Maintenance Request Modal (مربع معالجة طلب صيانة كما في الشكاوي) */}
+      {targetStatusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-card border border-border w-full max-w-lg rounded-2xl shadow-2xl p-6 text-right space-y-4 font-['Cairo']">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-base font-black text-foreground flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                معالجة طلب الصيانة
+              </h3>
+              <X className="w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => setTargetStatusModal(null)} />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted-foreground">الحالة الجديدة المطلوبة:</span>
+                <span className={`px-3 py-1 rounded-xl text-xs font-bold border ${getStatusBadgeStyles(targetStatusModal)}`}>
+                  {getStatusLabel(targetStatusModal)}
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-foreground block mb-1.5">
+                  ملاحظات أو تفاصيل الإجراء المتخذ {targetStatusModal === 'cancelled' && <span className="text-red-500">* (مطلوبة للإلغاء)</span>}
+                </label>
+                <textarea
+                  rows={4}
+                  value={modalActionNote}
+                  onChange={(e) => setModalActionNote(e.target.value)}
+                  placeholder="أدخل التفاصيل والإجراءات المتخذة لمعالجة الطلب..."
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <button
+                onClick={() => setTargetStatusModal(null)}
+                disabled={updatingStatus}
+                className="px-4 py-2 bg-muted text-foreground font-bold text-xs rounded-xl hover:bg-muted/80 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={confirmStatusUpdate}
+                disabled={updatingStatus}
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50"
+              >
+                {updatingStatus && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>تأكيد ومعالجة الطلب</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

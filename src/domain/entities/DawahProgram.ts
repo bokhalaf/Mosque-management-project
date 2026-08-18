@@ -92,3 +92,16 @@ export interface DawahProgramStats {
   total_competitions: number;
   featured_count: number;
 }
+
+export interface DawahPaginationState {
+  currentPage: number;
+  lastPage: number;
+  total: number;
+  perPage: number;
+}
+
+export interface DawahPaginatedResponse {
+  data: DawahProgram[];
+  pagination: DawahPaginationState;
+}
+

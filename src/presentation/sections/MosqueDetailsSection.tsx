@@ -360,6 +360,48 @@ export function MosqueDetailsSection() {
                   className="w-full px-3.5 py-2 bg-muted/60 border border-border focus:border-primary rounded-xl text-xs font-bold outline-none text-foreground"
                 />
               </div>
+
+              {/* ── Mosque Image Upload / URL Field ── */}
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-xs font-bold text-muted-foreground">صورة المسجد الرسمية (Mosque Image)</label>
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-muted/30 border border-border rounded-2xl">
+                  {form.image ? (
+                    <div className="w-28 h-20 rounded-xl overflow-hidden border border-border relative bg-muted shrink-0 shadow-sm">
+                      <img
+                        src={typeof form.image === 'string' ? form.image : URL.createObjectURL(form.image)}
+                        alt="صورة المسجد"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-28 h-20 rounded-xl bg-primary/10 text-primary border border-primary/20 flex flex-col items-center justify-center gap-1 shrink-0">
+                      <Building2 className="w-6 h-6" />
+                      <span className="text-[10px] font-bold">بدون صورة</span>
+                    </div>
+                  )}
+
+                  <div className="flex-1 space-y-2 w-full">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setForm(prev => ({ ...prev, image: file }));
+                        }
+                      }}
+                      className="w-full text-xs text-muted-foreground file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={typeof form.image === 'string' ? form.image : ''}
+                      onChange={(e) => setForm(prev => ({ ...prev, image: e.target.value }))}
+                      placeholder="أو أدخل رابط صورة المسجد المباشرة (URL)..."
+                      className="w-full px-3.5 py-2 bg-card border border-border focus:border-primary rounded-xl text-xs font-bold outline-none text-foreground font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

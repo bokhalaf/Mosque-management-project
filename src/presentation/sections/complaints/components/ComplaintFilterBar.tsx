@@ -138,11 +138,11 @@ export function ComplaintFilterBar({
     }
   };
 
-  const statusTabs = [
-    { id: 'all', label: 'الجميع', count: stats.total_complaints },
-    { id: 'pending', label: 'جديدة', count: stats.open_complaints },
+  const statusOptions: FilterOption[] = [
+    { id: 'all', label: 'الجميع' },
+    { id: 'pending', label: 'جديدة' },
     { id: 'in_progress', label: 'قيد المعالجة' },
-    { id: 'resolved', label: 'تم الحل', count: stats.resolved_this_month },
+    { id: 'resolved', label: 'تم الحل' },
     { id: 'canceled', label: 'مغلقة' },
   ];
 
@@ -163,6 +163,7 @@ export function ComplaintFilterBar({
   ];
 
   const activeFiltersCount = [
+    filters.statusFilter !== 'all',
     filters.priorityFilter !== 'all',
     filters.typeFilter !== 'all',
   ].filter(Boolean).length;
@@ -170,49 +171,25 @@ export function ComplaintFilterBar({
   return (
     <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4 font-['Cairo']">
 
-      {/* Row 1: Status Segmented Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onSetStatusFilter(tab.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-              filters.statusFilter === tab.id
-                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-            }`}
-          >
-            <span>{tab.label}</span>
-            {tab.count !== undefined && (
-              <span className={`px-1.5 py-0.5 text-[10px] rounded-md ${
-                filters.statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-background text-foreground'
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Row 2: Search + Dropdown Filters Button */}
+      {/* Search Input + Dropdown Filters Button */}
       <div className="flex gap-3 items-center">
 
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="ابحث برقم الشكوى، العنوان، اسم المرسل... ثم اضغط Enter"
+            placeholder="ابحث عن الشكوى بالرقم، الاسم، البريد، أو الوصف (اضغط Enter للبحث)..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full pl-24 pr-11 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground placeholder:text-muted-foreground"
+            className="w-full pl-24 pr-10 py-2.5 bg-muted/50 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
           />
           <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {localSearch && (
               <button
                 onClick={() => { setLocalSearch(''); onSetSearchQuery(''); }}
-                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="p-1 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
                 title="مسح البحث"
               >
                 <X className="w-3.5 h-3.5" />
@@ -254,13 +231,22 @@ export function ComplaintFilterBar({
                 <span className="text-sm font-black text-foreground">خيارات التصفية</span>
                 {activeFiltersCount > 0 && (
                   <button
-                    onClick={() => { onSetPriorityFilter('all'); onSetTypeFilter('all'); }}
+                    onClick={() => { onSetStatusFilter('all'); onSetPriorityFilter('all'); onSetTypeFilter('all'); }}
                     className="text-[11px] font-bold text-red-500 hover:underline"
                   >
                     مسح الفلاتر
                   </button>
                 )}
               </div>
+
+              <FilterGroup
+                title="حالة البلاغ"
+                options={statusOptions}
+                value={filters.statusFilter}
+                onChange={(v) => onSetStatusFilter(v)}
+              />
+
+              <div className="border-t border-border/60" />
 
               <FilterGroup
                 title="الأولوية"

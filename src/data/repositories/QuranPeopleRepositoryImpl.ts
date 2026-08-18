@@ -7,82 +7,12 @@ import { IQuranPeopleRepository } from "../../domain/repositories/IQuranPeopleRe
 
 const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
-const STORAGE_KEY_PEOPLE = "quran_people_unified_cache";
-
-// Initial seed data for Mosque Quran Circles Staff & Students
-const INITIAL_PEOPLE: QuranPerson[] = [
-  {
-    id: 1,
-    name: "الشيخ عبد الله بن محمد العتيبي",
-    email: "a.alotaibi@mosque.com",
-    phone: "0501234567",
-    role: "teacher",
-    circle_name: "حلقة الإمام الحصري للحفظ المكثف",
-    status: "active",
-    joined_date: "2025-01-15",
-    created_at: "2025-01-15T10:00:00Z",
-  },
-  {
-    id: 2,
-    name: "الأستاذ د. فهد بن عبد العزيز السلمان",
-    email: "f.alsalman@mosque.com",
-    phone: "0559876543",
-    role: "halaqa_supervisor",
-    circle_name: "إدارة مجمع حلقات المسجد الجامع",
-    status: "active",
-    joined_date: "2024-11-01",
-    created_at: "2024-11-01T08:30:00Z",
-  },
-  {
-    id: 3,
-    name: "الطالب عبدالرحمن محمد الغامدي",
-    email: "a.alghamdi@student.com",
-    phone: "0561122334",
-    role: "student",
-    circle_name: "حلقة الشاطبي لإتقان التلاوة",
-    status: "active",
-    joined_date: "2025-02-10",
-    created_at: "2025-02-10T14:20:00Z",
-  },
-  {
-    id: 4,
-    name: "الشيخ يوسف بن إبراهيم الحسون",
-    email: "y.alhassoun@mosque.com",
-    phone: "0543344556",
-    role: "teacher",
-    circle_name: "حلقة نافع المدني للجاليات",
-    status: "active",
-    joined_date: "2025-03-01",
-    created_at: "2025-03-01T09:15:00Z",
-  },
-  {
-    id: 5,
-    name: "الطالب عمر خالد الدوسري",
-    email: "o.aldossary@student.com",
-    phone: "0507788990",
-    role: "student",
-    circle_name: "حلقة الإمام الحصري للحفظ المكثف",
-    status: "active",
-    joined_date: "2025-03-12",
-    created_at: "2025-03-12T16:00:00Z",
-  },
-  {
-    id: 6,
-    name: "الشيخ د. خالد بن سليمان الدريس",
-    email: "k.aldrees@mosque.com",
-    phone: "0582233445",
-    role: "halaqa_supervisor",
-    circle_name: "إشراف الحلقة النموذجية المسائية",
-    status: "pending_invitation",
-    joined_date: "2026-08-01",
-    created_at: "2026-08-01T11:00:00Z",
-  }
-];
-
 export class QuranPeopleRepositoryImpl implements IQuranPeopleRepository {
+  public lastUsersRawResponse: any = null;
+  public lastDashboardRawResponse: any = null;
 
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const token = typeof window !== "undefined" ? (localStorage.getItem("auth_token") || localStorage.getItem("token")) : null;
     return {
       "Content-Type": "application/json",
       "Accept": "application/json",
@@ -90,200 +20,355 @@ export class QuranPeopleRepositoryImpl implements IQuranPeopleRepository {
     };
   }
 
-  private getMosqueId(): number {
-    const userStr = typeof window !== "undefined" ? localStorage.getItem("auth_user") : null;
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        if (user.mosque_id) return Number(user.mosque_id);
-      } catch (e) { }
-    }
-    return 1;
-  }
+  // ── 1. getPeople (GET /api/users ONLY - Swagger listUsers with Pagination) ────
+  async getPeople(params?: { role?: string; status?: string; q?: string; page?: number; per_page?: number }): Promise<{ data: QuranPerson[]; pagination: { currentPage: number; lastPage: number; total: number; perPage: number } }> {
+    this.lastUsersRawResponse = null;
+    const apiPeople: QuranPerson[] = [];
+    let paginationMeta = {
+      currentPage: params?.page || 1,
+      lastPage: 1,
+      total: 0,
+      perPage: params?.per_page || 5,
+    };
 
-  private getLocalPeople(): QuranPerson[] {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY_PEOPLE);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) { }
-      }
-      localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(INITIAL_PEOPLE));
-    }
-    return INITIAL_PEOPLE;
-  }
-
-  private saveLocalPeople(list: QuranPerson[]): void {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(list));
-    }
-  }
-
-  // ── 1. getPeople (Students, Teachers, Managers) ─────────────────────
-  async getPeople(params?: { role?: string; q?: string }): Promise<QuranPerson[]> {
-    let apiPeople: QuranPerson[] = [];
-
-    // 1. Try GET /api/students & GET /api/teachers endpoints
     try {
-      const [studentsRes, teachersRes] = await Promise.all([
-        fetch(`${BASE_URL}/students`, { headers: this.getAuthHeaders() }).catch(() => null),
-        fetch(`${BASE_URL}/teachers`, { headers: this.getAuthHeaders() }).catch(() => null),
-      ]);
+      const url = new URL(`${BASE_URL}/users`);
 
-      if (studentsRes && studentsRes.ok) {
-        const stJson = await studentsRes.json();
-        const stItems = Array.isArray(stJson) ? stJson : (stJson.data || []);
-        stItems.forEach((st: any) => {
-          apiPeople.push({
-            id: st.id || Date.now(),
-            name: st.name || st.full_name || 'طالب',
-            email: st.email || '',
-            phone: st.phone || st.phone_number || '',
-            role: 'student',
-            circle_name: st.circle_name || 'حلقة القرآن',
-            status: st.status || 'active',
-            joined_date: st.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          });
-        });
+      if (params?.q && params.q.trim()) {
+        url.searchParams.append('search', params.q.trim());
+      }
+      if (params?.status && params.status !== 'all') {
+        url.searchParams.append('status', params.status);
+      }
+      if (params?.role && params.role !== 'all') {
+        url.searchParams.append('role', params.role);
+      }
+      if (params?.page) {
+        url.searchParams.append('page', String(params.page));
+      }
+      if (params?.per_page) {
+        url.searchParams.append('per_page', String(params.per_page));
       }
 
-      if (teachersRes && teachersRes.ok) {
-        const tcJson = await teachersRes.json();
-        const tcItems = Array.isArray(tcJson) ? tcJson : (tcJson.data || []);
-        tcItems.forEach((tc: any) => {
-          apiPeople.push({
-            id: tc.id || Date.now(),
-            name: tc.name || tc.full_name || 'معلم',
-            email: tc.email || '',
-            phone: tc.phone || tc.phone_number || '',
-            role: tc.role || 'teacher',
-            circle_name: tc.circle_name || 'حلقة الحفظ والتعليم',
-            status: tc.status || 'active',
-            joined_date: tc.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          });
-        });
-      }
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }).catch(() => null);
 
+      if (response) {
+        const json = await response.json().catch(() => null);
+        this.lastUsersRawResponse = json;
+
+        if (response.ok && json) {
+          const items = Array.isArray(json) ? json : (json.data || []);
+          const perPage = params?.per_page || 5;
+          const page = params?.page || 1;
+
+          let paginatedItems = items;
+
+          if (json.pagination) {
+            paginationMeta = {
+              currentPage: Number(json.pagination.current_page || page),
+              lastPage: Number(json.pagination.last_page || Math.ceil((json.pagination.total || items.length) / perPage) || 1),
+              total: Number(json.pagination.total || items.length),
+              perPage: Number(json.pagination.per_page || perPage),
+            };
+
+            if (items.length > perPage) {
+              const start = (page - 1) * perPage;
+              paginatedItems = items.slice(start, start + perPage);
+            }
+          } else {
+            const total = items.length;
+            const lastPage = Math.max(1, Math.ceil(total / perPage));
+            const start = (page - 1) * perPage;
+            paginatedItems = items.slice(start, start + perPage);
+
+            paginationMeta = {
+              currentPage: page,
+              lastPage,
+              total,
+              perPage,
+            };
+          }
+
+          if (Array.isArray(paginatedItems)) {
+            paginatedItems.forEach((usr: any) => {
+              const primaryRole = Array.isArray(usr.roles) && usr.roles.length > 0
+                ? usr.roles[0]
+                : (usr.role || 'student');
+
+              apiPeople.push({
+                id: usr.id,
+                name: usr.name || `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || 'مستخدم',
+                email: usr.email || '',
+                phone: usr.phone || '',
+                role: primaryRole as any,
+                circle_name: usr.circle_name || (primaryRole === 'teacher' ? 'حلقة القرآن والتعليم' : primaryRole === 'halaqa_supervisor' ? 'إشراف المجمع' : 'حلقة القرآن'),
+                status: usr.status || 'active',
+                joined_date: usr.created_at?.split(' ')[0] || usr.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+                mosque_id: usr.mosque_id,
+              });
+            });
+          }
+        }
+      }
     } catch (e) {
-      console.warn("Error fetching people from API:", e);
+      console.warn("API listUsers (/api/users) error:", e);
     }
 
-    // Merge with persistent local people list
-    const localList = this.getLocalPeople();
-    const mergedMap = new Map<string, QuranPerson>();
-
-    localList.forEach(p => mergedMap.set(String(p.id), p));
-    apiPeople.forEach(p => mergedMap.set(String(p.id), p));
-
-    let result = Array.from(mergedMap.values());
-
-    if (params?.role && params.role !== 'all') {
-      result = result.filter(p => p.role === params.role);
-    }
-
-    if (params?.q && params.q.trim()) {
-      const q = params.q.trim().toLowerCase();
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q) ||
-        p.phone.includes(q) ||
-        (p.circle_name && p.circle_name.toLowerCase().includes(q))
-      );
-    }
-
-    return result;
-  }
-
-  // ── 2. getStats ─────────────────────────────────────────────────────
-  async getStats(): Promise<QuranPeopleStats> {
-    const people = await this.getPeople();
     return {
-      total_students: people.filter(p => p.role === 'student').length,
-      total_teachers: people.filter(p => p.role === 'teacher').length,
-      total_supervisors: people.filter(p => p.role === 'halaqa_supervisor').length,
-      pending_invitations: people.filter(p => p.status === 'pending_invitation').length,
+      data: apiPeople,
+      pagination: paginationMeta,
     };
   }
 
-  // ── 3. sendInvitation (POST /api/invitations/send) ──────────────────
-  async sendInvitation(payload: SendInvitationPayload): Promise<{ success: boolean; message: string; invitation?: any }> {
-    const mosqueId = payload.mosque_id || this.getMosqueId();
-
-    const requestBody = {
-      mosque_id: Number(mosqueId),
-      email: payload.email,
-      phone: payload.phone,
-      role: payload.role,
-      name: payload.name,
-      notes: payload.notes || undefined,
-    };
-
-    console.log("POST /api/invitations/send Payload:", requestBody);
-
-    let apiSuccess = false;
-    let apiMessage = "تم إرسال دعوة التسجيل بنجاح";
-    let apiResponse = null;
+  // ── 2. getStats (GET /api/dashboard/mosque-manager/statistics) ──────
+  async getStats(): Promise<QuranPeopleStats> {
+    this.lastDashboardRawResponse = null;
 
     try {
-      const response = await fetch(`${BASE_URL}/invitations/send`, {
+      const response = await fetch(`${BASE_URL}/dashboard/mosque-manager/statistics`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }).catch(() => null);
+
+      if (response) {
+        const json = await response.json().catch(() => null);
+        this.lastDashboardRawResponse = json;
+
+        if (response.ok && json) {
+          const dataObj = json.data || json;
+          const kpi = dataObj.kpi_cards || dataObj.cards || dataObj;
+
+          let total_students = Number(kpi.total_students ?? kpi.students_count ?? 0);
+          let total_teachers = Number(kpi.total_teachers ?? kpi.teachers_count ?? 0);
+          let total_volunteers = Number(kpi.total_volunteers ?? kpi.volunteers_count ?? kpi.volunteers ?? 0);
+          let pending_invitations = Number(kpi.pending_invitations ?? kpi.pending_invitations_count ?? 0);
+          let total_supervisors = Number(kpi.total_supervisors ?? kpi.total_halaqas ?? 0);
+
+          // If counts are 0, populate from /api/users & /api/invitations
+          if (!total_students && !total_teachers) {
+            const [usersRes, invRes] = await Promise.all([
+              fetch(`${BASE_URL}/users`, { method: "GET", headers: this.getAuthHeaders() }).catch(() => null),
+              fetch(`${BASE_URL}/invitations?status=pending`, { method: "GET", headers: this.getAuthHeaders() }).catch(() => null),
+            ]);
+
+            if (usersRes && usersRes.ok) {
+              const usersJson = await usersRes.json().catch(() => null);
+              const items: any[] = Array.isArray(usersJson) ? usersJson : (usersJson.data || []);
+              items.forEach((u: any) => {
+                const roles: string[] = Array.isArray(u.roles) ? u.roles : [u.role || 'student'];
+                if (roles.includes('student')) total_students++;
+                if (roles.includes('teacher')) total_teachers++;
+                if (roles.includes('volunteer')) total_volunteers++;
+                if (roles.includes('halaqa_supervisor') || roles.includes('mosque_manager')) total_supervisors++;
+                if (u.status === 'pending_invitation' || u.status === 'pending') pending_invitations++;
+              });
+            }
+
+            if (invRes && invRes.ok) {
+              const invJson = await invRes.json().catch(() => null);
+              const invItems = Array.isArray(invJson) ? invJson : (invJson.data || []);
+              if (Array.isArray(invItems) && invItems.length > 0) {
+                pending_invitations = invItems.length;
+              }
+            }
+          }
+
+          return {
+            total_students,
+            total_teachers,
+            total_supervisors,
+            total_volunteers,
+            pending_invitations,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("getStats API fetch error:", e);
+    }
+
+    return {
+      total_students: 0,
+      total_teachers: 0,
+      total_supervisors: 0,
+      total_volunteers: 0,
+      pending_invitations: 0,
+    };
+  }
+
+  private extractErrorMessage(json: any, fallback: string): string {
+    if (!json) return fallback;
+
+    if (json.data && typeof json.data === "object" && !Array.isArray(json.data)) {
+      const details: string[] = [];
+      Object.values(json.data).forEach((val: any) => {
+        if (Array.isArray(val)) {
+          details.push(...val);
+        } else if (typeof val === "string") {
+          details.push(val);
+        }
+      });
+      if (details.length > 0) {
+        return details.join(" — ");
+      }
+    }
+
+    if (json.message && json.message !== "Validation error.") {
+      return json.message;
+    }
+
+    return json.message || fallback;
+  }
+
+  // ── 3. sendInvitation ─────────────────────────────────────────────────
+  async sendInvitation(payload: SendInvitationPayload): Promise<{ success: boolean; message: string; invitation?: any }> {
+    const url = `${BASE_URL}/invitations/send`;
+    try {
+      const response = await fetch(url, {
         method: "POST",
         headers: this.getAuthHeaders(),
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(payload),
       });
 
       const json = await response.json().catch(() => null);
-      console.log("POST /api/invitations/send Response:", json);
+
+      if (response.ok && json && json.status !== false) {
+        return {
+          success: true,
+          message: json.message || "تم إرسال دعوة الانضمام بنجاح",
+          invitation: json.data || json,
+        };
+      } else {
+        return {
+          success: false,
+          message: this.extractErrorMessage(json, "تعذر إرسال الدعوة من السيرفر"),
+        };
+      }
+    } catch (e: any) {
+      return {
+        success: false,
+        message: e.message || "حدث خطأ غير متوقع أثناء إرسال الدعوة",
+      };
+    }
+  }
+
+  // ── 4. resendInvitation ───────────────────────────────────────────────
+  async resendInvitation(id: string | number): Promise<void> {
+    await this.resendInvitationApi(id);
+  }
+
+  // ── 4.1 getInvitations (GET /api/invitations) ──────────────────────────
+  async getInvitations(status?: string): Promise<{ data: any[]; rawResponse?: any }> {
+    try {
+      const url = new URL(`${BASE_URL}/invitations`);
+      if (status && status !== 'all') {
+        url.searchParams.append('status', status);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }).catch(() => null);
+
+      if (response) {
+        const json = await response.json().catch(() => null);
+        if (response.ok && json) {
+          const items = Array.isArray(json) ? json : (json.data || []);
+          return { data: items, rawResponse: json };
+        }
+      }
+    } catch (e) {
+      console.warn("API listInvitations error:", e);
+    }
+    return { data: [], rawResponse: null };
+  }
+
+  // ── 4.2 resendInvitationApi (POST /api/invitations/{id}/resend) ───────
+  async resendInvitationApi(invitationId: string | number): Promise<{ success: boolean; message: string; rawResponse?: any }> {
+    const url = `${BASE_URL}/invitations/${invitationId}/resend`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: this.getAuthHeaders(),
+      });
+
+      const json = await response.json().catch(() => null);
+      if (response.ok && json && json.status !== false) {
+        return {
+          success: true,
+          message: json.message || "تمت إعادة إرسال الدعوة بنجاح وتمديد صلاحيتها.",
+          rawResponse: json,
+        };
+      } else {
+        const errorMsg = this.extractErrorMessage(json, "تعذر إعادة إرسال الدعوة (قد تكون مقبولة بالفعل أو غير مسموح بإعادة إرسالها)");
+        return {
+          success: false,
+          message: errorMsg,
+          rawResponse: json,
+        };
+      }
+    } catch (e: any) {
+      return {
+        success: false,
+        message: e.message || "حدث خطأ أثناء إعادة إرسال الدعوة",
+      };
+    }
+  }
+
+  // ── 5. updatePersonStatus ─────────────────────────────────────────────
+  async updatePersonStatus(id: string | number, status: 'active' | 'pending_invitation' | 'inactive'): Promise<boolean> {
+    const res = await this.changeUserStatus(id, status === 'pending_invitation' ? 'inactive' : status);
+    return res.success;
+  }
+
+  // ── 6. changeUserStatus (PATCH /api/users/{user}/status) ─────────────
+  async changeUserStatus(userId: string | number, status: 'active' | 'inactive'): Promise<{ success: boolean; message: string; rawResponse?: any }> {
+    const url = `${BASE_URL}/users/${userId}/status`;
+    let apiSuccess = false;
+    let apiMessage = status === 'active' ? 'تم تفعيل الحساب بنجاح' : 'تم تجميد الحساب بنجاح';
+    let apiResponse = null;
+
+    try {
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+
+      const json = await response.json().catch(() => null);
       apiResponse = json;
 
-      if (response.ok && (json?.status || json?.message)) {
-        apiSuccess = true;
-        apiMessage = json.message || "تم إرسال الدعوة بنجاح عبر السيرفر";
+      if (response.ok && json) {
+        apiSuccess = json.status ?? true;
+        apiMessage = json.message || apiMessage;
       } else if (json?.message) {
         apiMessage = json.message;
       }
     } catch (e: any) {
-      console.warn("Error calling POST /api/invitations/send:", e);
+      console.warn("API changeUserStatus error:", e);
     }
 
-    // Add new invited person to local state
-    const newPerson: QuranPerson = {
-      id: Date.now(),
-      name: payload.name,
-      email: payload.email,
-      phone: payload.phone,
-      role: payload.role,
-      circle_name: payload.role === 'halaqa_supervisor' ? 'إشراف الحلقات' : 'حلقة القرآن',
-      status: 'pending_invitation',
-      joined_date: new Date().toISOString().split('T')[0],
-      created_at: new Date().toISOString(),
-      notes: payload.notes,
-      mosque_id: mosqueId,
-    };
-
-    const currentList = this.getLocalPeople();
-    currentList.unshift(newPerson);
-    this.saveLocalPeople(currentList);
-
     return {
-      success: true,
+      success: apiSuccess,
       message: apiMessage,
-      invitation: apiResponse || newPerson,
+      rawResponse: apiResponse,
     };
   }
 
-  // ── 4. resendInvitation ─────────────────────────────────────────────
-  async resendInvitation(id: string | number): Promise<void> {
-    const list = this.getLocalPeople();
-    const target = list.find(p => String(p.id) === String(id));
-    if (target) {
-      await this.sendInvitation({
-        mosque_id: target.mosque_id || this.getMosqueId(),
-        email: target.email,
-        phone: target.phone,
-        role: target.role as 'teacher' | 'halaqa_supervisor',
-        name: target.name,
+  // ── 7. deletePerson (DELETE /api/users/{id}) ─────────────────────────
+  async deletePerson(id: string | number): Promise<boolean> {
+    const url = `${BASE_URL}/users/${id}`;
+    try {
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: this.getAuthHeaders(),
       });
+      return response.ok;
+    } catch (e) {
+      console.warn("Delete user error:", e);
+      return false;
     }
   }
 }

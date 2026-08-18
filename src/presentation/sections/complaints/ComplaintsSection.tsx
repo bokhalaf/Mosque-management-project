@@ -21,6 +21,9 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
   const {
     stats,
     complaints,
+    page,
+    setPage,
+    pagination,
     loadingStats,
     loadingComplaints,
     error,
@@ -94,6 +97,8 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
               loadingComplaints={loadingComplaints}
               error={error}
               hasActiveFilters={hasActiveFilters}
+              pagination={pagination}
+              onPageChange={setPage}
               onViewDetails={onViewComplaintDetails}
               onResetFilters={resetFilters}
             />

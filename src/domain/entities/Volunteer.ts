@@ -67,18 +67,19 @@ export interface VolunteerCertificate {
   total_hours: number;
 }
 
-// Payload Types
 export interface CreateOpportunityPayload {
   mosque_id?: number | string;
   title: string;
-  description: string;
+  description?: string;
   required_volunteers: number;
   start_date: string;
-  end_date: string;
+  end_date?: string;
+  tasks?: string[];
 }
 
 export interface AssignTaskPayload {
   application_id: number | string;
+  opportunity_id?: number | string;
   task_description: string;
 }
 
@@ -89,3 +90,25 @@ export interface LogHoursPayload {
   manager_evaluation: string;
   notes?: string;
 }
+
+export interface VolunteerPaginationState {
+  currentPage: number;
+  lastPage: number;
+  total: number;
+  perPage: number;
+}
+
+export interface VolunteerPaginatedResponse {
+  data: VolunteerOpportunity[];
+  pagination: VolunteerPaginationState;
+}
+
+export interface VolunteerStats {
+  total_opportunities: number;
+  active_opportunities: number;
+  pending_applications: number;
+  approved_volunteers: number;
+  active_tasks: number;
+  total_hours: number;
+}
+

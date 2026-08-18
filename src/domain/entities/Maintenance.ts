@@ -51,6 +51,8 @@ export interface MaintenanceRequestItem {
   mosque?: MaintenanceMosqueRef | null;
   files?: MaintenanceFile[];
   status_logs?: MaintenanceStatusLog[];
+  logs?: MaintenanceStatusLog[];
+  history?: any[];
   created_at: string;
   updated_at: string;
 }

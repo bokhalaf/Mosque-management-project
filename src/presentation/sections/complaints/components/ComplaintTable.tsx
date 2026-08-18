@@ -84,6 +84,14 @@ interface ComplaintTableProps {
   loadingComplaints: boolean;
   error: string | null;
   hasActiveFilters: boolean;
+  pagination?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    has_more?: boolean;
+  };
+  onPageChange?: (page: number) => void;
   onViewDetails?: (id: string) => void;
   onResetFilters: () => void;
 }
@@ -94,9 +102,13 @@ export function ComplaintTable({
   loadingComplaints,
   error,
   hasActiveFilters,
+  pagination,
+  onPageChange,
   onViewDetails,
   onResetFilters,
 }: ComplaintTableProps) {
+  const currentPage = pagination?.current_page || 1;
+  const lastPage = pagination?.last_page || 1;
   return (
     <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col font-['Cairo']">
       <div className="overflow-x-auto">
@@ -244,12 +256,6 @@ export function ComplaintTable({
                             <UserPlus className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                          title="أرشفة الشكوى"
-                        >
-                          <Archive className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -260,11 +266,53 @@ export function ComplaintTable({
         </table>
       </div>
 
-      {/* Table Footer */}
-      <div className="px-4 py-3 border-t border-border bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground font-bold">
-          عرض <span className="text-foreground">{complaints.length}</span> من إجمالي <span className="text-foreground">{totalCount ?? complaints.length}</span> شكوى
-        </span>
+      {/* Table Footer with Interactive Pagination */}
+      <div className="p-4 border-t border-border bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="text-xs text-muted-foreground font-medium">
+          عرض <span className="font-bold text-foreground">{complaints.length}</span> من أصل <span className="font-bold text-foreground">{pagination?.total || totalCount}</span> شكوى
+          {lastPage > 1 && (
+            <span className="mr-2 text-muted-foreground">
+              (الصفحة <span className="font-bold text-foreground">{currentPage}</span> من <span className="font-bold text-foreground">{lastPage}</span>)
+            </span>
+          )}
+        </div>
+
+        {/* Pagination Buttons */}
+        {lastPage > 1 && onPageChange && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="px-3.5 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              السابق
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: lastPage }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => onPageChange(p)}
+                  className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                    currentPage === p
+                      ? 'bg-primary text-primary-foreground font-black shadow-md shadow-primary/20'
+                      : 'bg-card border border-border text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= lastPage}
+              className="px-3.5 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              التالي
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

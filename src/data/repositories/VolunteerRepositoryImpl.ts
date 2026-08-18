@@ -1,5 +1,5 @@
 // ==============================
-// Data — VolunteerRepositoryImpl (Live API & Dynamic Local Storage)
+// Data — VolunteerRepositoryImpl (Live API Only — Flexible Array & Key Extraction)
 // ==============================
 
 import {
@@ -11,11 +11,12 @@ import {
   CreateOpportunityPayload,
   AssignTaskPayload,
   LogHoursPayload,
+  VolunteerPaginatedResponse,
+  VolunteerStats,
 } from "../../domain/entities/Volunteer";
 import { IVolunteerRepository } from "../../domain/repositories/IVolunteerRepository";
 
 const BASE_URL = "https://mms-backend-rose.vercel.app/api";
-const STORAGE_KEY_VOLUNTEERS = "mosque_volunteers_real_live_store";
 
 export class VolunteerRepositoryImpl implements IVolunteerRepository {
   private getAuthHeaders(): HeadersInit {
@@ -38,354 +39,475 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
     return 20;
   }
 
-  // Pure dynamic store (no static hardcoded fake data)
-  private getLocalStore(): {
-    opportunities: VolunteerOpportunity[];
-    applications: VolunteerApplication[];
-    tasks: VolunteerTask[];
-    logs: VolunteerLog[];
-    certificates: VolunteerCertificate[];
-  } {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY_VOLUNTEERS);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {}
-      }
+  private parseErrorResponse(json: any): string {
+    if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+      return Object.entries(json.data)
+        .map(([f, msgs]) => `${f}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+        .join(" | ");
     }
-    const emptyStore = {
-      opportunities: [],
-      applications: [],
-      tasks: [],
-      logs: [],
-      certificates: [],
+    if (json?.errors && typeof json.errors === 'object') {
+      return Object.entries(json.errors)
+        .map(([f, msgs]) => `${f}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+        .join(" | ");
+    }
+    return json?.message || "";
+  }
+
+  private extractItems(json: any): any[] {
+    if (!json) return [];
+    if (Array.isArray(json)) return json;
+    if (Array.isArray(json.data)) return json.data;
+    if (json.data && Array.isArray(json.data.data)) return json.data.data;
+    if (Array.isArray(json.opportunities)) return json.opportunities;
+    if (json.data && Array.isArray(json.data.opportunities)) return json.data.opportunities;
+    return [];
+  }
+
+  private mapOpportunity(item: any): VolunteerOpportunity {
+    return {
+      id: item.id,
+      mosque_id: item.mosque_id || this.getMosqueId(),
+      title: item.title || item.name || item.opportunity_title || "فرصة تطوعية",
+      description: item.description || item.details || item.notes || "",
+      required_volunteers: Number(item.required_volunteers || item.volunteers_needed || 0),
+      current_volunteers: Number(item.current_volunteers || item.volunteers_count || item.accepted_volunteers_count || 0),
+      start_date: item.start_date || item.start_at || "",
+      end_date: item.end_date || item.end_at || "",
+      status: item.status || (item.is_active === false || item.closed ? "closed" : "open"),
+      created_at: item.created_at || new Date().toISOString(),
     };
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY_VOLUNTEERS, JSON.stringify(emptyStore));
-    }
-    return emptyStore;
   }
 
-  private saveLocalStore(store: {
-    opportunities: VolunteerOpportunity[];
-    applications: VolunteerApplication[];
-    tasks: VolunteerTask[];
-    logs: VolunteerLog[];
-    certificates: VolunteerCertificate[];
-  }): void {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY_VOLUNTEERS, JSON.stringify(store));
-    }
+  private mapApplication(item: any, opportunityId?: number | string): VolunteerApplication {
+    return {
+      id: item.id,
+      opportunity_id: item.opportunity_id || (opportunityId ? Number(opportunityId) : 0),
+      opportunity_title: item.opportunity_title || item.opportunity?.title || "",
+      volunteer_id: item.volunteer_id || item.user_id || item.user?.id || item.id,
+      volunteer_name: item.volunteer_name || item.user?.name || item.user?.full_name || item.name || "متطوع",
+      phone: item.phone || item.user?.phone || item.user?.phone_number || "—",
+      email: item.email || item.user?.email || "",
+      status: item.status || "pending",
+      applied_at: item.created_at || item.applied_at || new Date().toISOString(),
+      notes: item.notes || "",
+    };
   }
 
-  // ── 1. OPPERTUNITIES (GET /api/volunteer/manager/opportunities & /api/volunteer/opportunities) ─
+  private mapTask(item: any, opportunityId?: number | string): VolunteerTask {
+    return {
+      id: item.id,
+      application_id: item.application_id || "",
+      volunteer_id: item.volunteer_id,
+      volunteer_name: item.volunteer_name || item.volunteer?.name || "غير مسند",
+      opportunity_id: item.opportunity_id || opportunityId,
+      opportunity_title: item.opportunity_title || item.opportunity?.title || "",
+      task_description: item.task_description || item.description || item.title || "",
+      status: item.is_completed ? "completed" : (item.status || "assigned"),
+      created_at: item.created_at || new Date().toISOString(),
+    };
+  }
+
+  // ── 1. OPPORTUNITIES ─────────────────────────────────────────────────────
+  // GET /api/volunteer/manager/opportunities & fallback /api/volunteer/opportunities
   async getManagerOpportunities(): Promise<VolunteerOpportunity[]> {
-    let apiItems: VolunteerOpportunity[] = [];
-    const endpointsToTry = [
+    const urls = [
       `${BASE_URL}/volunteer/manager/opportunities`,
       `${BASE_URL}/volunteer/opportunities`,
     ];
 
-    for (const url of endpointsToTry) {
+    for (const url of urls) {
       try {
-        const res = await fetch(url, {
-          headers: this.getAuthHeaders(),
-        });
+        const res = await fetch(url, { headers: this.getAuthHeaders() });
         if (res.ok) {
           const json = await res.json();
-          const items = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+          const items = this.extractItems(json);
           if (items.length > 0) {
-            apiItems = items;
-            break;
+            return items.map((item: any) => this.mapOpportunity(item));
           }
         }
       } catch (e) {
-        console.warn(`API call to ${url} failed:`, e);
+        console.warn(`API getManagerOpportunities (${url}) error:`, e);
+      }
+    }
+    return [];
+  }
+
+  async getManagerOpportunitiesPaginated(page: number = 1, perPage: number = 6): Promise<VolunteerPaginatedResponse> {
+    const urls = [
+      `${BASE_URL}/volunteer/manager/opportunities?page=${page}&per_page=${perPage}`,
+      `${BASE_URL}/volunteer/opportunities?page=${page}&per_page=${perPage}`,
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const json = await res.json();
+          const items = this.extractItems(json);
+
+          // Extract server pagination metadata
+          const meta = json.pagination || json.meta || json.data?.pagination || json.data || {};
+          const currentPage = Number(meta.current_page || meta.currentPage || page);
+          const lastPage = Number(meta.last_page || meta.lastPage || Math.ceil((meta.total || items.length) / perPage) || 1);
+          const total = Number(meta.total ?? (meta.total_count || items.length));
+
+          return {
+            data: items.map((item: any) => this.mapOpportunity(item)),
+            pagination: {
+              currentPage,
+              lastPage: Math.max(1, lastPage),
+              total,
+              perPage,
+            },
+          };
+        }
+      } catch (e) {
+        console.warn(`API getManagerOpportunitiesPaginated (${url}) error:`, e);
       }
     }
 
-    const store = this.getLocalStore();
-    const map = new Map<string | number, VolunteerOpportunity>();
-
-    // Merge persistent local real opportunities with API items
-    store.opportunities.forEach(item => map.set(item.id, item));
-    apiItems.forEach(item => map.set(item.id, item));
-
-    const merged = Array.from(map.values());
-    store.opportunities = merged;
-    this.saveLocalStore(store);
-
-    return merged;
+    return {
+      data: [],
+      pagination: { currentPage: 1, lastPage: 1, total: 0, perPage },
+    };
   }
 
+  // GET /api/volunteer/stats or /api/volunteer/opportunities/stats
+  async getStats(): Promise<VolunteerStats> {
+    try {
+      const urls = [
+        `${BASE_URL}/volunteer/opportunities/stats`,
+        `${BASE_URL}/volunteer/stats`,
+      ];
+
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, {
+            headers: this.getAuthHeaders(),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            const data = json.data || json;
+            if (data && typeof data === 'object') {
+              return {
+                total_opportunities: Number(data.total_opportunities || data.opportunities_count || data.total || 0),
+                active_opportunities: Number(data.active_opportunities || data.open_opportunities_count || data.active || 0),
+                pending_applications: Number(data.pending_applications || data.applications_pending_count || data.pending || 0),
+                approved_volunteers: Number(data.approved_volunteers || data.volunteers_count || data.approved || 0),
+                active_tasks: Number(data.active_tasks || data.tasks_count || 0),
+                total_hours: Number(data.total_hours || data.hours_count || 0),
+              };
+            }
+          }
+        } catch {
+          // continue to next URL
+        }
+      }
+    } catch (e) {
+      console.warn('API getStats error:', e);
+    }
+
+    // Fallback: calculate from opportunities, applications, tasks, logs
+    const [opps, apps, tasks, logs] = await Promise.all([
+      this.getManagerOpportunities(),
+      this.getOpportunityApplications(),
+      this.getTasks(),
+      this.getLogs(),
+    ]);
+
+    return {
+      total_opportunities: opps.length,
+      active_opportunities: opps.filter(o => o.status === 'open').length,
+      pending_applications: apps.filter(a => a.status === 'pending').length,
+      approved_volunteers: apps.filter(a => a.status === 'approved').length,
+      active_tasks: tasks.filter(t => t.status === 'assigned').length,
+      total_hours: logs.reduce((sum, l) => sum + (Number(l.logged_hours) || 0), 0),
+    };
+  }
+
+  // GET /api/volunteer/opportunities/{id}
+  async getOpportunityById(id: number | string): Promise<VolunteerOpportunity | null> {
+    try {
+      const res = await fetch(`${BASE_URL}/volunteer/opportunities/${id}`, {
+        headers: this.getAuthHeaders(),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const item = json.data || json;
+        if (item && (item.id || item.title)) return this.mapOpportunity(item);
+      }
+    } catch (e) {
+      console.warn(`API getOpportunityById(${id}) error:`, e);
+    }
+    // Fallback: search from manager list
+    const all = await this.getManagerOpportunities();
+    return all.find(o => String(o.id) === String(id)) || null;
+  }
+
+  // POST /api/volunteer/opportunities
   async createOpportunity(payload: CreateOpportunityPayload): Promise<VolunteerOpportunity> {
     const mosqueId = payload.mosque_id || this.getMosqueId();
-    let created: VolunteerOpportunity | null = null;
+    const tasksArray = Array.isArray(payload.tasks)
+      ? payload.tasks.filter(t => typeof t === 'string' && t.trim().length > 0)
+      : [];
 
-    try {
-      const res = await fetch(`${BASE_URL}/volunteer/opportunities`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          mosque_id: mosqueId,
-          title: payload.title,
-          description: payload.description,
-          required_volunteers: Number(payload.required_volunteers),
-          start_date: payload.start_date,
-          end_date: payload.end_date,
-        }),
-      });
+    const requestBody: Record<string, any> = {
+      mosque_id: Number(mosqueId),
+      title: payload.title.trim(),
+      description: payload.description?.trim() || null,
+      required_volunteers: Number(payload.required_volunteers),
+      start_date: payload.start_date,
+      end_date: payload.end_date || null,
+      tasks: tasksArray,
+    };
 
-      const json = await res.json().catch(() => null);
+    const res = await fetch(`${BASE_URL}/volunteer/opportunities`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(requestBody),
+    });
 
-      if (res.ok && json) {
-        created = json.data || json;
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(this.parseErrorResponse(json) || `فشل إنشاء الفرصة التطوعية (HTTP ${res.status})`);
+    }
+
+    const item = json.data || json;
+    const created = this.mapOpportunity(item);
+
+    // Safeguard: Ensure sub-tasks are posted if array was provided
+    const createdTasks = (created as any).tasks || (item && item.tasks);
+    if ((!createdTasks || createdTasks.length === 0) && tasksArray.length > 0) {
+      for (const taskDesc of tasksArray) {
+        try {
+          await fetch(`${BASE_URL}/volunteer/opportunities/${created.id}/tasks`, {
+            method: "POST",
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ task_description: taskDesc }),
+          });
+        } catch (e) {
+          console.warn("Sub-task post error:", e);
+        }
       }
-    } catch (e) {
-      console.warn("API POST /volunteer/opportunities error:", e);
     }
-
-    if (!created) {
-      created = {
-        id: Date.now(),
-        mosque_id: mosqueId,
-        title: payload.title,
-        description: payload.description,
-        required_volunteers: Number(payload.required_volunteers),
-        current_volunteers: 0,
-        start_date: payload.start_date,
-        end_date: payload.end_date,
-        status: "open",
-        created_at: new Date().toISOString(),
-      };
-    }
-
-    const store = this.getLocalStore();
-    store.opportunities.unshift(created);
-    this.saveLocalStore(store);
 
     return created;
   }
 
+  // PUT /api/volunteer/opportunities/{id}
   async updateOpportunity(id: number | string, payload: Partial<CreateOpportunityPayload>): Promise<VolunteerOpportunity> {
-    try {
-      await fetch(`${BASE_URL}/volunteer/opportunities/${id}`, {
+    const corePayload: Record<string, any> = {};
+    if (payload.title) corePayload.title = payload.title.trim();
+    if (payload.description !== undefined) corePayload.description = payload.description?.trim() || null;
+    if (payload.required_volunteers) corePayload.required_volunteers = Number(payload.required_volunteers);
+    if (payload.start_date) corePayload.start_date = payload.start_date;
+    if (payload.end_date !== undefined) corePayload.end_date = payload.end_date || null;
+
+    if (Object.keys(corePayload).length > 0) {
+      const res = await fetch(`${BASE_URL}/volunteer/opportunities/${id}`, {
         method: "PUT",
         headers: this.getAuthHeaders(),
-        body: JSON.stringify(payload),
+        body: JSON.stringify(corePayload),
       });
-    } catch (e) {
-      console.warn("API PUT /volunteer/opportunities error:", e);
-    }
-
-    const store = this.getLocalStore();
-    const target = store.opportunities.find(o => String(o.id) === String(id));
-    if (target) {
-      Object.assign(target, payload);
-      this.saveLocalStore(store);
-      return target;
-    }
-    throw new Error("الفرصة التطوعية غير موجودة");
-  }
-
-  async closeOpportunity(id: number | string): Promise<boolean> {
-    try {
-      await fetch(`${BASE_URL}/volunteer/opportunities/${id}/close`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-      });
-    } catch (e) {
-      console.warn("API POST /volunteer/opportunities/close error:", e);
-    }
-
-    const store = this.getLocalStore();
-    const target = store.opportunities.find(o => String(o.id) === String(id));
-    if (target) {
-      target.status = "closed";
-      this.saveLocalStore(store);
-    }
-    return true;
-  }
-
-  // ── 2. APPLICATIONS (GET /api/volunteer/opportunities/{id}/applications & /api/volunteer/my-applications) ─
-  async getOpportunityApplications(opportunityId?: number | string): Promise<VolunteerApplication[]> {
-    let apiItems: VolunteerApplication[] = [];
-
-    const urlsToTry = opportunityId
-      ? [`${BASE_URL}/volunteer/opportunities/${opportunityId}/applications`]
-      : [`${BASE_URL}/volunteer/my-applications`];
-
-    for (const url of urlsToTry) {
-      try {
-        const res = await fetch(url, {
-          headers: this.getAuthHeaders(),
-        });
-        if (res.ok) {
-          const json = await res.json();
-          const items = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-          if (items.length > 0) {
-            apiItems = items;
-            break;
-          }
-        }
-      } catch (e) {
-        console.warn(`API call to ${url} failed:`, e);
-      }
-    }
-
-    const store = this.getLocalStore();
-    const map = new Map<string | number, VolunteerApplication>();
-
-    store.applications.forEach(item => map.set(item.id, item));
-    apiItems.forEach(item => map.set(item.id, item));
-
-    const merged = Array.from(map.values());
-    if (opportunityId) {
-      return merged.filter(a => String(a.opportunity_id) === String(opportunityId));
-    }
-    return merged;
-  }
-
-  async approveApplication(applicationId: number | string): Promise<boolean> {
-    try {
-      await fetch(`${BASE_URL}/volunteer/applications/${applicationId}/approve`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-      });
-    } catch (e) {
-      console.warn("API approveApplication error:", e);
-    }
-
-    const store = this.getLocalStore();
-    const target = store.applications.find(a => String(a.id) === String(applicationId));
-    if (target) {
-      target.status = "approved";
-      const opp = store.opportunities.find(o => String(o.id) === String(target.opportunity_id));
-      if (opp) {
-        opp.current_volunteers = (opp.current_volunteers || 0) + 1;
-      }
-      this.saveLocalStore(store);
-    }
-    return true;
-  }
-
-  async rejectApplication(applicationId: number | string): Promise<boolean> {
-    try {
-      await fetch(`${BASE_URL}/volunteer/applications/${applicationId}/reject`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-      });
-    } catch (e) {
-      console.warn("API rejectApplication error:", e);
-    }
-
-    const store = this.getLocalStore();
-    const target = store.applications.find(a => String(a.id) === String(applicationId));
-    if (target) {
-      target.status = "rejected";
-      this.saveLocalStore(store);
-    }
-    return true;
-  }
-
-  // ── 3. TASKS ──────────────────────────────────────────────────────
-  async assignTask(payload: AssignTaskPayload): Promise<VolunteerTask> {
-    let created: VolunteerTask | null = null;
-
-    try {
-      const res = await fetch(`${BASE_URL}/volunteer/tasks`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          application_id: payload.application_id,
-          task_description: payload.task_description,
-        }),
-      });
-
       const json = await res.json().catch(() => null);
+      if (!res.ok || (json && json.status === false)) {
+        throw new Error(this.parseErrorResponse(json) || `فشل تعديل الفرصة (HTTP ${res.status})`);
+      }
+    }
 
-      if (res.ok && json) {
-        created = json.data || json;
+    // Create new tasks via tasks endpoint if provided
+    const tasksArray = Array.isArray(payload.tasks)
+      ? payload.tasks.filter(t => typeof t === 'string' && t.trim().length > 0)
+      : [];
+
+    for (const taskDesc of tasksArray) {
+      try {
+        await fetch(`${BASE_URL}/volunteer/opportunities/${id}/tasks`, {
+          method: "POST",
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ task_description: taskDesc }),
+        });
+      } catch (e) {
+        console.warn("Failed to create task:", taskDesc, e);
+      }
+    }
+
+    const updated = await this.getOpportunityById(id);
+    return updated || {
+      id,
+      mosque_id: this.getMosqueId(),
+      title: payload.title || "",
+      description: payload.description || "",
+      required_volunteers: Number(payload.required_volunteers || 0),
+      current_volunteers: 0,
+      start_date: payload.start_date || "",
+      end_date: payload.end_date || "",
+      status: "open",
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  // POST /api/volunteer/opportunities/{id}/close
+  async closeOpportunity(id: number | string): Promise<boolean> {
+    const res = await fetch(`${BASE_URL}/volunteer/opportunities/${id}/close`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || `فشل إغلاق الفرصة (HTTP ${res.status})`);
+    }
+    return true;
+  }
+
+  // ── 2. APPLICATIONS ──────────────────────────────────────────────────────
+  // GET /api/volunteer/opportunities/{id}/applications
+  async getOpportunityApplications(opportunityId?: number | string): Promise<VolunteerApplication[]> {
+    const url = opportunityId
+      ? `${BASE_URL}/volunteer/opportunities/${opportunityId}/applications`
+      : `${BASE_URL}/volunteer/my-applications`;
+
+    try {
+      const res = await fetch(url, { headers: this.getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const items = this.extractItems(json);
+        return items.map((item: any) => this.mapApplication(item, opportunityId));
       }
     } catch (e) {
-      console.warn("API assignTask error:", e);
+      console.warn(`API getOpportunityApplications error:`, e);
     }
+    return [];
+  }
 
-    const store = this.getLocalStore();
-    const app = store.applications.find(a => String(a.id) === String(payload.application_id));
-
-    if (!created) {
-      created = {
-        id: Date.now(),
-        application_id: payload.application_id,
-        volunteer_name: app?.volunteer_name || "متطوع معتمد",
-        opportunity_title: app?.opportunity_title || "فرصة تطوعية بالمسجد",
-        task_description: payload.task_description,
-        status: "assigned",
-        created_at: new Date().toISOString(),
-      };
+  // POST /api/volunteer/applications/{id}/approve
+  async approveApplication(applicationId: number | string): Promise<boolean> {
+    const res = await fetch(`${BASE_URL}/volunteer/applications/${applicationId}/approve`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || `فشل قبول الطلب (HTTP ${res.status})`);
     }
+    return true;
+  }
 
-    store.tasks.unshift(created);
-    this.saveLocalStore(store);
-    return created;
+  // POST /api/volunteer/applications/{id}/reject
+  async rejectApplication(applicationId: number | string): Promise<boolean> {
+    const res = await fetch(`${BASE_URL}/volunteer/applications/${applicationId}/reject`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || `فشل رفض الطلب (HTTP ${res.status})`);
+    }
+    return true;
+  }
+
+  // ── 3. TASKS ──────────────────────────────────────────────────────────────
+  // GET /api/volunteer/opportunities/{id}/tasks
+  async getOpportunityTasks(opportunityId: number | string): Promise<VolunteerTask[]> {
+    try {
+      const res = await fetch(`${BASE_URL}/volunteer/opportunities/${opportunityId}/tasks`, {
+        headers: this.getAuthHeaders(),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const items = this.extractItems(json);
+        return items.map((item: any) => this.mapTask(item, opportunityId));
+      }
+    } catch (e) {
+      console.warn(`API getOpportunityTasks(${opportunityId}) error:`, e);
+    }
+    return [];
+  }
+
+  // POST /api/volunteer/opportunities/{id}/tasks
+  async createOpportunityTask(opportunityId: number | string, taskDescription: string): Promise<VolunteerTask> {
+    const res = await fetch(`${BASE_URL}/volunteer/opportunities/${opportunityId}/tasks`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ task_description: taskDescription }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || "فشل إنشاء المهمة بالسيرفر");
+    }
+    return this.mapTask(json.data || json, opportunityId);
+  }
+
+  // POST /api/volunteer/tasks/{id}/assign
+  async assignTaskToVolunteer(taskId: number | string, applicationId: number | string): Promise<VolunteerTask> {
+    const res = await fetch(`${BASE_URL}/volunteer/tasks/${taskId}/assign`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ application_id: Number(applicationId) }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || "فشل إسناد المهمة للمتطوع");
+    }
+    return this.mapTask(json.data || json);
+  }
+
+  async assignTask(payload: AssignTaskPayload): Promise<VolunteerTask> {
+    const opportunityId = payload.opportunity_id;
+    if (!opportunityId) throw new Error("opportunityId مطلوب لإسناد المهمة");
+
+    const createdTask = await this.createOpportunityTask(opportunityId, payload.task_description);
+    try {
+      return await this.assignTaskToVolunteer(createdTask.id, payload.application_id);
+    } catch (e) {
+      return { ...createdTask, application_id: payload.application_id };
+    }
   }
 
   async getTasks(): Promise<VolunteerTask[]> {
-    const store = this.getLocalStore();
-    return store.tasks;
+    try {
+      const opps = await this.getManagerOpportunities();
+      const results = await Promise.all(opps.map(opp => this.getOpportunityTasks(opp.id)));
+      return results.flat();
+    } catch (e) {
+      console.warn("API getTasks error:", e);
+      return [];
+    }
   }
 
-  // ── 4. HOURS & EVALUATIONS (GET /api/volunteer/my-logs & POST /api/volunteer/logs) ─
+  // ── 4. HOURS & LOGS ───────────────────────────────────────────────────────
+  // POST /api/volunteer/logs
   async logVolunteerHours(payload: LogHoursPayload): Promise<VolunteerLog> {
-    let created: VolunteerLog | null = null;
-
-    try {
-      const res = await fetch(`${BASE_URL}/volunteer/logs`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          volunteer_id: payload.volunteer_id,
-          opportunity_id: payload.opportunity_id,
-          logged_hours: Number(payload.logged_hours),
-          manager_evaluation: payload.manager_evaluation,
-          notes: payload.notes || "",
-        }),
-      });
-
-      const json = await res.json().catch(() => null);
-
-      if (res.ok && json) {
-        created = json.data || json;
-      }
-    } catch (e) {
-      console.warn("API logVolunteerHours error:", e);
-    }
-
-    const store = this.getLocalStore();
-    const app = store.applications.find(a => String(a.volunteer_id) === String(payload.volunteer_id));
-    const opp = store.opportunities.find(o => String(o.id) === String(payload.opportunity_id));
-
-    if (!created) {
-      created = {
-        id: Date.now(),
+    const res = await fetch(`${BASE_URL}/volunteer/logs`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({
         volunteer_id: payload.volunteer_id,
-        volunteer_name: app?.volunteer_name || "متطوع معتمد",
         opportunity_id: payload.opportunity_id,
-        opportunity_title: opp?.title || "فرصة تطوعية بالمسجد",
         logged_hours: Number(payload.logged_hours),
         manager_evaluation: payload.manager_evaluation,
-        notes: payload.notes,
-        created_at: new Date().toISOString(),
-      };
+        notes: payload.notes || "",
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || "فشل تسجيل ساعات المتطوع بالسيرفر");
     }
-
-    store.logs.unshift(created);
-    this.saveLocalStore(store);
-    return created;
+    const item = json?.data || json;
+    return {
+      id: item.id || Date.now(),
+      volunteer_id: item.volunteer_id || payload.volunteer_id,
+      volunteer_name: item.volunteer_name || "متطوع",
+      opportunity_id: item.opportunity_id || payload.opportunity_id,
+      opportunity_title: item.opportunity_title || "",
+      logged_hours: Number(item.logged_hours || payload.logged_hours),
+      manager_evaluation: item.manager_evaluation || payload.manager_evaluation,
+      notes: item.notes || payload.notes,
+      created_at: item.created_at || new Date().toISOString(),
+    };
   }
 
+  // GET /api/volunteer/hours/{volunteerId}/{opportunityId}
   async getVolunteerHours(volunteerId: number | string, opportunityId: number | string): Promise<number> {
     try {
       const res = await fetch(`${BASE_URL}/volunteer/hours/${volunteerId}/${opportunityId}`, {
@@ -399,107 +521,83 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
     } catch (e) {
       console.warn("API getVolunteerHours error:", e);
     }
-
-    const store = this.getLocalStore();
-    const matchingLogs = store.logs.filter(
-      l => String(l.volunteer_id) === String(volunteerId) && String(l.opportunity_id) === String(opportunityId)
-    );
-    return matchingLogs.reduce((acc, curr) => acc + (curr.logged_hours || 0), 0);
+    return 0;
   }
 
+  // GET /api/volunteer/my-logs
   async getLogs(): Promise<VolunteerLog[]> {
-    let apiLogs: VolunteerLog[] = [];
     try {
       const res = await fetch(`${BASE_URL}/volunteer/my-logs`, {
         headers: this.getAuthHeaders(),
       });
       if (res.ok) {
         const json = await res.json();
-        const items = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-        if (items.length > 0) apiLogs = items;
+        const items = this.extractItems(json);
+        return items.map((item: any) => ({
+          id: item.id,
+          volunteer_id: item.volunteer_id,
+          volunteer_name: item.volunteer_name || item.volunteer?.name || "متطوع",
+          opportunity_id: item.opportunity_id,
+          opportunity_title: item.opportunity_title || item.opportunity?.title || "",
+          logged_hours: Number(item.logged_hours || 0),
+          manager_evaluation: item.manager_evaluation || "",
+          notes: item.notes || "",
+          created_at: item.created_at || new Date().toISOString(),
+        }));
       }
     } catch (e) {
       console.warn("API getLogs error:", e);
     }
-
-    const store = this.getLocalStore();
-    const map = new Map<string | number, VolunteerLog>();
-    store.logs.forEach(item => map.set(item.id, item));
-    apiLogs.forEach(item => map.set(item.id, item));
-
-    const merged = Array.from(map.values());
-    store.logs = merged;
-    this.saveLocalStore(store);
-
-    return merged;
+    return [];
   }
 
-  // ── 5. CERTIFICATES (GET /api/volunteer/my-certificates & POST /api/volunteer/certificates) ─
+  // ── 5. CERTIFICATES ───────────────────────────────────────────────────────
+  // POST /api/volunteer/certificates/{volunteerId}/{opportunityId}
   async issueCertificate(volunteerId: number | string, opportunityId: number | string): Promise<VolunteerCertificate> {
-    let created: VolunteerCertificate | null = null;
-
-    try {
-      const res = await fetch(`${BASE_URL}/volunteer/certificates/${volunteerId}/${opportunityId}`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-      });
-
-      const json = await res.json().catch(() => null);
-
-      if (res.ok && json) {
-        created = json.data || json;
-      }
-    } catch (e) {
-      console.warn("API issueCertificate error:", e);
+    const res = await fetch(`${BASE_URL}/volunteer/certificates/${volunteerId}/${opportunityId}`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || (json && json.status === false)) {
+      throw new Error(json?.message || "فشل إصدار شهادة التطوع بالسيرفر");
     }
-
-    const store = this.getLocalStore();
-    const totalHours = await this.getVolunteerHours(volunteerId, opportunityId);
-    const app = store.applications.find(a => String(a.volunteer_id) === String(volunteerId));
-    const opp = store.opportunities.find(o => String(o.id) === String(opportunityId));
-
-    if (!created) {
-      created = {
-        id: Date.now(),
-        volunteer_id: volunteerId,
-        volunteer_name: app?.volunteer_name || "المتطوع المتميز",
-        opportunity_id: opportunityId,
-        opportunity_title: opp?.title || "الفرصة التطوعية بالمسجد",
-        certificate_url: `https://mms-backend-rose.vercel.app/api/volunteer/certificates/${volunteerId}/${opportunityId}/download`,
-        issued_at: new Date().toISOString(),
-        total_hours: totalHours || 5,
-      };
-    }
-
-    store.certificates.unshift(created);
-    this.saveLocalStore(store);
-    return created;
+    const item = json?.data || json;
+    return {
+      id: item.id || Date.now(),
+      volunteer_id: item.volunteer_id || volunteerId,
+      volunteer_name: item.volunteer_name || "متطوع",
+      opportunity_id: item.opportunity_id || opportunityId,
+      opportunity_title: item.opportunity_title || "",
+      certificate_url: item.certificate_url || "",
+      issued_at: item.issued_at || item.created_at || new Date().toISOString(),
+      total_hours: Number(item.total_hours || 0),
+    };
   }
 
+  // GET /api/volunteer/my-certificates
   async getCertificates(): Promise<VolunteerCertificate[]> {
-    let apiCerts: VolunteerCertificate[] = [];
     try {
       const res = await fetch(`${BASE_URL}/volunteer/my-certificates`, {
         headers: this.getAuthHeaders(),
       });
       if (res.ok) {
         const json = await res.json();
-        const items = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-        if (items.length > 0) apiCerts = items;
+        const items = this.extractItems(json);
+        return items.map((item: any) => ({
+          id: item.id,
+          volunteer_id: item.volunteer_id,
+          volunteer_name: item.volunteer_name || item.volunteer?.name || "متطوع",
+          opportunity_id: item.opportunity_id,
+          opportunity_title: item.opportunity_title || item.opportunity?.title || "",
+          certificate_url: item.certificate_url || "",
+          issued_at: item.issued_at || item.created_at || new Date().toISOString(),
+          total_hours: Number(item.total_hours || 0),
+        }));
       }
     } catch (e) {
       console.warn("API getCertificates error:", e);
     }
-
-    const store = this.getLocalStore();
-    const map = new Map<string | number, VolunteerCertificate>();
-    store.certificates.forEach(item => map.set(item.id, item));
-    apiCerts.forEach(item => map.set(item.id, item));
-
-    const merged = Array.from(map.values());
-    store.certificates = merged;
-    this.saveLocalStore(store);
-
-    return merged;
+    return [];
   }
 }

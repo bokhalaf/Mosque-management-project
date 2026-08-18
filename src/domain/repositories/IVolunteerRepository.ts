@@ -11,14 +11,19 @@ import {
   CreateOpportunityPayload,
   AssignTaskPayload,
   LogHoursPayload,
+  VolunteerPaginatedResponse,
+  VolunteerStats,
 } from "../entities/Volunteer";
 
 export interface IVolunteerRepository {
   // 1. Opportunities
   getManagerOpportunities(): Promise<VolunteerOpportunity[]>;
+  getManagerOpportunitiesPaginated(page?: number, perPage?: number): Promise<VolunteerPaginatedResponse>;
+  getOpportunityById(id: number | string): Promise<VolunteerOpportunity | null>;
   createOpportunity(payload: CreateOpportunityPayload): Promise<VolunteerOpportunity>;
   updateOpportunity(id: number | string, payload: Partial<CreateOpportunityPayload>): Promise<VolunteerOpportunity>;
   closeOpportunity(id: number | string): Promise<boolean>;
+  getStats(): Promise<VolunteerStats>;
 
   // 2. Applications
   getOpportunityApplications(opportunityId?: number | string): Promise<VolunteerApplication[]>;
@@ -26,6 +31,9 @@ export interface IVolunteerRepository {
   rejectApplication(applicationId: number | string): Promise<boolean>;
 
   // 3. Tasks
+  createOpportunityTask(opportunityId: number | string, taskDescription: string): Promise<VolunteerTask>;
+  assignTaskToVolunteer(taskId: number | string, applicationId: number | string): Promise<VolunteerTask>;
+  getOpportunityTasks(opportunityId: number | string): Promise<VolunteerTask[]>;
   assignTask(payload: AssignTaskPayload): Promise<VolunteerTask>;
   getTasks(): Promise<VolunteerTask[]>;
 

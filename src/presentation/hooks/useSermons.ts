@@ -42,6 +42,7 @@ export function useSermons() {
   const { showToast } = useToast();
   const [archivedSermons, setArchivedSermons] = useState<Sermon[]>([]);
   const [pendingSermons, setPendingSermons] = useState<Sermon[]>([]);
+  const [mostSelectedSermon, setMostSelectedSermon] = useState<Sermon | Sermon[] | null>(null);
   const [upcomingSelection, setUpcomingSelection] = useState<SermonSelection | null>(null);
   const [selectionsHistory, setSelectionsHistory] = useState<SermonSelection[]>([]);
 
@@ -109,6 +110,20 @@ export function useSermons() {
 
       setSelectionsHistory(data.selectionsHistory);
       setUpcomingSelection(data.upcomingSelection);
+
+      // Load Most Selected Sermon (GET /api/sermons/most-selected)
+      try {
+        const mostSel = await sermonRepo.getMostSelectedSermons();
+        if (mostSel) {
+          setMostSelectedSermon(mostSel);
+          addDebugLog(
+            'GET /api/sermons/most-selected',
+            `${BASE_URL}/sermons/most-selected`,
+            200,
+            mostSel
+          );
+        }
+      } catch (e) {}
     } catch (err: any) {
       console.error('Error fetching sermons list:', err);
       setError(err.message || 'تعذر تحميل بيانات خطب المسجد من السيرفر');
@@ -120,6 +135,50 @@ export function useSermons() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const [processingSermonId, setProcessingSermonId] = useState<string | number | null>(null);
+
+  // Handle Approve Pending Sermon (POST /api/sermons/{id}/approve)
+  const handleApprovePendingSermon = useCallback(async (id: string | number) => {
+    setProcessingSermonId(id);
+    try {
+      await sermonRepo.approveSermon(id);
+      addDebugLog(
+        `POST /api/sermons/${id}/approve`,
+        `${BASE_URL}/sermons/${id}/approve`,
+        200,
+        { status: 'approved', id }
+      );
+      showToast('تم إرسال طلب القبول للسيرفر بنجاح!', 'success');
+      await loadData();
+    } catch (e: any) {
+      console.error('Error approving sermon:', e);
+      showToast(e.message || 'فشل قبول الخطبة', 'error');
+    } finally {
+      setProcessingSermonId(null);
+    }
+  }, [loadData, addDebugLog, showToast]);
+
+  // Handle Reject Pending Sermon (POST /api/sermons/{id}/reject)
+  const handleRejectPendingSermon = useCallback(async (id: string | number) => {
+    setProcessingSermonId(id);
+    try {
+      await sermonRepo.rejectSermon(id);
+      addDebugLog(
+        `POST /api/sermons/${id}/reject`,
+        `${BASE_URL}/sermons/${id}/reject`,
+        200,
+        { status: 'rejected', id }
+      );
+      showToast('تم إرسال طلب الرفض للسيرفر بنجاح', 'error');
+      await loadData();
+    } catch (e: any) {
+      console.error('Error rejecting sermon:', e);
+      showToast(e.message || 'فشل رفض الخطبة', 'error');
+    } finally {
+      setProcessingSermonId(null);
+    }
+  }, [loadData, addDebugLog, showToast]);
 
   // Handle archived page change directly
   const handleArchivedPageChange = useCallback(async (p: number) => {
@@ -321,6 +380,7 @@ export function useSermons() {
     // Data
     archivedSermons,
     pendingSermons,
+    mostSelectedSermon,
     upcomingSelection,
     selectionsHistory,
     filteredSermons,
@@ -340,11 +400,14 @@ export function useSermons() {
     loading,
     selectingSermonId,
     deletingSermonId,
+    processingSermonId,
     error,
     loadData,
     handleSelectForFriday,
     handleCancelFridaySelection,
     handleDeletePendingSermon,
+    handleApprovePendingSermon,
+    handleRejectPendingSermon,
     // Debug
     showDebugTerminal,
     setShowDebugTerminal,

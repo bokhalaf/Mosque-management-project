@@ -29,4 +29,5 @@ export interface IMaintenanceRepository {
   createMaintenanceRequest(payload: CreateMaintenancePayload): Promise<MaintenanceRequestItem>;
   updateMaintenanceRequest(id: string | number, payload: Partial<CreateMaintenancePayload> & { status?: string }): Promise<MaintenanceRequestItem>;
   deleteMaintenanceRequest(id: string | number): Promise<void>;
+  processAdminMaintenanceRequest?(id: string | number, status: 'in_progress' | 'completed' | 'cancelled', notes?: string): Promise<MaintenanceRequestItem>;
 }

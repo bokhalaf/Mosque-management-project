@@ -10,9 +10,12 @@ import { GetComplaintDetailsUseCase } from '../../domain/usecases/complaints/Get
 import { UpdateComplaintStatusUseCase } from '../../domain/usecases/complaints/UpdateComplaintStatusUseCase';
 import { useToast } from '../../app/components/ui/Toast';
 
+import { AssignComplaintToAdminUseCase } from '../../domain/usecases/complaints/AssignComplaintToAdminUseCase';
+
 const complaintRepo = new ComplaintRepositoryImpl();
 const getDetailsUseCase = new GetComplaintDetailsUseCase(complaintRepo);
 const updateStatusUseCase = new UpdateComplaintStatusUseCase(complaintRepo);
+const assignAdminUseCase = new AssignComplaintToAdminUseCase(complaintRepo);
 
 export type ComplaintStatusKey = 'pending' | 'in_progress' | 'resolved' | 'canceled';
 
@@ -25,6 +28,27 @@ export function useComplaintDetails(complaintId: string) {
   const [resolutionNote, setResolutionNote] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [isMosqueManager, setIsMosqueManager] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes('mosque_manager') || roles.length === 0 || !roles.includes('super_admin')) {
+            // Mosque Manager role or default manager role
+            setIsMosqueManager(true);
+          }
+        } else {
+          setIsMosqueManager(true);
+        }
+      } catch (e) {
+        setIsMosqueManager(true);
+      }
+    }
+  }, []);
 
   // 1. Fetch Details via GetComplaintDetailsUseCase (Swagger: getComplaintDetails - GET /api/admin/complaints/{id})
   const fetchDetails = useCallback(async () => {
@@ -84,6 +108,20 @@ export function useComplaintDetails(complaintId: string) {
     }
   }, [newNote, currentStatus, handleUpdateStatus]);
 
+  const handleAssignToAdmin = useCallback(async (adminId: number, note?: string) => {
+    setUpdatingStatus(true);
+    try {
+      await assignAdminUseCase.execute(complaintId, adminId, note);
+      showToast('تم إسناد ورفع الشكوى إلى السوبر أدمن بنجاح 🚀', 'success');
+      await fetchDetails();
+    } catch (err: any) {
+      console.error('Error assigning complaint to admin:', err);
+      showToast(err.message || 'حدث خطأ أثناء رفع الشكوى للسوبر أدمن', 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }, [complaintId, fetchDetails, showToast]);
+
   return {
     complaint,
     loading,
@@ -94,8 +132,10 @@ export function useComplaintDetails(complaintId: string) {
     updatingStatus,
     newNote,
     setNewNote,
+    isMosqueManager,
     fetchDetails,
     handleUpdateStatus,
+    handleAssignToAdmin,
     submitNote,
   };
 }

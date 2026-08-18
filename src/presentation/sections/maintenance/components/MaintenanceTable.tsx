@@ -117,6 +117,22 @@ export function MaintenanceTable({
   const currentPage = pagination?.current_page || 1;
   const lastPage = pagination?.last_page || 1;
 
+  const [isSuperAdmin, setIsSuperAdmin] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes('super_admin') || Boolean(user.is_super_admin)) {
+            setIsSuperAdmin(true);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   // Build page numbers array
   const pageNumbers = [];
   for (let i = 1; i <= lastPage; i++) {
@@ -214,20 +230,24 @@ export function MaintenanceTable({
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => onEditItem && onEditItem(task)}
-                          className="p-2 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
-                          title="تعديل طلب الصيانة"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteItem && onDeleteItem(task.id)}
-                          className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                          title="حذف طلب الصيانة"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!isSuperAdmin && (
+                          <>
+                            <button
+                              onClick={() => onEditItem && onEditItem(task)}
+                              className="p-2 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                              title="تعديل طلب الصيانة"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteItem && onDeleteItem(task.id)}
+                              className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                              title="حذف طلب الصيانة"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

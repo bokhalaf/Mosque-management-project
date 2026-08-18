@@ -167,4 +167,22 @@ export class ComplaintRepositoryImpl implements IComplaintRepository {
 
     return json.data as ComplaintItem;
   }
+
+  // ── 5. assignComplaintToAdmin (PATCH /api/admin/complaints/{id}/assign) ──
+  async assignComplaintToAdmin(id: string | number, adminId: number, note?: string): Promise<ComplaintItem> {
+    const response = await fetch(`${BASE_URL}/admin/complaints/${id}/assign`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ admin_id: Number(adminId), note: note || null }),
+    });
+
+    const json = await response.json();
+    console.log("assignComplaintToAdmin API Response:", json);
+
+    if (!response.ok || !json.status) {
+      throw new Error(json.message || "فشل إسناد/رفع الشكوى إلى السوبر أدمن");
+    }
+
+    return json.data as ComplaintItem;
+  }
 }

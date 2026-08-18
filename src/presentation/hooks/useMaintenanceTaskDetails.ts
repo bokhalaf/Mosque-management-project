@@ -11,10 +11,13 @@ import { GetMaintenanceDetailsUseCase } from '../../domain/usecases/maintenance/
 import { TrackMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/TrackMaintenanceRequestUseCase';
 import { UpdateMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/UpdateMaintenanceRequestUseCase';
 
+import { ProcessAdminMaintenanceUseCase } from '../../domain/usecases/maintenance/ProcessAdminMaintenanceUseCase';
+
 const maintenanceRepo = new MaintenanceRepositoryImpl();
 const getDetailsUseCase = new GetMaintenanceDetailsUseCase(maintenanceRepo);
 const trackUseCase = new TrackMaintenanceRequestUseCase(maintenanceRepo);
 const updateStatusUseCase = new UpdateMaintenanceRequestUseCase(maintenanceRepo);
+const processAdminUseCase = new ProcessAdminMaintenanceUseCase(maintenanceRepo);
 
 export type MaintenanceStatusKey = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -28,6 +31,24 @@ export function useMaintenanceTaskDetails(taskId: string, refreshKey?: number) {
   const [completionNote, setCompletionNote] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes('super_admin') || Boolean(user.is_super_admin)) {
+            setIsSuperAdmin(true);
+          } else {
+            setIsSuperAdmin(false);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -89,6 +110,22 @@ export function useMaintenanceTaskDetails(taskId: string, refreshKey?: number) {
     }
   }, [newNote, currentStatus, handleUpdateStatus]);
 
+  const handleProcessAdminStatus = useCallback(async (targetStatus: 'in_progress' | 'completed' | 'cancelled', notes?: string) => {
+    setUpdatingStatus(true);
+    try {
+      const updated = await processAdminUseCase.execute(taskId, targetStatus, notes);
+      setTask(updated);
+      setCurrentStatus((updated.status as MaintenanceStatusKey) || targetStatus);
+      showToast('تمت معالجة طلب الصيانة بنجاح بواسطة الأدمن 🛠️', 'success');
+      await fetchDetails();
+    } catch (err: any) {
+      console.error('Error processing admin maintenance request:', err);
+      showToast(err.message || 'حدث خطأ أثناء معالجة طلب الصيانة', 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }, [taskId, fetchDetails, showToast]);
+
   return {
     task,
     trackingInfo,
@@ -100,9 +137,10 @@ export function useMaintenanceTaskDetails(taskId: string, refreshKey?: number) {
     updatingStatus,
     newNote,
     setNewNote,
+    isSuperAdmin,
     fetchDetails,
     handleUpdateStatus,
+    handleProcessAdminStatus,
     submitNote,
   };
-
 }

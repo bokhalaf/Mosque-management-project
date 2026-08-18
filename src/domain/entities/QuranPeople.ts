@@ -32,5 +32,6 @@ export interface QuranPeopleStats {
   total_students: number;
   total_teachers: number;
   total_supervisors: number;
+  total_volunteers?: number;
   pending_invitations: number;
 }

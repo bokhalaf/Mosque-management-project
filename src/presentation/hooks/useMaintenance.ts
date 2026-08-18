@@ -47,7 +47,7 @@ export function useMaintenance() {
   }>({
     current_page: 1,
     last_page: 1,
-    per_page: 15,
+    per_page: 5,
     total: 0,
     has_more: false,
   });
@@ -98,7 +98,7 @@ export function useMaintenance() {
         priority: filters.priorityFilter,
         category: filters.categoryFilter,
         page,
-        per_page: 15,
+        per_page: 5,
       };
 
       // استخدام حالة الاستخدام الرسمية حسب وجود بحث (Search vs Index)

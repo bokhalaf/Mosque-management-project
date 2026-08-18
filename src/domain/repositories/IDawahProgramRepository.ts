@@ -12,10 +12,12 @@ import {
   DawahProgramStats,
   MosqueSpace,
   MyMosqueDetails,
+  DawahPaginatedResponse,
 } from "../entities/DawahProgram";
 
 export interface IDawahProgramRepository {
   getDawahPrograms(params?: { mosque_id?: number; status?: string; type?: string; q?: string }): Promise<DawahProgram[]>;
+  getDawahProgramsPaginated(params?: { mosque_id?: number; status?: string; type?: string; q?: string; page?: number; per_page?: number }): Promise<DawahPaginatedResponse>;
   getDawahProgramById(id: number | string): Promise<DawahProgram | null>;
   createDawahProgram(payload: CreateDawahProgramPayload): Promise<DawahProgram>;
   updateDawahProgram(id: number | string, payload: UpdateDawahProgramPayload): Promise<DawahProgram>;

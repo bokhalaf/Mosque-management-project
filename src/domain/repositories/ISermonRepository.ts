@@ -19,6 +19,11 @@ export interface ISermonRepository {
   createSermon(payload: CreateSermonPayload): Promise<Sermon>;
   deleteSermon(id: string | number): Promise<void>;
   
+  // Admin Actions for Sermons (Super Admin)
+  getMostSelectedSermons(): Promise<Sermon | Sermon[] | null>;
+  approveSermon(id: string | number): Promise<void>;
+  rejectSermon(id: string | number): Promise<void>;
+
   // Sermon Selections API
   getSermonSelections(params?: { from_date?: string; to_date?: string }): Promise<SermonSelection[]>;
   getUpcomingSermonSelection(): Promise<SermonSelection | null>;

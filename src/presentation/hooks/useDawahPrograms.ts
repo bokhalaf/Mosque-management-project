@@ -1,3 +1,5 @@
+'use client';
+
 // ==============================
 // Presentation Hook — useDawahPrograms
 // ==============================
@@ -37,7 +39,7 @@ export interface ApiDebugLog {
 }
 
 export function useDawahPrograms() {
-  const [programs, setPrograms] = useState<DawahProgram[]>([]);
+  const [allPrograms, setAllPrograms] = useState<DawahProgram[]>([]);
   const [myMosque, setMyMosque] = useState<MyMosqueDetails | null>(null);
   const [spaces, setSpaces] = useState<MosqueSpace[]>([]);
   const [stats, setStats] = useState<DawahProgramStats>({
@@ -52,13 +54,22 @@ export function useDawahPrograms() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Filters & Pagination
   const [selectedType, setSelectedType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const perPage = 6;
 
   // Debug Box state
   const [showDebugTerminal, setShowDebugTerminal] = useState<boolean>(false);
   const [debugLogs, setDebugLogs] = useState<ApiDebugLog[]>([]);
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    perPage: 6,
+  });
 
   const repository = useMemo(() => new DawahProgramRepositoryImpl(), []);
 
@@ -88,13 +99,19 @@ export function useDawahPrograms() {
     setLoading(true);
     setError(null);
     try {
-      const [programsData, statsData, mosqueData] = await Promise.all([
-        getProgramsUC.execute({ type: selectedType, q: searchQuery }),
+      const [paginatedResult, statsData, mosqueData] = await Promise.all([
+        repository.getDawahProgramsPaginated({
+          page,
+          per_page: 6,
+          type: selectedType,
+          q: searchQuery,
+        }),
         getStatsUC.execute(),
         getMyMosqueUC.execute(),
       ]);
 
-      setPrograms(programsData);
+      setAllPrograms(paginatedResult.data);
+      setPagination(paginatedResult.pagination);
       setStats(statsData);
       if (mosqueData) {
         setMyMosque(mosqueData);
@@ -108,13 +125,13 @@ export function useDawahPrograms() {
 
       addDebugLog(
         "GET /api/program/mosques/{mosque}/dawah_programs",
-        `https://mms-backend-rose.vercel.app/api/program/mosques/${mosqueData?.id || 1}/dawah_programs`,
+        `https://mms-backend-rose.vercel.app/api/program/mosques/${mosqueData?.id || 1}/dawah_programs?page=${page}&per_page=6`,
         200,
         {
           status: true,
-          message: "تم جلب البرامج بنجاح من السيرفر",
-          data: programsData,
-          total: programsData.length,
+          message: "تم جلب البرامج المرقّمة من السيرفر بنجاح",
+          data: paginatedResult.data,
+          pagination: paginatedResult.pagination,
           stats: statsData,
           myMosque: mosqueData,
         }
@@ -124,11 +141,15 @@ export function useDawahPrograms() {
     } finally {
       setLoading(false);
     }
-  }, [selectedType, searchQuery, getProgramsUC, getStatsUC, getMyMosqueUC, getMosqueSpacesUC, addDebugLog]);
+  }, [page, selectedType, searchQuery, repository, getStatsUC, getMyMosqueUC, getMosqueSpacesUC, addDebugLog]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const totalCount = pagination.total || allPrograms.length;
+  const lastPage = Math.max(1, pagination.lastPage);
+  const paginatedPrograms = allPrograms;
 
   const createProgram = async (payload: CreateDawahProgramPayload): Promise<DawahProgram> => {
     const created = await createProgramUC.execute(payload);
@@ -138,7 +159,7 @@ export function useDawahPrograms() {
       200,
       created
     );
-    await loadData();
+    setAllPrograms(prev => [created, ...prev]);
     return created;
   };
 
@@ -146,11 +167,11 @@ export function useDawahPrograms() {
     const updated = await updateProgramUC.execute(id, payload);
     addDebugLog(
       "POST /api/program/mosques/dawah_programs/{id}",
-      `https://mms-backend-rose.vercel.app/api/program/mosques/${updated.mosque_id}/dawah_programs/${id}`,
+      `https://mms-backend-rose.vercel.app/api/program/mosques/dawah_programs/${id}`,
       200,
       updated
     );
-    await loadData();
+    setAllPrograms(prev => prev.map(p => String(p.id) === String(id) ? { ...p, ...updated } : p));
     return updated;
   };
 
@@ -162,7 +183,7 @@ export function useDawahPrograms() {
       200,
       { deleted_id: id }
     );
-    await loadData();
+    setAllPrograms(prev => prev.filter(p => String(p.id) !== String(id)));
     return success;
   };
 
@@ -170,6 +191,7 @@ export function useDawahPrograms() {
     return await getSchedulesUC.execute(programId);
   };
 
+  // Single-update Schedule methods (updates in-place once upon server response)
   const addSchedule = async (programId: number | string, schedule: CreateProgramSchedulePayload): Promise<ProgramSchedule> => {
     const added = await addScheduleUC.execute(programId, schedule);
     addDebugLog(
@@ -178,7 +200,19 @@ export function useDawahPrograms() {
       200,
       added
     );
-    await loadData();
+    // Update local program schedules in-place once
+    setAllPrograms(prev =>
+      prev.map(p => {
+        if (String(p.id) === String(programId)) {
+          const currentSchedules = p.schedules || [];
+          return {
+            ...p,
+            schedules: [...currentSchedules, added],
+          };
+        }
+        return p;
+      })
+    );
     return added;
   };
 
@@ -190,7 +224,18 @@ export function useDawahPrograms() {
       200,
       updated
     );
-    await loadData();
+    setAllPrograms(prev =>
+      prev.map(p => {
+        if (String(p.id) === String(programId)) {
+          const currentSchedules = p.schedules || [];
+          return {
+            ...p,
+            schedules: currentSchedules.map(s => String(s.id) === String(scheduleId) ? { ...s, ...updated } : s),
+          };
+        }
+        return p;
+      })
+    );
     return updated;
   };
 
@@ -202,7 +247,18 @@ export function useDawahPrograms() {
       200,
       { program_id: programId, schedule_id: scheduleId }
     );
-    await loadData();
+    setAllPrograms(prev =>
+      prev.map(p => {
+        if (String(p.id) === String(programId)) {
+          const currentSchedules = p.schedules || [];
+          return {
+            ...p,
+            schedules: currentSchedules.filter(s => String(s.id) !== String(scheduleId)),
+          };
+        }
+        return p;
+      })
+    );
     return success;
   };
 
@@ -211,12 +267,24 @@ export function useDawahPrograms() {
   };
 
   return {
-    programs,
+    programs: paginatedPrograms,
+    allPrograms,
+    filteredPrograms: allPrograms,
     myMosque,
     spaces,
     stats,
     loading,
     error,
+    page,
+    setPage,
+    lastPage,
+    totalCount,
+    pagination: {
+      currentPage: page,
+      lastPage,
+      total: totalCount,
+      perPage,
+    },
     selectedType,
     setSelectedType,
     searchQuery,
@@ -230,11 +298,10 @@ export function useDawahPrograms() {
     updateSchedule,
     deleteSchedule,
     getMosqueSpaces,
-    getProgramById: getProgramByIdUC.execute.bind(getProgramByIdUC),
+    showDebugTerminal,
+    setShowDebugTerminal,
     debugLogs,
     addDebugLog,
     clearDebugLogs,
-    showDebugTerminal,
-    setShowDebugTerminal,
   };
 }
