@@ -3,7 +3,7 @@
 // Presentation Section — MosquesListSection (Super Admin Only)
 // ==============================
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   Building2, Search, Plus, Star, MapPin, Clock, User, CheckCircle2, 
   Wrench, AlertCircle, Trash2, Edit3, Eye, Terminal, RefreshCw, X, ShieldCheck, Sparkles, Filter,
@@ -127,6 +127,41 @@ export function MosquesListSection({
     }
     setSelectedMosque(mosque);
   };
+
+  // Dynamically resolve City and District from Geo Catalog if string names are empty
+  const getMosqueLocationText = useCallback((m: MosqueDetail) => {
+    let cityName = m.city && typeof m.city === 'string' && isNaN(Number(m.city)) && m.city.trim() !== '' ? m.city : '';
+    let districtName = m.district && typeof m.district === 'string' && isNaN(Number(m.district)) && m.district.trim() !== '' ? m.district : '';
+
+    if (!cityName && m.city_id && geoCatalog && geoCatalog.length > 0) {
+      for (const gov of geoCatalog) {
+        const foundCity = gov.cities?.find(c => Number(c.id) === Number(m.city_id));
+        if (foundCity) {
+          cityName = foundCity.name;
+          break;
+        }
+      }
+    }
+
+    if (!districtName && m.district_id && geoCatalog && geoCatalog.length > 0) {
+      for (const gov of geoCatalog) {
+        for (const city of (gov.cities || [])) {
+          const foundDist = city.districts?.find(d => Number(d.id) === Number(m.district_id));
+          if (foundDist) {
+            districtName = foundDist.name;
+            if (!cityName) cityName = city.name;
+            break;
+          }
+        }
+        if (districtName) break;
+      }
+    }
+
+    const parts = [cityName, districtName].filter(Boolean);
+    if (parts.length > 0) return parts.join(' - ');
+    if (m.address) return m.address;
+    return 'الموقع غير محدد';
+  }, [geoCatalog]);
 
   const openEditModal = (mosque: MosqueDetail) => {
     setEditingMosque(mosque);
@@ -527,7 +562,7 @@ export function MosquesListSection({
                       </h3>
                       <p className="text-xs text-white/80 font-bold flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3 text-primary shrink-0" />
-                        <span>{mosque.city} - {mosque.district}</span>
+                        <span>{getMosqueLocationText(mosque)}</span>
                       </p>
                     </div>
                   </div>
@@ -684,7 +719,7 @@ export function MosquesListSection({
               <div className="grid grid-cols-2 gap-4 text-xs font-bold text-foreground">
                 <div className="p-3 bg-muted/40 rounded-xl border border-border">
                   <span className="text-muted-foreground block mb-1">المدينة والحي:</span>
-                  <span>{selectedMosque.city} - {selectedMosque.district}</span>
+                  <span>{getMosqueLocationText(selectedMosque)}</span>
                 </div>
                 <div className="p-3 bg-muted/40 rounded-xl border border-border">
                   <span className="text-muted-foreground block mb-1">العنوان التفصيلي:</span>
