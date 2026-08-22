@@ -162,14 +162,7 @@ export function InviteStaffModal({
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-foreground">إرسال دعوة انضمام</h2>
-                {isSuperAdmin && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-primary/10 text-primary border border-primary/20">
-                    مدير النطاق (سوبر أدمن)
-                  </span>
-                )}
-              </div>
+              <h2 className="text-base sm:text-lg font-black text-foreground">إرسال دعوة انضمام</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {isSuperAdmin
                   ? 'دعوة مدير مسجد لربطه بالمسجد أو إضافة كادر إداري'
@@ -347,9 +340,6 @@ export function InviteStaffModal({
               className="w-full px-3.5 py-2.5 bg-muted/30 border border-input rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/30 outline-none font-mono text-left"
               dir="ltr"
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              سيتم إرسال رابط الدعوة الرسمية لإنشاء الحساب إلى هذا البريد مباشرة.
-            </p>
           </div>
 
           {/* Optional: Full Name and Phone */}

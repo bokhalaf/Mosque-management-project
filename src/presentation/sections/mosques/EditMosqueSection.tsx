@@ -90,14 +90,55 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
   // Populate data when mosque and geoCatalog are available
   useEffect(() => {
     if (mosque) {
-      // Find governorate that contains this city_id if possible
       let matchedGovId: string | number = '';
-      if (mosque.city_id && geoCatalog.length > 0) {
-        const foundGov = geoCatalog.find(g => g.cities?.some(c => String(c.id) === String(mosque.city_id)));
-        if (foundGov) matchedGovId = foundGov.id;
-      }
-      if (!matchedGovId && geoCatalog.length > 0) {
-        matchedGovId = geoCatalog[0].id;
+      let matchedCityId = mosque.city_id ? String(mosque.city_id) : '';
+      let matchedDistrictId = mosque.district_id ? String(mosque.district_id) : '';
+
+      if (geoCatalog.length > 0) {
+        // 1. Match governorate by city_id
+        if (mosque.city_id) {
+          const foundGov = geoCatalog.find(g => g.cities?.some(c => Number(c.id) === Number(mosque.city_id)));
+          if (foundGov) {
+            matchedGovId = foundGov.id;
+            matchedCityId = String(mosque.city_id);
+          }
+        }
+
+        // 2. Match by district_id if gov still not found
+        if (!matchedGovId && mosque.district_id) {
+          for (const gov of geoCatalog) {
+            for (const city of (gov.cities || [])) {
+              if (city.districts?.some(d => Number(d.id) === Number(mosque.district_id))) {
+                matchedGovId = gov.id;
+                matchedCityId = String(city.id);
+                matchedDistrictId = String(mosque.district_id);
+                break;
+              }
+            }
+            if (matchedGovId) break;
+          }
+        }
+
+        // 3. Match by city name if gov still not found
+        if (!matchedGovId && mosque.city) {
+          const cityQuery = String(mosque.city).trim().toLowerCase();
+          for (const gov of geoCatalog) {
+            const foundCity = gov.cities?.find(c => c.name.trim().toLowerCase() === cityQuery);
+            if (foundCity) {
+              matchedGovId = gov.id;
+              matchedCityId = String(foundCity.id);
+              break;
+            }
+          }
+        }
+
+        // 4. Default fallback if no match
+        if (!matchedGovId && geoCatalog.length > 0) {
+          matchedGovId = geoCatalog[0].id;
+          if (!matchedCityId && geoCatalog[0].cities?.length > 0) {
+            matchedCityId = String(geoCatalog[0].cities[0].id);
+          }
+        }
       }
 
       setFormData(prev => ({
@@ -107,8 +148,8 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
         status: (mosque.status as any) || 'active',
         isFeatured: Boolean(mosque.is_featured),
         selectedGovId: matchedGovId,
-        cityId: mosque.city_id ? String(mosque.city_id) : (geoCatalog[0]?.cities?.[0]?.id || ''),
-        districtId: mosque.district_id ? String(mosque.district_id) : '',
+        cityId: matchedCityId,
+        districtId: matchedDistrictId,
         address: mosque.address || '',
         latitude: mosque.latitude !== undefined && mosque.latitude !== null ? String(mosque.latitude) : '',
         longitude: mosque.longitude !== undefined && mosque.longitude !== null ? String(mosque.longitude) : '',
@@ -127,8 +168,7 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
 
   const availableCities = useMemo(() => {
     if (!currentGov) return [];
-    if (currentGov.cities && currentGov.cities.length > 0) return currentGov.cities;
-    return [{ id: currentGov.id, name: currentGov.name, lat: currentGov.lat, lng: currentGov.lng, districts: [] }];
+    return currentGov.cities || [];
   }, [currentGov]);
 
   const currentCity = useMemo(() => {

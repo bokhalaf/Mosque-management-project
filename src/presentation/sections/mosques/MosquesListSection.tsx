@@ -223,18 +223,6 @@ export function MosquesListSection({
 
             <button
               onClick={() => {
-                setInviteInitialMosqueId(undefined);
-                setInviteModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
-              title="إرسال دعوة تعيين مدير مسجد (POST /api/invitations/send)"
-            >
-              <UserPlus className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span>دعوة مدير مسجد</span>
-            </button>
-
-            <button
-              onClick={() => {
                 if (onNavigateToAdd) {
                   onNavigateToAdd();
                 } else {

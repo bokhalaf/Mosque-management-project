@@ -32,8 +32,37 @@ export function MosqueDetailsSection({
   onDeleteSuccess,
 }: MosqueDetailsSectionProps) {
   const { mosque, loading, error, fetchMosque } = useMosque(mosqueId);
-  const { handleDeleteMosque, handleToggleFeatured, handleUpdateStatus } = useMosques();
+  const { handleDeleteMosque, handleToggleFeatured, handleUpdateStatus, geoCatalog } = useMosques();
   const { showToast } = useToast();
+
+  // Resolve city and district from geoCatalog using city_id and district_id
+  const resolvedCityName = React.useMemo(() => {
+    if (mosque?.city && typeof mosque.city === 'string' && isNaN(Number(mosque.city)) && mosque.city.trim() !== '') {
+      return mosque.city;
+    }
+    if (mosque?.city_id && geoCatalog && geoCatalog.length > 0) {
+      for (const gov of geoCatalog) {
+        const found = gov.cities?.find(c => Number(c.id) === Number(mosque.city_id));
+        if (found) return found.name;
+      }
+    }
+    return mosque?.city || '';
+  }, [mosque, geoCatalog]);
+
+  const resolvedDistrictName = React.useMemo(() => {
+    if (mosque?.district && typeof mosque.district === 'string' && isNaN(Number(mosque.district)) && mosque.district.trim() !== '') {
+      return mosque.district;
+    }
+    if (mosque?.district_id && geoCatalog && geoCatalog.length > 0) {
+      for (const gov of geoCatalog) {
+        for (const city of (gov.cities || [])) {
+          const found = city.districts?.find(d => Number(d.id) === Number(mosque.district_id));
+          if (found) return found.name;
+        }
+      }
+    }
+    return mosque?.district || '';
+  }, [mosque, geoCatalog]);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -353,11 +382,11 @@ export function MosqueDetailsSection({
           <div className="absolute bottom-6 right-6 left-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-4 text-white">
             <div className="space-y-1.5">
               <h1 className="text-2xl md:text-3xl font-black">{mosque.name}</h1>
-              {([mosque.city, mosque.district, mosque.address].some(Boolean)) && (
+              {([resolvedCityName, resolvedDistrictName, mosque.address].some(Boolean)) && (
                 <p className="text-xs md:text-sm text-white/80 font-bold flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary shrink-0" />
-                  <span>{[mosque.city, mosque.district].filter(Boolean).join(' - ') || mosque.address}</span>
-                  {mosque.address && mosque.city && <span className="opacity-75">({mosque.address})</span>}
+                  <span>{[resolvedCityName, resolvedDistrictName].filter(Boolean).join(' - ') || mosque.address}</span>
+                  {mosque.address && resolvedCityName && <span className="opacity-75">({mosque.address})</span>}
                 </p>
               )}
             </div>
@@ -510,12 +539,12 @@ export function MosqueDetailsSection({
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
                   <span className="text-muted-foreground block text-[11px]">المدينة:</span>
-                  <span className="text-foreground text-sm font-bold">{mosque.city || '—'}</span>
+                  <span className="text-foreground text-sm font-bold">{resolvedCityName || '—'}</span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
                   <span className="text-muted-foreground block text-[11px]">الحي / المنطقة:</span>
-                  <span className="text-foreground text-sm font-bold">{mosque.district || '—'}</span>
+                  <span className="text-foreground text-sm font-bold">{resolvedDistrictName || '—'}</span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1 md:col-span-2">
