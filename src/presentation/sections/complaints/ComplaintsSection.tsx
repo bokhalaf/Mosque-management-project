@@ -30,6 +30,7 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
     filters,
     hasActiveFilters,
     debugData,
+    statsDebugData,
     copiedDebug,
     copyDebugToClipboard,
     closeDebugBox,
@@ -104,9 +105,10 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
             />
 
             {/* Server Debug Box Component (مراقب رد السيرفر) */}
-            {debugData && (
+            {(debugData || statsDebugData) && (
               <ComplaintDebugBox
                 debugData={debugData}
+                statsDebugData={statsDebugData}
                 copiedDebug={copiedDebug}
                 onCopy={copyDebugToClipboard}
                 onClose={closeDebugBox}

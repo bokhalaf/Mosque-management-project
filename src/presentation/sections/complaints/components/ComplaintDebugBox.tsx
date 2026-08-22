@@ -1,10 +1,11 @@
 // ==============================
 // Complaints — ComplaintDebugBox Component
 // صندوق مراقب السيرفر لمعاينة خرج الـ API الخاص بالشكاوى (HTTP, URL, JSON)
+// يعرض طلبي الإحصائيات وقائمة الشكاوى في تبويبين منفصلين
 // ==============================
 
-import React from 'react';
-import { Terminal, Copy, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Terminal, Copy, X, CheckCircle2, AlertCircle, BarChart2, List } from 'lucide-react';
 
 export interface ComplaintOperationDebugResponse {
   operationType: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -19,13 +20,17 @@ export interface ComplaintOperationDebugResponse {
 
 interface ComplaintDebugBoxProps {
   debugData: ComplaintOperationDebugResponse | null;
+  statsDebugData?: ComplaintOperationDebugResponse | null;
   copiedDebug: boolean;
   onCopy: () => void;
   onClose: () => void;
 }
 
-export function ComplaintDebugBox({ debugData, copiedDebug, onCopy, onClose }: ComplaintDebugBoxProps) {
-  if (!debugData) return null;
+export function ComplaintDebugBox({ debugData, statsDebugData, copiedDebug, onCopy, onClose }: ComplaintDebugBoxProps) {
+  const [activeTab, setActiveTab] = useState<'complaints' | 'stats'>('stats');
+
+  const activeData = activeTab === 'stats' ? statsDebugData : debugData;
+  if (!activeData && !debugData && !statsDebugData) return null;
 
   const {
     operationType,
@@ -36,7 +41,7 @@ export function ComplaintDebugBox({ debugData, copiedDebug, onCopy, onClose }: C
     isSuccess,
     requestPayloadSent,
     timestamp,
-  } = debugData;
+  } = activeData || (debugData ?? statsDebugData)!;
 
   const getMethodBadgeClass = (m: string) => {
     switch (m) {
@@ -78,6 +83,46 @@ export function ComplaintDebugBox({ debugData, copiedDebug, onCopy, onClose }: C
           </button>
           <X className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors" onClick={onClose} />
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        {statsDebugData && (
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'stats'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>إحصائيات الكاردات</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              statsDebugData.isSuccess ? 'bg-emerald-900 text-emerald-400' : 'bg-red-900 text-red-400'
+            }`}>
+              {statsDebugData.httpStatus}
+            </span>
+          </button>
+        )}
+        {debugData && (
+          <button
+            onClick={() => setActiveTab('complaints')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'complaints'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>قائمة الشكاوى</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              debugData.isSuccess ? 'bg-emerald-900 text-emerald-400' : 'bg-red-900 text-red-400'
+            }`}>
+              {debugData.httpStatus}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Info Row */}

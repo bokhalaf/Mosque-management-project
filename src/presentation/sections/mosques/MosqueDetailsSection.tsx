@@ -229,32 +229,31 @@ export function MosqueDetailsSection({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            {/* Edit Button */}
+            {/* Edit Button — icon only */}
             <button
               onClick={() => onNavigateToEdit && onNavigateToEdit(mosque.id)}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/90 transition-all shadow-md active:scale-95"
+              className="p-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md active:scale-95"
+              title="تعديل بيانات المسجد"
             >
               <Edit3 className="w-4 h-4" />
-              <span>تعديل بيانات المسجد</span>
             </button>
 
-            {/* Delete Button */}
+            {/* Delete Button — icon only */}
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white border border-red-500/20 font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95"
+              className="p-2.5 bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all shadow-sm active:scale-95"
+              title="حذف المسجد"
             >
               <Trash2 className="w-4 h-4" />
-              <span>حذف المسجد</span>
             </button>
 
-            {/* Live API Inspector Toggle */}
+            {/* Live API Inspector Toggle — icon only */}
             <button
               onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold transition-all shadow-sm"
+              className="p-2.5 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl transition-all shadow-sm"
               title="مراقب استجابة السيرفر المباشر"
             >
               <Terminal className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">{showDebugTerminal ? 'إخفاء مراقب الـ API' : 'مراقب الـ API المباشر'}</span>
             </button>
           </div>
         }
@@ -561,11 +560,6 @@ export function MosqueDetailsSection({
               </div>
 
               <div className="space-y-3 text-xs font-bold text-foreground">
-                <div className="p-3 bg-muted/40 rounded-xl border border-border">
-                  <span className="text-muted-foreground block mb-1">المدينة والحي:</span>
-                  <span>{[mosque.city, mosque.district].filter(Boolean).join(' - ') || '—'}</span>
-                </div>
-
                 <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
                   <div className="p-2.5 bg-muted/40 rounded-xl border border-border">
                     <span className="text-muted-foreground block text-[10px]">Lat (العرض):</span>
@@ -591,34 +585,7 @@ export function MosqueDetailsSection({
               </div>
             </div>
 
-            {/* Quick Actions Card */}
-            <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-sm">
-              <h3 className="text-sm font-black text-foreground">إجراءات المسجد</h3>
 
-              <div className="space-y-2">
-                <button
-                  onClick={() => onNavigateToEdit && onNavigateToEdit(mosque.id)}
-                  className="w-full flex items-center justify-between p-3 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl text-xs font-bold text-primary transition-all"
-                >
-                  <span className="flex items-center gap-2">
-                    <Edit3 className="w-4 h-4" />
-                    <span>تعديل بيانات المسجد</span>
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="w-full flex items-center justify-between p-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-xl text-xs font-bold text-red-600 transition-all"
-                >
-                  <span className="flex items-center gap-2">
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                    <span>حذف المسجد من النظام</span>
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-red-400" />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>

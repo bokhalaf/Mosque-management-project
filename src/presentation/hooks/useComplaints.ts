@@ -60,10 +60,36 @@ export function useComplaints() {
 
   // Debug Box State
   const [debugData, setDebugData] = useState<ComplaintOperationDebugResponse | null>(null);
+  const [statsDebugData, setStatsDebugData] = useState<ComplaintOperationDebugResponse | null>(null);
   const [copiedDebug, setCopiedDebug] = useState(false);
 
   const loadStats = useCallback(async () => {
     setLoadingStats(true);
+    const statsUrl = 'https://mms-backend-rose.vercel.app/api/complaints/stats';
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : '';
+    let httpStatus = 500;
+    let rawJson: any = null;
+    try {
+      const res = await fetch(statsUrl, {
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      httpStatus = res.status;
+      rawJson = await res.json().catch(() => null);
+    } catch (e: any) {
+      rawJson = { error: e.message };
+    }
+
+    // Store stats debug info
+    setStatsDebugData({
+      operationType: 'GET',
+      operationLabel: 'إحصائيات كاردات الشكاوى (Stats)',
+      httpStatus,
+      endpointUrl: statsUrl,
+      rawResponse: rawJson,
+      isSuccess: httpStatus >= 200 && httpStatus < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    });
+
     try {
       const data = await getStatsUseCase.execute();
       setStats({
@@ -75,13 +101,7 @@ export function useComplaints() {
       });
     } catch (err: any) {
       console.error('Error loading complaint stats:', err);
-      setStats({
-        total_complaints: 0,
-        open_complaints: 0,
-        urgent_complaints: 0,
-        resolved_this_month: 0,
-        avg_response_hours: 0,
-      });
+      setStats({ total_complaints: 0, open_complaints: 0, urgent_complaints: 0, resolved_this_month: 0, avg_response_hours: 0 });
     } finally {
       setLoadingStats(false);
     }
@@ -187,6 +207,7 @@ export function useComplaints() {
     hasActiveFilters,
     // Debug state & actions
     debugData,
+    statsDebugData,
     copiedDebug,
     copyDebugToClipboard,
     closeDebugBox,
