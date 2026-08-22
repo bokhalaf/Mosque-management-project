@@ -200,8 +200,8 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
         onBack={onBack}
         breadcrumbs={[{ label: 'الشكاوى والاقتراحات' }, { label: 'تفاصيل الشكوى', active: true }]}
         actions={
-          <div className="flex gap-2">
-            {isMosqueManager && !isAssignedToAdmin && (
+          isMosqueManager && !isAssignedToAdmin ? (
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowAssignModal(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
@@ -210,16 +210,8 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
                 <UserPlus className="w-4 h-4" />
                 <span>رفع الطلب للسوبر أدمن</span>
               </button>
-            )}
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm"
-              title="طباعة التذكرة"
-            >
-              <Printer className="w-4 h-4 text-muted-foreground" />
-              <span className="hidden sm:inline">طباعة</span>
-            </button>
-          </div>
+            </div>
+          ) : undefined
         }
       />
 

@@ -45,6 +45,7 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
     setDeletingId,
     isSubmittingAction,
     operationDebug,
+    statsDebug,
     showDebugBox,
     setShowDebugBox,
     copiedDebug,
@@ -119,9 +120,10 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
       <div className="px-4 md:px-8 pt-4 space-y-8">
 
         {/* Debug Box */}
-        {showDebugBox && operationDebug && (
+        {showDebugBox && (operationDebug || statsDebug) && (
           <MaintenanceDebugBox
             debugData={operationDebug}
+            statsDebugData={statsDebug}
             copiedDebug={copiedDebug}
             onCopy={copyDebugJson}
             onClose={() => setShowDebugBox(false)}

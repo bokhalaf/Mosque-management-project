@@ -71,12 +71,41 @@ export function useMaintenance() {
 
   // Debug Inspector State
   const [operationDebug, setOperationDebug] = useState<MaintenanceOperationDebugResponse | null>(null);
+  const [statsDebug, setStatsDebug] = useState<MaintenanceOperationDebugResponse | null>(null);
   const [showDebugBox, setShowDebugBox] = useState(false);
   const [copiedDebug, setCopiedDebug] = useState(false);
 
   // 1. Load Stats via GetMaintenanceStatsUseCase
   const loadStats = useCallback(async () => {
     setLoadingStats(true);
+    const statsUrl = 'https://mms-backend-rose.vercel.app/api/maintenance/stats';
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : '';
+    let httpStatus = 500;
+    let rawJson: any = null;
+    try {
+      const res = await fetch(statsUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      httpStatus = res.status;
+      rawJson = await res.json().catch(() => null);
+    } catch (e: any) {
+      rawJson = { error: e.message };
+    }
+
+    setStatsDebug({
+      operationType: 'GET',
+      operationLabel: 'إحصائيات كاردات الصيانة (Stats)',
+      httpStatus,
+      endpointUrl: statsUrl,
+      rawResponse: rawJson,
+      isSuccess: httpStatus >= 200 && httpStatus < 300,
+      timestamp: new Date().toLocaleTimeString('ar-EG'),
+    });
+
     try {
       const data = await getStatsUseCase.execute();
       setStats(data);
@@ -256,6 +285,7 @@ export function useMaintenance() {
     handleEditRequest,
     // Debug Inspector State
     operationDebug,
+    statsDebug,
     showDebugBox,
     setShowDebugBox,
     copiedDebug,

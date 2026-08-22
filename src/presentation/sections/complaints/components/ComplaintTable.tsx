@@ -248,14 +248,6 @@ export function ComplaintTable({
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {item.status !== 'resolved' && item.status !== 'canceled' && (
-                          <button
-                            className="p-2 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
-                            title="إسناد / متابعة الشكوى"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

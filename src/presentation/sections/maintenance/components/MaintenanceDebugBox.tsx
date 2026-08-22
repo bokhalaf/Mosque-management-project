@@ -1,31 +1,36 @@
 // ==============================
 // Maintenance — MaintenanceDebugBox Component
 // صندوق معاينة رد السيرفر الموحد (GET, POST, PUT, DELETE)
+// يدعم التبديل بين إحصائيات الكاردات وقائمة طلبات الصيانة
 // ==============================
 
-import React from 'react';
-import { Terminal, Copy, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Terminal, Copy, X, CheckCircle2, AlertCircle, BarChart2, Wrench } from 'lucide-react';
 import { MaintenanceOperationDebugResponse, MaintenanceRecentDebugResponse } from '../../../../data/repositories/MaintenanceRepositoryImpl';
 
 interface MaintenanceDebugBoxProps {
   debugData: MaintenanceOperationDebugResponse | MaintenanceRecentDebugResponse | null;
+  statsDebugData?: MaintenanceOperationDebugResponse | null;
   copiedDebug: boolean;
   onCopy: () => void;
   onClose: () => void;
 }
 
-export function MaintenanceDebugBox({ debugData, copiedDebug, onCopy, onClose }: MaintenanceDebugBoxProps) {
-  if (!debugData) return null;
+export function MaintenanceDebugBox({ debugData, statsDebugData, copiedDebug, onCopy, onClose }: MaintenanceDebugBoxProps) {
+  const [activeTab, setActiveTab] = useState<'stats' | 'requests'>('stats');
 
-  const isOperationDebug = 'operationType' in debugData;
-  const method = isOperationDebug ? (debugData as MaintenanceOperationDebugResponse).operationType : 'GET';
-  const label = isOperationDebug ? (debugData as MaintenanceOperationDebugResponse).operationLabel : 'جلب أحدث طلبات الصيانة';
-  const httpStatus = debugData.httpStatus;
-  const endpointUrl = debugData.endpointUrl;
-  const rawResponse = debugData.rawResponse;
-  const isSuccess = isOperationDebug ? (debugData as MaintenanceOperationDebugResponse).isSuccess : (httpStatus >= 200 && httpStatus < 300);
-  const payload = isOperationDebug ? (debugData as MaintenanceOperationDebugResponse).requestPayloadSent : null;
-  const timestamp = isOperationDebug ? (debugData as MaintenanceOperationDebugResponse).timestamp : '';
+  const currentData = activeTab === 'stats' ? (statsDebugData || debugData) : (debugData || statsDebugData);
+  if (!currentData) return null;
+
+  const isOperationDebug = 'operationType' in currentData;
+  const method = isOperationDebug ? (currentData as MaintenanceOperationDebugResponse).operationType : 'GET';
+  const label = isOperationDebug ? (currentData as MaintenanceOperationDebugResponse).operationLabel : 'جلب أحدث طلبات الصيانة';
+  const httpStatus = currentData.httpStatus;
+  const endpointUrl = currentData.endpointUrl;
+  const rawResponse = currentData.rawResponse;
+  const isSuccess = isOperationDebug ? (currentData as MaintenanceOperationDebugResponse).isSuccess : (httpStatus >= 200 && httpStatus < 300);
+  const payload = isOperationDebug ? (currentData as MaintenanceOperationDebugResponse).requestPayloadSent : null;
+  const timestamp = isOperationDebug ? (currentData as MaintenanceOperationDebugResponse).timestamp : '';
 
   const getMethodBadgeClass = (m: string) => {
     switch (m) {
@@ -38,7 +43,7 @@ export function MaintenanceDebugBox({ debugData, copiedDebug, onCopy, onClose }:
   };
 
   return (
-    <div className={`p-6 bg-slate-900 border rounded-2xl shadow-2xl space-y-4 animate-in fade-in transition-all ${
+    <div className={`p-6 bg-slate-900 border rounded-2xl shadow-2xl space-y-4 animate-in fade-in transition-all font-['Cairo'] ${
       isSuccess ? 'border-emerald-500/40 text-emerald-400' : 'border-red-500/40 text-red-400'
     }`}>
       {/* Box Header */}
@@ -66,6 +71,48 @@ export function MaintenanceDebugBox({ debugData, copiedDebug, onCopy, onClose }:
           </button>
           <X className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors" onClick={onClose} />
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        {statsDebugData && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('stats')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'stats'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>إحصائيات الكاردات</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              statsDebugData.isSuccess ? 'bg-emerald-900 text-emerald-400' : 'bg-red-900 text-red-400'
+            }`}>
+              {statsDebugData.httpStatus}
+            </span>
+          </button>
+        )}
+        {debugData && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('requests')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'requests'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>طلبات ومهام الصيانة</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              ('isSuccess' in debugData ? debugData.isSuccess : debugData.httpStatus === 200) ? 'bg-emerald-900 text-emerald-400' : 'bg-red-900 text-red-400'
+            }`}>
+              {debugData.httpStatus}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Info Row */}

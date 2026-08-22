@@ -71,7 +71,6 @@ const NAV: NavSection[] = [
       { id: "add-donation", label: "إضافة تبرع", href: "/donations/add" },
       { id: "campaigns", label: "الحملات", href: "/donations/campaigns" },
       { id: "create-campaign", label: "إنشاء حملة", href: "/donations/campaigns/create" },
-      { id: "reports", label: "التقارير", href: "/donations/reports" },
     ],
   },
   {
@@ -112,15 +111,6 @@ const NAV: NavSection[] = [
     icon: CalendarDays,
     href: "/tasks",
     items: [],
-  },
-  {
-    id: "design-system",
-    label: "نظام التصميم",
-    icon: Palette,
-    items: [
-      { id: "foundation", label: "الأسس", href: "/design-system/foundation" },
-      { id: "components", label: "المكونات", href: "/design-system/components" },
-    ],
   },
 ];
 
@@ -242,6 +232,7 @@ export function Sidebar({
             const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin") || Boolean(rawUser?.is_super_admin) || rawUser?.role === 'super_admin' || rawUser?.role === 'admin' || (typeof window !== "undefined" && localStorage.getItem("user_role") === "super_admin");
 
             if (section.id === "mosques" && !isSuperAdmin) return null;
+            if (section.id === "tasks" && isSuperAdmin) return null;
 
             const visibleItems = section.items.filter((i) => {
               if (isSuperAdmin) {
