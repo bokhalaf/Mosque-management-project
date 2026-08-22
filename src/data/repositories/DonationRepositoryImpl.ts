@@ -40,32 +40,91 @@ export class DonationRepositoryImpl implements IDonationRepository {
     return 1;
   }
 
-  async getDonations(page: number = 1, limit: number = 5, search: string = "", type: string = "", status: string = ""): Promise<PaginatedDonations> {
-    const mosqueId = this.getMosqueId();
-    try {
-      let url = `${BASE_URL}/mosques/${mosqueId}/donations?page=${page}&per_page=${limit}`;
-      if (search) url += `&search=${encodeURIComponent(search)}`;
-      if (type) {
-        let t = type;
-        if (type === 'تبرع عام' || type === 'صدقة' || type === 'زكاة' || type === 'كفارة') t = 'cash';
-        url += `&type=${encodeURIComponent(t)}`;
+  private isSuperAdminUser(): boolean {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("auth_user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const role = String(user.role || user.user_type || user.role_name || '').toLowerCase();
+          if (
+            role === 'super_admin' ||
+            role === 'superadmin' ||
+            role === 'admin' ||
+            role === 'administrator' ||
+            role === 'region_manager' ||
+            user.is_super_admin === true ||
+            user.role_id === 1
+          ) {
+            return true;
+          }
+        } catch (e) {}
       }
-      if (status) {
-        let s = status;
-        if (status === 'مكتمل') s = 'completed';
-        if (status === 'قيد المعالجة' || status === 'قيد الانتظار') s = 'pending';
-        url += `&status=${encodeURIComponent(s)}`;
+      const roleStr = localStorage.getItem("user_role");
+      if (roleStr && (roleStr.toLowerCase() === 'super_admin' || roleStr.toLowerCase() === 'admin')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async getDonations(page: number = 1, limit: number = 10, search: string = "", type: string = "", status: string = ""): Promise<PaginatedDonations> {
+    const isSuperAdmin = this.isSuperAdminUser();
+    const mosqueId = this.getMosqueId();
+
+    try {
+      // ── Build Query String ──
+      const params = new URLSearchParams();
+      params.append("page", String(page));
+      params.append("per_page", String(limit));
+
+      if (search && search.trim()) {
+        params.append("search", search.trim());
       }
 
-      const response = await fetch(url, {
+      if (type && type !== 'all') {
+        let t = type;
+        if (type === 'تبرع عام' || type === 'صدقة' || type === 'زكاة' || type === 'كفارة' || type === 'نقدي' || type === 'تبرع نقدي') t = 'cash';
+        if (type === 'تبرع عيني' || type === 'عيني') t = 'in_kind';
+        params.append("type", t);
+      }
+
+      if (status && status !== 'all') {
+        let s = status;
+        if (status === 'مكتمل' || status === 'مكتملة') s = 'completed';
+        if (status === 'قيد المعالجة' || status === 'قيد الانتظار' || status === 'معلق') s = 'pending';
+        params.append("status", s);
+      }
+
+      // ── Determine URL: Super Admin uses /api/admin/donations (adminListDonations) ──
+      const adminUrl = `${BASE_URL}/admin/donations?${params.toString()}`;
+      const mosqueUrl = `${BASE_URL}/mosques/${mosqueId}/donations?${params.toString()}`;
+
+      let url = isSuperAdmin ? adminUrl : mosqueUrl;
+
+      let response = await fetch(url, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
       
-      const json = await response.json();
-      console.log("API Donations Response:", json);
+      let json = await response.json().catch(() => null);
+      console.log(`API Donations Response (${url}):`, json);
       
-      if (!response.ok || json.status === false) {
+      // Fallback seamlessly if 403 (e.g. admin accessed mosque URL or vice versa)
+      if ((response.status === 403 || !response.ok || (json && json.status === false)) && !isSuperAdmin) {
+        console.log(`Retrying Donations via Super Admin endpoint: ${adminUrl}`);
+        const fallbackRes = await fetch(adminUrl, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const fallbackJson = await fallbackRes.json().catch(() => null);
+        if (fallbackRes.ok && fallbackJson && fallbackJson.status !== false) {
+          response = fallbackRes;
+          json = fallbackJson;
+        }
+      }
+
+      if (!response.ok || !json || json.status === false) {
         console.warn("Failed to fetch donations, returning fallback data.", json?.message || response.statusText);
         return this.getPaginatedFallback(page, limit, search, type, status);
       }
@@ -94,13 +153,13 @@ export class DonationRepositoryImpl implements IDonationRepository {
       const data = items.map((item: any) => {
         let donorName = 'فاعل خير';
         if (item.user && typeof item.user === 'object') {
-          donorName = item.user.name || item.donor_name || 'فاعل خير';
+          donorName = item.user.name || item.user.full_name || item.donor_name || 'فاعل خير';
         } else if (item.donor_name && item.donor_name.trim() && item.donor_name !== 'null') {
           donorName = item.donor_name;
         }
 
         const amt = parseAmount(item.amount);
-        const itemType = item.donation_type || item.type || 'تبرع عام';
+        const itemType = item.donation_type || item.type || 'cash';
         let mappedType = itemType === 'in_kind' ? 'تبرع عيني' : 'تبرع عام';
         if (item.campaign_id || item.campaign) mappedType = 'حملة تبرع';
 
@@ -110,7 +169,7 @@ export class DonationRepositoryImpl implements IDonationRepository {
           donorName: donorName,
           amount: amt,
           type: mappedType,
-          donation_type: item.donation_type || item.type || 'cash',
+          donation_type: itemType,
           item_description: item.item_description || null,
           campaign: item.campaign_title || item.campaign?.title || (item.campaign_id ? `حملة رقم ${item.campaign_id}` : undefined),
           status: item.status === 'completed' ? 'مكتمل' : item.status === 'pending' ? 'قيد المعالجة' : item.status || 'مكتمل',
@@ -118,6 +177,8 @@ export class DonationRepositoryImpl implements IDonationRepository {
           rawDate: item.created_at,
           paymentMethod: item.payment_method || 'نقدي',
           notes: item.notes || null,
+          mosque_id: item.mosque_id,
+          mosque: item.mosque || null,
           _rawResponse: json,
         } as Donation;
       });
@@ -159,26 +220,71 @@ export class DonationRepositoryImpl implements IDonationRepository {
   }
 
   async getCampaigns(page: number = 1, limit: number = 4, search: string = "", status: string = "", priority: string = ""): Promise<PaginatedCampaigns> {
+    const isSuperAdmin = this.isSuperAdminUser();
     const mosqueId = this.getMosqueId();
-    try {
-      let url = `${BASE_URL}/mosques/${mosqueId}/campaigns?page=${page}&per_page=${limit}`;
-      if (search) url += `&search=${encodeURIComponent(search)}`;
-      if (status && status !== 'all') url += `&status=${encodeURIComponent(status)}`;
-      if (priority && priority !== 'all') url += `&priority=${encodeURIComponent(priority)}`;
 
-      const response = await fetch(url, {
+    try {
+      // ── Build Query String ──
+      const params = new URLSearchParams();
+      params.append("page", String(page));
+      params.append("per_page", String(limit));
+
+      if (search && search.trim()) {
+        params.append("search", search.trim());
+      }
+
+      if (status && status !== 'all') {
+        let s = status;
+        if (status === 'نشطة') s = 'active';
+        if (status === 'متوقفة' || status === 'متوقفة مؤقتاً') s = 'paused';
+        if (status === 'مكتملة') s = 'completed';
+        if (status === 'ملغاة') s = 'cancelled';
+        params.append("status", s);
+      }
+
+      if (priority && priority !== 'all') {
+        let p = priority;
+        if (priority === 'عالية' || priority === 'عاجلة' || priority === 'urgent') p = 'high';
+        if (priority === 'متوسطة') p = 'medium';
+        if (priority === 'منخفضة' || priority === 'عادية') p = 'low';
+        params.append("priority", p);
+      }
+
+      // ── Determine URL: Super Admin or Global listing uses /api/campaigns (listAllCampaigns) ──
+      const allCampaignsUrl = `${BASE_URL}/campaigns?${params.toString()}`;
+      const mosqueCampaignsUrl = `${BASE_URL}/mosques/${mosqueId}/campaigns?${params.toString()}`;
+
+      let url = isSuperAdmin ? allCampaignsUrl : mosqueCampaignsUrl;
+
+      let response = await fetch(url, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
-      const json = await response.json();
-      console.log("API Campaigns Response:", json);
-      if (!response.ok || !json.status) {
+      let json = await response.json().catch(() => null);
+      console.log(`API Campaigns Response (${url}):`, json);
+
+      // Fallback if mosque-specific route returns error or 403
+      if ((!response.ok || !json || json.status === false) && !isSuperAdmin) {
+        console.log(`Retrying Campaigns via Global endpoint: ${allCampaignsUrl}`);
+        const altRes = await fetch(allCampaignsUrl, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const altJson = await altRes.json().catch(() => null);
+        if (altRes.ok && altJson && altJson.status !== false) {
+          response = altRes;
+          json = altJson;
+        }
+      }
+
+      if (!response.ok || !json || json.status === false) {
         return {
           data: this.getFallbackCampaigns(),
           pagination: { current_page: 1, last_page: 1, per_page: limit, total: this.getFallbackCampaigns().length }
         };
       }
-      const items = Array.isArray(json.data) ? json.data : [];
+
+      const items = Array.isArray(json.data) ? json.data : (Array.isArray(json.data?.data) ? json.data.data : []);
       const data = items.map((item: any) => {
         const target = parseAmount(item.target_amount || item.targetAmount || item.goalAmount);
         const raised = parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount);
@@ -215,10 +321,10 @@ export class DonationRepositoryImpl implements IDonationRepository {
       });
 
       const paginationMeta = {
-        current_page: json.pagination?.current_page || page,
-        last_page: json.pagination?.last_page || 1,
-        per_page: json.pagination?.per_page || limit,
-        total: json.pagination?.total || data.length,
+        current_page: json.pagination?.current_page || json.meta?.current_page || page,
+        last_page: json.pagination?.last_page || json.meta?.last_page || 1,
+        per_page: json.pagination?.per_page || json.meta?.per_page || limit,
+        total: json.pagination?.total || json.meta?.total || data.length,
         has_more_pages: json.pagination?.has_more_pages ?? false,
       };
 

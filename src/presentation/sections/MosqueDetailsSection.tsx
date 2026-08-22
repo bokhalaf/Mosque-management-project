@@ -20,7 +20,16 @@ interface ApiDebugLog {
 }
 
 export function MosqueDetailsSection() {
-  const { mosque, loading, error, fetchMosque, updateMosque, addSpace, deleteSpace } = useMosque(20);
+  const [activeMosqueId, setActiveMosqueId] = useState<string | number>(1);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedId = localStorage.getItem('active_mosque_id');
+      if (savedId) setActiveMosqueId(savedId);
+    }
+  }, []);
+
+  const { mosque, loading, error, fetchMosque, updateMosque, addSpace, deleteSpace } = useMosque(activeMosqueId);
 
   // Mosque Edit Form State
   const [form, setForm] = useState<UpdateMosquePayload>({
@@ -82,13 +91,13 @@ export function MosqueDetailsSection() {
       setFacilitiesList(mosque.facilities || []);
 
       addDebugLog(
-        "GET /api/mosques/20",
-        "https://mms-backend-rose.vercel.app/api/mosques/20",
+        `GET /api/mosques/${activeMosqueId}`,
+        `https://mms-backend-rose.vercel.app/api/mosques/${activeMosqueId}`,
         200,
         { status: true, data: mosque }
       );
     }
-  }, [mosque]);
+  }, [mosque, activeMosqueId]);
 
   // Toggle Facility Status
   const handleToggleFacility = (id: number | string) => {
@@ -120,19 +129,29 @@ export function MosqueDetailsSection() {
     setSavingMosque(true);
     try {
       const payload: UpdateMosquePayload = {
-        ...form,
+        name: form.name?.trim(),
+        working_hours: typeof form.working_hours === 'string' ? form.working_hours.trim() : form.working_hours,
+        imam: form.imam?.trim(),
+        khatib: form.khatib?.trim(),
+        status: form.status,
+        image: form.image,
+        city_id: form.city_id,
+        district_id: form.district_id,
+        address: form.address,
+        latitude: form.latitude,
+        longitude: form.longitude,
         facilities: facilitiesList,
       };
       const updated = await updateMosque(payload);
       addDebugLog(
-        "PUT /api/mosques/20",
-        "https://mms-backend-rose.vercel.app/api/mosques/20",
+        `POST /api/mosques/${activeMosqueId} (_method=PUT)`,
+        `https://mms-backend-rose.vercel.app/api/mosques/${activeMosqueId}`,
         200,
         { payload, response: updated }
       );
-      alert("تم تحديث بيانات المسجد والإمام والخطيب والمرافق بنجاح!");
+      alert("تم تحديث بيانات المسجد في السيرفر بنجاح!");
     } catch (err: any) {
-      alert(err.message || "حدث خطأ أثناء حفظ بيانات المسجد.");
+      alert(err.message || "حدث خطأ أثناء حفظ بيانات المسجد بالسيرفر.");
     } finally {
       setSavingMosque(false);
     }
@@ -323,10 +342,11 @@ export function MosqueDetailsSection() {
                   type="text" required
                   value={form.working_hours}
                   onChange={(e) => setForm(prev => ({ ...prev, working_hours: e.target.value }))}
-                  placeholder="مثال: 04:30 AM - 10:30 PM"
+                  placeholder="5:00 AM - 10:00 PM"
                   className="w-full px-3.5 py-2 bg-muted/60 border border-border focus:border-primary rounded-xl text-xs font-bold outline-none text-foreground font-mono"
                 />
               </div>
+
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground mb-1">المدينة *</label>

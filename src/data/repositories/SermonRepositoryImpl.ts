@@ -64,12 +64,13 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
   // Helper to map API sermon format safely
   private formatSermon(item: any): Sermon {
+    const rawStatus = item.status || (item.is_pending ? 'pending' : (item.is_approved ? 'approved' : 'archived'));
     return {
       ...item,
       speaker_name: item.speaker_name || item.preacher || 'الشيخ الخطيب',
       sermon_date: item.sermon_date || item.date || item.created_at?.split('T')[0],
       content: item.content || item.description || item.notes || '',
-      status: item.status || 'archived',
+      status: rawStatus,
     };
   }
 
@@ -251,13 +252,23 @@ export class SermonRepositoryImpl implements ISermonRepository {
       const json = await response.json().catch(() => null);
       console.log("getSermonById API Response:", json);
 
-      if (response.ok && json && json.status) {
-        return this.formatSermon(json.data);
+      if (response.ok && json) {
+        // Handle both wrapped response {status, data} and direct object
+        const sermonData = (json.data && typeof json.data === 'object' && json.data.id) ? json.data : json;
+        if (sermonData && sermonData.id) {
+          return this.formatSermon(sermonData);
+        }
       }
     } catch (e) {
       console.warn(`Failed fetching sermon #${id} from API:`, e);
     }
 
+    // 1. Check pending sermons list
+    const pending = await this.getPendingSermons(1, 100);
+    const matchPending = pending.data.find(s => String(s.id) === String(id));
+    if (matchPending) return { ...matchPending, status: 'pending' };
+
+    // 2. Check archived sermons list
     const all = await this.getArchivedSermons(1, 100);
     const match = all.data.find(s => String(s.id) === String(id));
     if (match) return match;
@@ -445,7 +456,14 @@ export class SermonRepositoryImpl implements ISermonRepository {
   }
 
   // ── 6.4 rejectSermon (POST /api/sermons/{id}/reject) ────────────────
-  async rejectSermon(id: string | number): Promise<void> {
+  async rejectSermon(id: string | number, reason?: string): Promise<void> {
+    const notesValue = reason || 'يرجى مراجعة وتعديل الخطبة';
+    const bodyData = JSON.stringify({
+      notes: notesValue,
+      reason: notesValue,
+      rejection_reason: notesValue,
+    });
+
     const urlsToTry = [
       { url: `${BASE_URL}/sermons/${id}/reject`, method: "POST" },
       { url: `${BASE_URL}/sermons/${id}/reject`, method: "PUT" },
@@ -460,6 +478,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
         const response = await fetch(item.url, {
           method: item.method,
           headers: this.getAuthHeaders(),
+          body: bodyData,
         });
         const json = await response.json().catch(() => null);
         console.log(`${item.method} ${item.url} Response:`, json);
@@ -476,6 +495,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
       }
     }
   }
+
 
   // ── 7. Sermon Selections API ──────────────────────────────────────────
   

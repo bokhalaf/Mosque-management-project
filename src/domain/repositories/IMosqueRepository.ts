@@ -32,9 +32,23 @@ export interface CreateMosquePayload {
   manager_id?: number;
 }
 
+export interface MosqueFilterOptions {
+  page?: number;
+  limit?: number; // per_page
+  search?: string;
+  status?: 'active' | 'maintenance' | 'closed' | 'inactive' | 'all';
+  is_featured?: boolean;
+  city_id?: number | string;
+  district_id?: number | string;
+  min_rating?: number;
+  sort_by?: 'name' | 'city' | 'district' | 'average_rating' | 'reviews_count' | 'created_at';
+  sort_order?: 'asc' | 'desc';
+  facility_id?: number;
+}
+
 export interface IMosqueRepository {
-  getMosques(page?: number, limit?: number): Promise<PaginatedMosques>;
-  searchMosques(query: string, page?: number, limit?: number): Promise<PaginatedMosques>;
+  getMosques(options?: MosqueFilterOptions | number, limit?: number): Promise<PaginatedMosques>;
+  searchMosques(query: string, page?: number, limit?: number, filters?: Partial<MosqueFilterOptions>): Promise<PaginatedMosques>;
   getMosqueById(id: string | number): Promise<MosqueDetail>;
   getFeaturedMosques(): Promise<MosqueDetail[]>;
   createMosque(payload: CreateMosquePayload): Promise<MosqueDetail>;

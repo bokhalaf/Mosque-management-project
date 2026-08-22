@@ -12,6 +12,7 @@ import {
   VolunteerTask,
   VolunteerLog,
   VolunteerCertificate,
+  VolunteerUser,
   CreateOpportunityPayload,
   AssignTaskPayload,
   LogHoursPayload,
@@ -117,9 +118,14 @@ if (typeof window !== 'undefined') {
   installFetchInterceptor();
 }
 
+export type VolunteerMainTab = 'opportunities' | 'volunteers_list';
 export type VolunteerTabType = 'opportunities' | 'applications' | 'approved_volunteers' | 'tasks' | 'logs' | 'certificates';
 
 export function useVolunteers() {
+  // Top primary navigation tab
+  const [mainTab, setMainTab] = useState<VolunteerMainTab>('opportunities');
+
+  // Opportunities state
   const [opportunities, setOpportunities] = useState<VolunteerOpportunity[]>([]);
   const [applications, setApplications] = useState<VolunteerApplication[]>([]);
   const [tasks, setTasks] = useState<VolunteerTask[]>([]);
@@ -147,6 +153,20 @@ export function useVolunteers() {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTab, setActiveTab] = useState<VolunteerTabType>('opportunities');
+
+  // Volunteers Users List State (from GET /volunteer/volunteers)
+  const [volunteersList, setVolunteersList] = useState<VolunteerUser[]>([]);
+  const [volunteersLoading, setVolunteersLoading] = useState<boolean>(false);
+  const [volunteersError, setVolunteersError] = useState<string | null>(null);
+  const [volunteersPage, setVolunteersPage] = useState<number>(1);
+  const [volunteersSearch, setVolunteersSearch] = useState<string>('');
+  const [volunteersStatus, setVolunteersStatus] = useState<string>('all');
+  const [volunteersPagination, setVolunteersPagination] = useState<VolunteerPaginationState>({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    perPage: 12,
+  });
 
   const [showDebugTerminal, setShowDebugTerminal] = useState<boolean>(false);
   const [debugLogs, setDebugLogs] = useState<VolunteerDebugLog[]>([]);
@@ -204,10 +224,24 @@ export function useVolunteers() {
         repository.getStats(),
       ]);
 
+      const enrichedTasks = tsk.map(task => {
+        if (task.application_id) {
+          const matchedApp = apps.find(a => String(a.id) === String(task.application_id));
+          if (matchedApp && matchedApp.volunteer_name && (!task.volunteer_name || task.volunteer_name === 'غير مسند' || task.volunteer_name === 'متطوع مسند')) {
+            return {
+              ...task,
+              volunteer_name: matchedApp.volunteer_name,
+              volunteer_id: matchedApp.volunteer_id || task.volunteer_id,
+            };
+          }
+        }
+        return task;
+      });
+
       setOpportunities(paginatedOpps.data);
       setPagination(paginatedOpps.pagination);
       setApplications(apps);
-      setTasks(tsk);
+      setTasks(enrichedTasks);
       setLogs(lg);
       setCertificates(cert);
       setStats(liveStats);
@@ -273,7 +307,31 @@ export function useVolunteers() {
     return cert;
   }, [issueCertificateUC]);
 
+  // Fetch all registered volunteers from GET /api/volunteer/volunteers
+  const fetchVolunteersList = useCallback(async () => {
+    setVolunteersLoading(true);
+    setVolunteersError(null);
+    try {
+      const statusParam = volunteersStatus === 'all' ? undefined : volunteersStatus;
+      const res = await repository.getVolunteers(volunteersPage, 12, volunteersSearch, statusParam);
+      setVolunteersList(res.data);
+      setVolunteersPagination(res.pagination);
+    } catch (err: any) {
+      setVolunteersError(err.message || 'تعذر تحميل قائمة المتطوعين من السيرفر');
+    } finally {
+      setVolunteersLoading(false);
+    }
+  }, [repository, volunteersPage, volunteersSearch, volunteersStatus]);
+
+  useEffect(() => {
+    if (mainTab === 'volunteers_list') {
+      fetchVolunteersList();
+    }
+  }, [mainTab, fetchVolunteersList]);
+
   return {
+    mainTab,
+    setMainTab,
     opportunities,
     applications,
     tasks,
@@ -298,9 +356,21 @@ export function useVolunteers() {
     assignTask,
     logHours,
     issueCertificate,
+    volunteersList,
+    volunteersLoading,
+    volunteersError,
+    volunteersPage,
+    setVolunteersPage,
+    volunteersSearch,
+    setVolunteersSearch,
+    volunteersStatus,
+    setVolunteersStatus,
+    volunteersPagination,
+    fetchVolunteersList,
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
     clearDebugLogs,
   };
 }
+

@@ -148,39 +148,66 @@ export function useMosqueTasks() {
     };
   }, []);
 
-  const fetchTasks = useCallback(async () => {
+  const getDateForOffset = useCallback((offset: number): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const fetchTasksForActiveTab = useCallback(async (offset: number) => {
     setLoading(true);
     setError(null);
     try {
-      const [allTasks, tabs, nextWk, fri] = await Promise.all([
-        getTasksUC.execute(),
-        getDateTabsUC.execute(),
-        getNextWeekUC.execute(),
-        getFridayUC.execute(),
-      ]);
+      let fetchedTasks: MosqueTask[] = [];
 
-      setTasks(allTasks || []);
-      setDateTabs(tabs || []);
-      setNextWeekTasks(nextWk || []);
-      setFridayTasks(fri || []);
+      if (offset === 99) {
+        // Next 7 days
+        fetchedTasks = await getNextWeekUC.execute();
+      } else if (offset === 98) {
+        // Friday
+        fetchedTasks = await getFridayUC.execute();
+      } else {
+        // Specific day by date
+        const targetDate = getDateForOffset(offset);
+        fetchedTasks = await getTasksUC.execute({ date: targetDate });
+      }
+
+      setTasks(fetchedTasks || []);
+
+      // Refresh date tabs in background
+      getDateTabsUC.execute().then(tabs => setDateTabs(tabs || [])).catch(() => {});
     } catch (err: any) {
+      console.error("Error loading mosque tasks:", err);
       setError(err.message || 'تعذر جلب مهام المسجد من السيرفر');
       setTasks([]);
     } finally {
       setLoading(false);
     }
-  }, [getTasksUC, getDateTabsUC, getNextWeekUC, getFridayUC]);
+  }, [getTasksUC, getNextWeekUC, getFridayUC, getDateTabsUC, getDateForOffset]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    fetchTasksForActiveTab(activeDayOffset);
+  }, [activeDayOffset, fetchTasksForActiveTab]);
 
-  // Create Task (Strict server verification, throws error directly on failure)
+  // Initial load for date tabs
+  useEffect(() => {
+    getDateTabsUC.execute().then(tabs => setDateTabs(tabs || [])).catch(() => {});
+  }, [getDateTabsUC]);
+
+  const [togglingTaskIds, setTogglingTaskIds] = useState<Record<string, boolean>>({});
+
+  // Create Task (Strict server verification, waits for server response and refreshes list)
   const createTask = useCallback(async (payload: CreateMosqueTaskPayload) => {
     const newTask = await createTaskUC.execute(payload);
-    setTasks(prev => [newTask, ...prev]);
+    // Re-fetch fresh tasks for the selected tab directly from server to guarantee sync
+    await fetchTasksForActiveTab(activeDayOffset);
+    // Refresh date tabs counts
+    getDateTabsUC.execute().then(tabs => setDateTabs(tabs || [])).catch(() => {});
     return newTask;
-  }, [createTaskUC]);
+  }, [createTaskUC, fetchTasksForActiveTab, activeDayOffset, getDateTabsUC]);
 
   // Update Task (Strict server verification, throws error directly on failure)
   const updateTask = useCallback(async (id: number | string, payload: UpdateMosqueTaskPayload) => {
@@ -189,33 +216,46 @@ export function useMosqueTasks() {
     return updated;
   }, [updateTaskUC]);
 
-  // Toggle Task Completion (Wait for Server Response First - STRICT server verification)
+  // Toggle Task Completion (Shows loading indicator while waiting for server response)
   const toggleTask = useCallback(async (id: number | string) => {
-    const updated = await toggleCompleteUC.execute(id);
-    setTasks(prev => prev.map(t => {
-      if (String(t.id) === String(id)) {
-        const isDone = updated?.is_completed ?? (updated?.status === 'done');
-        return {
-          ...t,
-          ...updated,
-          is_completed: isDone,
-          status: isDone ? 'done' : 'todo',
-        };
-      }
-      return t;
-    }));
-    return updated;
-  }, [toggleCompleteUC]);
+    const idKey = String(id);
+    setTogglingTaskIds(prev => ({ ...prev, [idKey]: true }));
+    try {
+      const updated = await toggleCompleteUC.execute(id);
+      setTasks(prev => prev.map(t => {
+        if (String(t.id) === idKey) {
+          const isDone = updated?.is_completed ?? (updated?.status === 'done');
+          return {
+            ...t,
+            ...updated,
+            is_completed: isDone,
+            status: isDone ? 'done' : 'todo',
+          };
+        }
+        return t;
+      }));
+      // Refresh date tabs in background
+      getDateTabsUC.execute().then(tabs => setDateTabs(tabs || [])).catch(() => {});
+      return updated;
+    } finally {
+      setTogglingTaskIds(prev => {
+        const next = { ...prev };
+        delete next[idKey];
+        return next;
+      });
+    }
+  }, [toggleCompleteUC, getDateTabsUC]);
 
   // Delete Task
   const deleteTask = useCallback(async (id: number | string) => {
     setTasks(prev => prev.filter(t => String(t.id) !== String(id)));
     try {
       await deleteTaskUC.execute(id);
+      getDateTabsUC.execute().then(tabs => setDateTabs(tabs || [])).catch(() => {});
     } catch (err) {
       console.warn("Task delete sync note:", err);
     }
-  }, [deleteTaskUC]);
+  }, [deleteTaskUC, getDateTabsUC]);
 
   // Filtered Tasks for Active View
   const currentDayTasks = useMemo(() => {
@@ -257,10 +297,12 @@ export function useMosqueTasks() {
     setShowDebugTerminal,
     debugLogs,
     clearDebugLogs: () => setDebugLogs([]),
-    fetchTasks,
+    fetchTasks: () => fetchTasksForActiveTab(activeDayOffset),
+    getDateForOffset,
     createTask,
     updateTask,
     toggleTask,
     deleteTask,
+    togglingTaskIds,
   };
 }

@@ -37,12 +37,15 @@ export function MosqueTasksSection() {
     setStatusFilter,
     showDebugTerminal,
     setShowDebugTerminal,
+    dateTabs,
     debugLogs,
     clearDebugLogs,
+    getDateForOffset,
     createTask,
     updateTask,
     toggleTask,
     deleteTask,
+    togglingTaskIds,
   } = useMosqueTasks();
 
   // Modals state
@@ -63,6 +66,20 @@ export function MosqueTasksSection() {
   };
 
   const getTaskCountForDay = (offset: number) => {
+    if (offset === activeDayOffset) {
+      return tasks.length;
+    }
+    const tabMatch = dateTabs.find(t => 
+      t.day_offset === offset || 
+      (offset === 0 && t.key === 'today') || 
+      (offset === 1 && t.key === 'tomorrow') || 
+      (offset === 2 && t.key === 'day_after') ||
+      (offset === 98 && t.key === 'friday') ||
+      (offset === 99 && t.key === 'next_week')
+    );
+    if (tabMatch && tabMatch.count !== undefined) {
+      return tabMatch.count;
+    }
     return tasks.filter(t => (t.day_offset ?? 0) === offset).length;
   };
 
@@ -121,7 +138,7 @@ export function MosqueTasksSection() {
           />
         )}
 
-        {/* ── SECTION 1: Clean Day Selector & Stats Ring Grid (Matching Previous Layout) ── */}
+        {/* ── SECTION 1: Clean Day Selector & Stats Ring Grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column (Day Selector & Filters) */}
           <div className="lg:col-span-8">
@@ -129,6 +146,7 @@ export function MosqueTasksSection() {
               activeDayOffset={activeDayOffset}
               onSelectDay={setActiveDayOffset}
               getTaskCountForDay={getTaskCountForDay}
+              loading={loading}
             />
           </div>
 
@@ -142,12 +160,13 @@ export function MosqueTasksSection() {
         <TaskQuickAddBar
           onAdd={async ({ title, category, time }) => {
             try {
+              const targetDate = getDateForOffset(activeDayOffset < 50 ? activeDayOffset : 0);
               await createTask({
                 task_name: title,
                 title,
                 category,
                 due_time: time,
-                due_date: new Date().toISOString().split('T')[0],
+                due_date: targetDate,
               });
               showToast('تم إضافة المهمة بنجاح ✅', 'success');
             } catch (err: any) {
@@ -158,11 +177,11 @@ export function MosqueTasksSection() {
         />
 
         {/* ── SECTION 3: Tasks List with Scanning Skeleton Loader ── */}
-        {loading && tasks.length === 0 ? (
-          /* Scanning Skeleton Shimmer Loading Grid */
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-2 overflow-hidden animate-pulse">
+        {loading ? (
+          /* Scanning Skeleton Shimmer Loading Grid during tab transition */
+          <div className="space-y-3 animate-in fade-in duration-200">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-2.5 overflow-hidden animate-pulse">
                 <div className="flex items-center justify-between">
                   <div className="h-5 w-48 bg-muted rounded-xl" />
                   <div className="h-5 w-20 bg-muted rounded-xl" />
@@ -191,6 +210,7 @@ export function MosqueTasksSection() {
               <TaskItemCard
                 key={t.id}
                 task={t}
+                isToggling={Boolean(togglingTaskIds[String(t.id)])}
                 onToggle={handleToggleTask}
                 onEdit={(target) => setTaskToEdit(target)}
                 onDelete={(target) => setTaskToDelete(target)}

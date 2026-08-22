@@ -5,8 +5,8 @@
 // ==============================
 
 import React from 'react';
-import { Calendar, Star, Sparkles, Wrench, Users, BookOpen } from 'lucide-react';
-import { MosqueTaskCategory } from '../../../../domain/entities/MosqueTask';
+import { Calendar, Star, Sparkles, Wrench, Users, BookOpen, Clock, CalendarDays } from 'lucide-react';
+import { MosqueTaskCategory, MosqueTaskDateTab } from '../../../../domain/entities/MosqueTask';
 
 export const CATEGORY_CONFIG: Record<MosqueTaskCategory, { label: string; icon: React.ElementType; bg: string; text: string; border: string }> = {
   prayer_worship: { label: 'صلاة وعبادة', icon: Star,     bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
@@ -26,24 +26,26 @@ interface TaskDaySelectorProps {
   activeDayOffset: number;
   onSelectDay: (offset: number) => void;
   getTaskCountForDay: (offset: number) => number;
+  loading?: boolean;
 }
 
 export function TaskDaySelector({
   activeDayOffset,
   onSelectDay,
   getTaskCountForDay,
+  loading = false,
 }: TaskDaySelectorProps) {
   return (
     <div className="bg-card border border-border rounded-3xl p-5 shadow-sm space-y-4 font-['Cairo']">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <h3 className="text-base font-black text-foreground flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
-          <span>اختر اليوم لمتابعة المهام التشغيلية</span>
+          <span>جدول المهام التشغيلية للمسجد</span>
         </h3>
       </div>
 
-      {/* Prominent Clear Day Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      {/* 7 Days Grid Selector */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
         {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
           const isSelected = activeDayOffset === offset;
           const count = getTaskCountForDay(offset);
@@ -56,10 +58,11 @@ export function TaskDaySelector({
           return (
             <button
               key={offset}
+              type="button"
               onClick={() => onSelectDay(offset)}
-              className={`flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all text-center relative overflow-hidden group ${
+              className={`flex flex-col items-center justify-between p-3 rounded-2xl border transition-all text-center relative overflow-hidden group ${
                 isSelected
-                  ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 scale-[1.03]'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 scale-[1.02]'
                   : 'bg-card border-border hover:border-primary/50 hover:bg-muted/50 text-foreground'
               }`}
             >
@@ -71,7 +74,7 @@ export function TaskDaySelector({
               </span>
 
               <span
-                className={`mt-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                className={`mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                   isSelected
                     ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30'
                     : count > 0
@@ -79,7 +82,10 @@ export function TaskDaySelector({
                     : 'bg-muted text-muted-foreground border-border'
                 }`}
               >
-                {count > 0 ? `${count} مهام` : 'لا مهام'}
+                {isSelected && loading ? (
+                  <span className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin inline-block" />
+                ) : null}
+                <span>{count > 0 ? `${count} مهام` : 'لا مهام'}</span>
               </span>
             </button>
           );

@@ -80,7 +80,8 @@ export interface CreateOpportunityPayload {
 export interface AssignTaskPayload {
   application_id: number | string;
   opportunity_id?: number | string;
-  task_description: string;
+  task_description?: string;
+  taskId?: number | string;
 }
 
 export interface LogHoursPayload {
@@ -110,5 +111,22 @@ export interface VolunteerStats {
   approved_volunteers: number;
   active_tasks: number;
   total_hours: number;
+}
+
+export interface VolunteerUser {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  status: string;
+  roles?: string[];
+  created_at: string;
+}
+
+export interface VolunteerUsersPaginatedResponse {
+  data: VolunteerUser[];
+  pagination: VolunteerPaginationState;
 }
 

@@ -52,6 +52,26 @@ export function CampaignsSection({
     clearDebugLogs,
   } = useCampaigns();
 
+  const isSuperAdmin = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
+      const role = String(user.role || user.user_type || user.role_name || '').toLowerCase();
+      const roles = user.roles || [];
+      return (
+        role === 'super_admin' ||
+        role === 'admin' ||
+        role === 'administrator' ||
+        user.is_super_admin === true ||
+        roles.includes('super_admin') ||
+        roles.includes('admin') ||
+        localStorage.getItem("user_role") === "super_admin"
+      );
+    } catch (e) {
+      return false;
+    }
+  }, []);
+
   // Local state to support viewing details inline or via prop
   const [activeDetailsId, setActiveDetailsId] = useState<string | null>(null);
 
@@ -106,12 +126,14 @@ export function CampaignsSection({
               <span>تحديث</span>
             </button>
 
-            <button
-              onClick={onCreateCampaign}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-            >
-              <Plus className="w-4 h-4" /> <span>إنشاء حملة جديدة</span>
-            </button>
+            {!isSuperAdmin && (
+              <button
+                onClick={onCreateCampaign}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+              >
+                <Plus className="w-4 h-4" /> <span>إنشاء حملة جديدة</span>
+              </button>
+            )}
 
             <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm">
               <Download className="w-4 h-4 text-muted-foreground" />
@@ -186,11 +208,12 @@ export function CampaignsSection({
                   onViewDetails={handleViewDetails}
                   onEdit={setEditingCampaign}
                   onDelete={setDeletingCampaign}
+                  isSuperAdmin={isSuperAdmin}
                 />
               ))}
 
-              {/* Add New Campaign Card Placeholder on page 1 */}
-              {page === 1 && campaigns.length < 4 && (
+              {/* Add New Campaign Card Placeholder on page 1 for Mosque Manager only */}
+              {!isSuperAdmin && page === 1 && campaigns.length < 4 && (
                 <div
                   onClick={onCreateCampaign}
                   className="border-2 border-dashed border-border hover:border-primary rounded-2xl flex flex-col items-center justify-center p-8 text-muted-foreground hover:text-primary transition-all cursor-pointer group bg-card/60 hover:bg-primary/5 min-h-[360px] space-y-3"

@@ -27,11 +27,15 @@ import {
   AssignTaskModal,
   LogHoursModal,
   VolunteerDebugTerminal,
+  VolunteersListTab,
+  MosqueVolunteerLoader,
 } from './components';
 
 export function VolunteerManagementSection() {
   const router = useRouter();
   const {
+    mainTab,
+    setMainTab,
     opportunities,
     applications,
     tasks,
@@ -56,6 +60,17 @@ export function VolunteerManagementSection() {
     assignTask,
     logHours,
     issueCertificate,
+    volunteersList,
+    volunteersLoading,
+    volunteersError,
+    volunteersPage,
+    setVolunteersPage,
+    volunteersSearch,
+    setVolunteersSearch,
+    volunteersStatus,
+    setVolunteersStatus,
+    volunteersPagination,
+    fetchVolunteersList,
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
@@ -63,6 +78,24 @@ export function VolunteerManagementSection() {
   } = useVolunteers();
 
   const { showToast } = useToast();
+  const isSuperAdmin = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const rawUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const userRole = localStorage.getItem('user_role') || rawUser.role || '';
+      const roles = rawUser.roles || [];
+      return (
+        userRole === 'super_admin' ||
+        userRole === 'admin' ||
+        roles.includes('super_admin') ||
+        roles.includes('admin') ||
+        Boolean(rawUser.is_super_admin)
+      );
+    } catch {
+      return false;
+    }
+  }, []);
+
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [opportunityToEdit, setOpportunityToEdit] = useState<VolunteerOpportunity | null>(null);
   const [opportunityToClose, setOpportunityToClose] = useState<VolunteerOpportunity | null>(null);
@@ -183,129 +216,188 @@ export function VolunteerManagementSection() {
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-16">
       <PageHeader
         title="إدارة العمل التطوعي والمتطوعين"
-        description="مسار عمل كامل لمدير المسجد لإنشاء الفرص التطوعية، قبول المتقدمين، إسناد المهام، وتسجيل الساعات والشهادات."
+        description="مسار عمل كامل لمدير المسجد لإنشاء الفرص التطوعية، قبول المتقدمين، إسناد المهام، وتسجيل الساعات والشهادات، واستعراض قائمة المتطوعين."
         breadcrumbs={[
           { label: 'إدارة المسجد' },
           { label: 'إدارة المتطوعين', active: true },
         ]}
         actions={
-          <button
-            onClick={() => router.push('/volunteers/opportunities/create')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs rounded-xl shadow-sm transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>طرح فرصة تطوعية جديدة</span>
-          </button>
+          !isSuperAdmin && mainTab === 'opportunities' ? (
+            <button
+              onClick={() => router.push('/volunteers/opportunities/create')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs rounded-xl shadow-sm transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>طرح فرصة تطوعية جديدة</span>
+            </button>
+          ) : undefined
         }
       />
 
-      {/* Stats Banner */}
-      <VolunteerStatsBanner stats={stats} loading={loading} />
+      {/* Top Primary Tabs Switcher: الفرص التطوعية vs قائمة المتطوعين */}
+      <div className="flex items-center gap-3 border-b border-border pb-3 mb-6">
+        <button
+          onClick={() => setMainTab('opportunities')}
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black transition-all ${
+            mainTab === 'opportunities'
+              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105'
+              : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <HeartHandshake className="w-4 h-4" />
+          <span>الفرص التطوعية</span>
+          {pagination.total > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              mainTab === 'opportunities' ? 'bg-white text-primary' : 'bg-primary/20 text-primary'
+            }`}>
+              {pagination.total}
+            </span>
+          )}
+        </button>
 
-      {/* Debug Terminal */}
-      <VolunteerDebugTerminal
-        show={showDebugTerminal}
-        onClose={() => setShowDebugTerminal(false)}
-        logs={debugLogs}
-        onClear={clearDebugLogs}
-      />
+        <button
+          onClick={() => setMainTab('volunteers_list')}
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black transition-all ${
+            mainTab === 'volunteers_list'
+              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105'
+              : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>قائمة المتطوعين</span>
+          {volunteersPagination.total > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              mainTab === 'volunteers_list' ? 'bg-white text-primary' : 'bg-primary/20 text-primary'
+            }`}>
+              {volunteersPagination.total}
+            </span>
+          )}
+        </button>
+      </div>
 
-      {/* Tabs and Filter Bar */}
-      <VolunteerTabsNavigation
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onRefresh={fetchAllVolunteerData}
-        loading={loading}
-        showDebugTerminal={showDebugTerminal}
-        onToggleDebugTerminal={() => setShowDebugTerminal(!showDebugTerminal)}
-        counts={{
-          opportunities: pagination.total || opportunities.length,
-          applications: pendingApplications.length,
-          approved_volunteers: approvedVolunteers.length,
-          tasks: tasks.length,
-          logs: logs.length,
-          certificates: certificates.length,
-        }}
-      />
+      {/* View 1: Volunteers Users List */}
+      {mainTab === 'volunteers_list' ? (
+        <VolunteersListTab
+          volunteers={volunteersList}
+          loading={volunteersLoading}
+          error={volunteersError}
+          page={volunteersPage}
+          setPage={setVolunteersPage}
+          pagination={volunteersPagination}
+          search={volunteersSearch}
+          setSearch={setVolunteersSearch}
+          status={volunteersStatus}
+          setStatus={setVolunteersStatus}
+          onRefresh={fetchVolunteersList}
+        />
+      ) : (
+        /* View 2: Volunteer Opportunities Management Full Workflow */
+        <>
+          {/* Stats Banner */}
+          <VolunteerStatsBanner stats={stats} loading={loading} />
 
-      {/* Error Alert */}
-      {error && (
-        <div className="p-4 mb-6 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs text-rose-600 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-          <button
-            onClick={fetchAllVolunteerData}
-            className="flex items-center gap-1 text-xs font-bold underline hover:no-underline"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>إعادة المحاولة</span>
-          </button>
-        </div>
-      )}
+          {/* Debug Terminal */}
+          <VolunteerDebugTerminal
+            show={showDebugTerminal}
+            onClose={() => setShowDebugTerminal(false)}
+            logs={debugLogs}
+            onClear={clearDebugLogs}
+          />
 
-      {/* Content By Active Tab */}
-      {loading && opportunities.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-6 shadow-sm space-y-4 overflow-hidden animate-pulse">
-              <div className="flex items-center justify-between">
-                <div className="h-6 w-28 bg-muted rounded-xl" />
-                <div className="h-6 w-16 bg-muted rounded-xl" />
-              </div>
-              <div className="h-6 w-3/4 bg-muted rounded-xl" />
-              <div className="space-y-2">
-                <div className="h-4 w-full bg-muted/70 rounded-lg" />
-                <div className="h-4 w-5/6 bg-muted/70 rounded-lg" />
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="h-10 bg-muted/50 rounded-xl" />
-                <div className="h-10 bg-muted/50 rounded-xl" />
-              </div>
-              <div className="pt-4 border-t border-border flex items-center justify-between">
-                <div className="h-8 w-24 bg-muted rounded-xl" />
-                <div className="h-8 w-20 bg-muted rounded-xl" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : activeTab === 'opportunities' ? (
-        /* 1. Opportunities Tab */
-        <div className="space-y-6">
-          {filteredOpportunities.length === 0 ? (
-            <div className="bg-card border border-dashed border-border rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                <HeartHandshake className="w-8 h-8" />
-              </div>
-              <div className="max-w-md">
-                <h3 className="text-base font-bold text-foreground mb-1">لا توجد فرص تطوعية مسجلة</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  يمكنك طرح أول فرصة تطوعية بالمسجد لاستقطاب وتوزيع المتطوعين.
-                </p>
+          {/* Tabs and Filter Bar */}
+          <VolunteerTabsNavigation
+            activeTab={activeTab}
+            onSelectTab={setActiveTab}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onRefresh={fetchAllVolunteerData}
+            loading={loading}
+            showDebugTerminal={showDebugTerminal}
+            onToggleDebugTerminal={() => setShowDebugTerminal(!showDebugTerminal)}
+            counts={{
+              opportunities: pagination.total || opportunities.length,
+              applications: pendingApplications.length,
+              approved_volunteers: approvedVolunteers.length,
+              tasks: tasks.length,
+              logs: logs.length,
+              certificates: certificates.length,
+            }}
+          />
+
+          {/* Error Alert */}
+          {error && (
+            <div className="p-4 mb-6 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs text-rose-600 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
               <button
-                onClick={() => router.push('/volunteers/opportunities/create')}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-sm hover:bg-primary/90 transition-all"
+                onClick={fetchAllVolunteerData}
+                className="flex items-center gap-1 text-xs font-bold underline hover:no-underline"
               >
-                <Plus className="w-4 h-4" />
-                <span>طرح فرصة تطوعية</span>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>إعادة المحاولة</span>
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredOpportunities.map((opp) => (
-                <OpportunityCard
-                  key={opp.id}
-                  opportunity={opp}
-                  onCloseOpportunity={() => setOpportunityToClose(opp)}
-                  onOpenEdit={(target) => setOpportunityToEdit(target)}
-                  onNavigateToApplications={() => setActiveTab('applications')}
-                  onNavigateToDetails={(id) => router.push(`/volunteers/opportunities/${id}`)}
-                />
-              ))}
+          )}
+
+          {/* Content By Active Tab */}
+          {/* Initial loading with Mosque theme */}
+          {loading && opportunities.length === 0 ? (
+            <MosqueVolunteerLoader
+              message="جاري جلب الفرص التطوعية وإحصائيات المسجد..."
+              subMessage="يتم مزامنة بيانات الفرص والطلبات مباشرة من خادم إدارة المسجد"
+            />
+          ) : activeTab === 'opportunities' ? (
+            /* 1. Opportunities Tab */
+            <div className="space-y-6">
+              {filteredOpportunities.length === 0 ? (
+                <div className="bg-card border border-dashed border-border rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <HeartHandshake className="w-8 h-8" />
+                  </div>
+                  <div className="max-w-md">
+                    <h3 className="text-base font-bold text-foreground mb-1">لا توجد فرص تطوعية مسجلة</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      يمكنك طرح أول فرصة تطوعية بالمسجد لاستقطاب وتوزيع المتطوعين.
+                    </p>
+                  </div>
+                  {!isSuperAdmin && (
+                    <button
+                      onClick={() => router.push('/volunteers/opportunities/create')}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-sm hover:bg-primary/90 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>طرح فرصة تطوعية</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                /* Cards grid with pagination loading overlay */
+                <div className="relative">
+                  {/* Pagination Loading Overlay */}
+                  {loading && opportunities.length > 0 && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-3xl">
+                      <MosqueVolunteerLoader
+                        message="جاري تحديث قائمة الفرص التطوعية..."
+                        subMessage="يرجى الانتظار لحظات"
+                        minHeight="min-h-[220px]"
+                      />
+                    </div>
+                  )}
+
+              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 transition-opacity duration-300 ${loading && opportunities.length > 0 ? 'opacity-40 pointer-events-none select-none' : 'opacity-100'}`}>
+                {filteredOpportunities.map((opp) => (
+                  <OpportunityCard
+                    key={opp.id}
+                    opportunity={opp}
+                    onCloseOpportunity={!isSuperAdmin ? () => setOpportunityToClose(opp) : () => {}}
+                    onOpenEdit={!isSuperAdmin ? (target) => setOpportunityToEdit(target) : undefined}
+                    onNavigateToApplications={() => setActiveTab('applications')}
+                    onNavigateToDetails={(id) => router.push(`/volunteers/opportunities/${id}`)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -483,6 +575,8 @@ export function VolunteerManagementSection() {
             ))}
           </div>
         )
+      )}
+      </>
       )}
 
       {/* Modals */}

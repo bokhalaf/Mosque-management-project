@@ -8,6 +8,8 @@ import {
   VolunteerTask,
   VolunteerLog,
   VolunteerCertificate,
+  VolunteerUser,
+  VolunteerUsersPaginatedResponse,
   CreateOpportunityPayload,
   AssignTaskPayload,
   LogHoursPayload,
@@ -26,7 +28,7 @@ export interface IVolunteerRepository {
   getStats(): Promise<VolunteerStats>;
 
   // 2. Applications
-  getOpportunityApplications(opportunityId?: number | string): Promise<VolunteerApplication[]>;
+  getOpportunityApplications(opportunityId?: number | string, status?: string, page?: number, perPage?: number): Promise<VolunteerApplication[]>;
   approveApplication(applicationId: number | string): Promise<boolean>;
   rejectApplication(applicationId: number | string): Promise<boolean>;
 
@@ -45,4 +47,8 @@ export interface IVolunteerRepository {
   // 5. Certificates
   issueCertificate(volunteerId: number | string, opportunityId: number | string): Promise<VolunteerCertificate>;
   getCertificates(): Promise<VolunteerCertificate[]>;
+
+  // 6. Volunteers List
+  getVolunteers(page?: number, perPage?: number, search?: string, status?: string): Promise<VolunteerUsersPaginatedResponse>;
 }
+

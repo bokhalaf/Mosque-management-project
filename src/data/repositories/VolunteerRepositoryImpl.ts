@@ -8,6 +8,8 @@ import {
   VolunteerTask,
   VolunteerLog,
   VolunteerCertificate,
+  VolunteerUser,
+  VolunteerUsersPaginatedResponse,
   CreateOpportunityPayload,
   AssignTaskPayload,
   LogHoursPayload,
@@ -79,14 +81,23 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
   }
 
   private mapApplication(item: any, opportunityId?: number | string): VolunteerApplication {
+    const vName =
+      item.volunteer_name ||
+      item.user?.name ||
+      item.user?.full_name ||
+      item.volunteer?.name ||
+      item.volunteer?.full_name ||
+      item.name ||
+      "متطوع";
+
     return {
       id: item.id,
       opportunity_id: item.opportunity_id || (opportunityId ? Number(opportunityId) : 0),
-      opportunity_title: item.opportunity_title || item.opportunity?.title || "",
+      opportunity_title: item.opportunity_title || item.opportunity?.title || item.opportunity_name || "",
       volunteer_id: item.volunteer_id || item.user_id || item.user?.id || item.id,
-      volunteer_name: item.volunteer_name || item.user?.name || item.user?.full_name || item.name || "متطوع",
-      phone: item.phone || item.user?.phone || item.user?.phone_number || "—",
-      email: item.email || item.user?.email || "",
+      volunteer_name: vName,
+      phone: item.phone || item.user?.phone || item.user?.phone_number || item.volunteer?.phone || "—",
+      email: item.email || item.user?.email || item.volunteer?.email || "",
       status: item.status || "pending",
       applied_at: item.created_at || item.applied_at || new Date().toISOString(),
       notes: item.notes || "",
@@ -94,15 +105,28 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
   }
 
   private mapTask(item: any, opportunityId?: number | string): VolunteerTask {
+    const vName =
+      item.volunteer_name ||
+      item.volunteer?.name ||
+      item.volunteer?.full_name ||
+      item.user?.name ||
+      item.user?.full_name ||
+      item.application?.volunteer_name ||
+      item.application?.user?.name ||
+      (item.application_id ? "متطوع مسند" : "غير مسند");
+
+    const isDone = item.is_completed === true || item.status === 'completed';
+    const computedStatus = isDone ? 'completed' : (item.status || (item.application_id ? 'assigned' : 'unassigned'));
+
     return {
       id: item.id,
       application_id: item.application_id || "",
-      volunteer_id: item.volunteer_id,
-      volunteer_name: item.volunteer_name || item.volunteer?.name || "غير مسند",
+      volunteer_id: item.volunteer_id || item.user_id,
+      volunteer_name: vName,
       opportunity_id: item.opportunity_id || opportunityId,
-      opportunity_title: item.opportunity_title || item.opportunity?.title || "",
+      opportunity_title: item.opportunity_title || item.opportunity?.title || item.opportunity_name || "",
       task_description: item.task_description || item.description || item.title || "",
-      status: item.is_completed ? "completed" : (item.status || "assigned"),
+      status: computedStatus,
       created_at: item.created_at || new Date().toISOString(),
     };
   }
@@ -176,8 +200,8 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
   async getStats(): Promise<VolunteerStats> {
     try {
       const urls = [
-        `${BASE_URL}/volunteer/opportunities/stats`,
         `${BASE_URL}/volunteer/stats`,
+        `${BASE_URL}/volunteer/opportunities/stats`,
       ];
 
       for (const url of urls) {
@@ -190,12 +214,12 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
             const data = json.data || json;
             if (data && typeof data === 'object') {
               return {
-                total_opportunities: Number(data.total_opportunities || data.opportunities_count || data.total || 0),
-                active_opportunities: Number(data.active_opportunities || data.open_opportunities_count || data.active || 0),
-                pending_applications: Number(data.pending_applications || data.applications_pending_count || data.pending || 0),
-                approved_volunteers: Number(data.approved_volunteers || data.volunteers_count || data.approved || 0),
-                active_tasks: Number(data.active_tasks || data.tasks_count || 0),
-                total_hours: Number(data.total_hours || data.hours_count || 0),
+                total_opportunities: Number(data.opportunities_total ?? data.total_opportunities ?? data.opportunities_count ?? data.total ?? 0),
+                active_opportunities: Number(data.active_opportunities ?? data.open_opportunities_count ?? data.active ?? 0),
+                pending_applications: Number(data.pending_applications ?? data.applications_pending_count ?? data.pending ?? 0),
+                approved_volunteers: Number(data.volunteers_count ?? data.approved_volunteers ?? data.approved ?? 0),
+                active_tasks: Number(data.active_tasks ?? data.tasks_count ?? 0),
+                total_hours: Number(data.total_hours ?? data.hours_count ?? 0),
               };
             }
           }
@@ -362,10 +386,34 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
 
   // ── 2. APPLICATIONS ──────────────────────────────────────────────────────
   // GET /api/volunteer/opportunities/{id}/applications
-  async getOpportunityApplications(opportunityId?: number | string): Promise<VolunteerApplication[]> {
-    const url = opportunityId
-      ? `${BASE_URL}/volunteer/opportunities/${opportunityId}/applications`
-      : `${BASE_URL}/volunteer/my-applications`;
+  async getOpportunityApplications(
+    opportunityId?: number | string,
+    status?: string,
+    page?: number,
+    perPage?: number
+  ): Promise<VolunteerApplication[]> {
+    if (!opportunityId) {
+      const url = `${BASE_URL}/volunteer/my-applications`;
+      try {
+        const res = await fetch(url, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const json = await res.json();
+          const items = this.extractItems(json);
+          return items.map((item: any) => this.mapApplication(item));
+        }
+      } catch (e) {
+        console.warn(`API getOpportunityApplications error:`, e);
+      }
+      return [];
+    }
+
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.set('status', status);
+    if (page) params.set('page', String(page));
+    if (perPage) params.set('per_page', String(perPage));
+
+    const queryString = params.toString();
+    const url = `${BASE_URL}/volunteer/opportunities/${opportunityId}/applications${queryString ? `?${queryString}` : ''}`;
 
     try {
       const res = await fetch(url, { headers: this.getAuthHeaders() });
@@ -453,10 +501,14 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
   }
 
   async assignTask(payload: AssignTaskPayload): Promise<VolunteerTask> {
+    if (payload.taskId) {
+      return await this.assignTaskToVolunteer(payload.taskId, payload.application_id);
+    }
+
     const opportunityId = payload.opportunity_id;
     if (!opportunityId) throw new Error("opportunityId مطلوب لإسناد المهمة");
 
-    const createdTask = await this.createOpportunityTask(opportunityId, payload.task_description);
+    const createdTask = await this.createOpportunityTask(opportunityId, payload.task_description || "مهمة تطوعية");
     try {
       return await this.assignTaskToVolunteer(createdTask.id, payload.application_id);
     } catch (e) {
@@ -554,22 +606,34 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
   // ── 5. CERTIFICATES ───────────────────────────────────────────────────────
   // POST /api/volunteer/certificates/{volunteerId}/{opportunityId}
   async issueCertificate(volunteerId: number | string, opportunityId: number | string): Promise<VolunteerCertificate> {
-    const res = await fetch(`${BASE_URL}/volunteer/certificates/${volunteerId}/${opportunityId}`, {
+    const volIdNum = Number(volunteerId);
+    const oppIdNum = Number(opportunityId);
+
+    if (!volIdNum || isNaN(volIdNum)) {
+      throw new Error("معرف المتطوع غير صالح لإصدار الشهادة");
+    }
+    if (!oppIdNum || isNaN(oppIdNum)) {
+      throw new Error("معرف الفرصة غير صالح لإصدار الشهادة");
+    }
+
+    const res = await fetch(`${BASE_URL}/volunteer/certificates/${volIdNum}/${oppIdNum}`, {
       method: "POST",
       headers: this.getAuthHeaders(),
     });
     const json = await res.json().catch(() => null);
     if (!res.ok || (json && json.status === false)) {
-      throw new Error(json?.message || "فشل إصدار شهادة التطوع بالسيرفر");
+      const parsedErr = this.parseErrorResponse(json);
+      throw new Error(parsedErr || json?.message || `فشل إصدار شهادة التطوع بالسيرفر (HTTP ${res.status})`);
     }
     const item = json?.data || json;
+    const streamUrl = `${BASE_URL}/volunteer/certificates/${volIdNum}/${oppIdNum}/stream`;
     return {
       id: item.id || Date.now(),
-      volunteer_id: item.volunteer_id || volunteerId,
-      volunteer_name: item.volunteer_name || "متطوع",
-      opportunity_id: item.opportunity_id || opportunityId,
-      opportunity_title: item.opportunity_title || "",
-      certificate_url: item.certificate_url || "",
+      volunteer_id: item.volunteer_id || volIdNum,
+      volunteer_name: item.volunteer_name || item.name || "متطوع",
+      opportunity_id: item.opportunity_id || oppIdNum,
+      opportunity_title: item.opportunity_title || item.title || "",
+      certificate_url: item.certificate_url || streamUrl,
       issued_at: item.issued_at || item.created_at || new Date().toISOString(),
       total_hours: Number(item.total_hours || 0),
     };
@@ -590,7 +654,7 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
           volunteer_name: item.volunteer_name || item.volunteer?.name || "متطوع",
           opportunity_id: item.opportunity_id,
           opportunity_title: item.opportunity_title || item.opportunity?.title || "",
-          certificate_url: item.certificate_url || "",
+          certificate_url: item.certificate_url || (item.volunteer_id && item.opportunity_id ? `${BASE_URL}/volunteer/certificates/${item.volunteer_id}/${item.opportunity_id}/stream` : ""),
           issued_at: item.issued_at || item.created_at || new Date().toISOString(),
           total_hours: Number(item.total_hours || 0),
         }));
@@ -600,4 +664,69 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
     }
     return [];
   }
+
+  // ── 6. VOLUNTEERS LIST ───────────────────────────────────────────────────
+  // GET /api/volunteer/volunteers?page=1&per_page=15&search=&status=
+  async getVolunteers(
+    page: number = 1,
+    perPage: number = 15,
+    search?: string,
+    status?: string
+  ): Promise<VolunteerUsersPaginatedResponse> {
+    const params = new URLSearchParams();
+    if (page) params.append("page", String(page));
+    if (perPage) params.append("per_page", String(perPage));
+    if (search && search.trim()) params.append("search", search.trim());
+    if (status && status.trim()) params.append("status", status.trim());
+
+    const url = `${BASE_URL}/volunteer/volunteers?${params.toString()}`;
+
+    try {
+      const res = await fetch(url, { headers: this.getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const items = this.extractItems(json);
+
+        const meta = json.pagination || json.meta || json.data?.pagination || {};
+        const currentPage = Number(meta.current_page || meta.currentPage || page);
+        const lastPage = Number(meta.last_page || meta.totalPages || Math.ceil((meta.total || items.length) / perPage) || 1);
+        const total = Number(meta.total !== undefined ? meta.total : items.length);
+
+        const mappedUsers: VolunteerUser[] = items.map((item: any) => ({
+          id: Number(item.id),
+          first_name: item.first_name || "",
+          last_name: item.last_name || "",
+          name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || "متطوع",
+          email: item.email || "",
+          phone: item.phone || item.phone_number || null,
+          status: item.status || "active",
+          roles: Array.isArray(item.roles) ? item.roles : (item.role ? [item.role] : ["volunteer"]),
+          created_at: item.created_at || new Date().toISOString(),
+        }));
+
+        return {
+          data: mappedUsers,
+          pagination: {
+            currentPage,
+            lastPage,
+            total,
+            perPage,
+          },
+        };
+      }
+    } catch (e) {
+      console.warn("API getVolunteers error:", e);
+    }
+
+    return {
+      data: [],
+      pagination: {
+        currentPage: page,
+        lastPage: 1,
+        total: 0,
+        perPage,
+      },
+    };
+  }
 }
+

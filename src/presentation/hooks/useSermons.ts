@@ -160,17 +160,17 @@ export function useSermons() {
   }, [loadData, addDebugLog, showToast]);
 
   // Handle Reject Pending Sermon (POST /api/sermons/{id}/reject)
-  const handleRejectPendingSermon = useCallback(async (id: string | number) => {
+  const handleRejectPendingSermon = useCallback(async (id: string | number, reason?: string) => {
     setProcessingSermonId(id);
     try {
-      await sermonRepo.rejectSermon(id);
+      await sermonRepo.rejectSermon(id, reason);
       addDebugLog(
         `POST /api/sermons/${id}/reject`,
         `${BASE_URL}/sermons/${id}/reject`,
         200,
-        { status: 'rejected', id }
+        { status: 'rejected', id, reason: reason || 'غير محدد' }
       );
-      showToast('تم إرسال طلب الرفض للسيرفر بنجاح', 'error');
+      showToast('تم رفض الخطبة وإرسال السبب بنجاح', 'success');
       await loadData();
     } catch (e: any) {
       console.error('Error rejecting sermon:', e);

@@ -14,6 +14,7 @@ interface TaskItemCardProps {
   onToggle: (id: number | string) => void;
   onEdit: (task: MosqueTask) => void;
   onDelete: (task: MosqueTask) => void;
+  isToggling?: boolean;
 }
 
 export function TaskItemCard({
@@ -21,6 +22,7 @@ export function TaskItemCard({
   onToggle,
   onEdit,
   onDelete,
+  isToggling = false,
 }: TaskItemCardProps) {
   const cfg = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.prayer;
   const Icon = cfg.icon;
@@ -35,24 +37,31 @@ export function TaskItemCard({
       {/* Right Side: Checkbox & Details */}
       <div className="flex items-center gap-3.5 min-w-0">
         <button
-          onClick={() => onToggle(task.id)}
-          className={`p-1 rounded-lg transition-all shrink-0 ${
+          onClick={() => !isToggling && onToggle(task.id)}
+          disabled={isToggling}
+          className={`p-1.5 rounded-lg transition-all shrink-0 flex items-center justify-center ${
             isDone
               ? 'text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20'
               : 'text-muted-foreground hover:text-primary hover:bg-muted'
-          }`}
+          } ${isToggling ? 'opacity-70 cursor-wait' : ''}`}
           title={isDone ? 'تحديد كغير مكتملة' : 'تحديد كمكتملة'}
         >
-          {isDone ? <CheckSquare className="w-5 h-5 text-emerald-500" /> : <Square className="w-5 h-5 text-muted-foreground" />}
+          {isToggling ? (
+            <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block" />
+          ) : isDone ? (
+            <CheckSquare className="w-5 h-5 text-emerald-500" />
+          ) : (
+            <Square className="w-5 h-5 text-muted-foreground" />
+          )}
         </button>
 
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h4
-              onClick={() => onToggle(task.id)}
+              onClick={() => !isToggling && onToggle(task.id)}
               className={`text-sm font-bold cursor-pointer transition-colors truncate ${
                 isDone ? 'line-through text-muted-foreground' : 'text-foreground hover:text-primary'
-              }`}
+              } ${isToggling ? 'opacity-70' : ''}`}
             >
               {task.task_name || task.title}
             </h4>

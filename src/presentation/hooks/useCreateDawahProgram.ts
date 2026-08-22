@@ -82,7 +82,7 @@ export function useCreateDawahProgram(onSuccess: () => void) {
           setSpaces(data);
           setFormData((prev) => ({
             ...prev,
-            space_id: prev.space_id && data.some((s) => s.id === prev.space_id) ? prev.space_id : data[0].id,
+            space_id: prev.space_id && data.some((s) => Number(s.id) === Number(prev.space_id)) ? Number(prev.space_id) : Number(data[0].id),
           }));
         }
       } catch (e) {

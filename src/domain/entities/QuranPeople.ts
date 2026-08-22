@@ -3,7 +3,7 @@
 // ==============================
 
 // Exact role values accepted by POST /api/invitations/send (Mosque Manager can invite teacher | halaqa_supervisor)
-export type PeopleRole = 'student' | 'teacher' | 'halaqa_supervisor';
+export type PeopleRole = 'student' | 'teacher' | 'halaqa_supervisor' | 'mosque_manager' | string;
 
 export interface QuranPerson {
   id: number | string;
@@ -12,12 +12,14 @@ export interface QuranPerson {
   phone: string;
   role: PeopleRole;
   circle_name?: string;
+  mosque_name?: string;
   status: 'active' | 'pending_invitation' | 'inactive';
   joined_date?: string;
   created_at?: string;
   notes?: string;
   mosque_id?: number;
 }
+
 
 export interface SendInvitationPayload {
   mosque_id: number;

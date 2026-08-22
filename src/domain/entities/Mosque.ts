@@ -60,15 +60,18 @@ export interface MosqueDetail {
   imam: string;
   khatib: string;
   manager_id?: number;
+  average_rating?: number;
+  reviews_count?: number;
+  created_at?: string;
+  updated_at?: string;
   spaces?: MosqueSpace[];
   facilities?: MosqueFacility[];
-  updated_at?: string;
 }
 
 export interface UpdateMosquePayload {
   name?: string;
   image?: File | string | null;
-  working_hours?: string;
+  working_hours?: string | string[];
   status?: 'active' | 'maintenance' | 'closed' | 'inactive';
   is_featured?: boolean;
   city_id?: number;

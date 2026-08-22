@@ -16,7 +16,7 @@ import {
 } from "../../domain/entities/DawahProgram";
 import { IDawahProgramRepository } from "../../domain/repositories/IDawahProgramRepository";
 
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
 export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
   private programsMosqueMap = new Map<number | string, number>();
@@ -28,6 +28,22 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
       "Accept": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
+  }
+
+  private checkIsSuperAdmin(): boolean {
+    if (typeof window !== "undefined") {
+      try {
+        const userStr = localStorage.getItem("auth_user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes("super_admin") || Boolean(user.is_super_admin)) {
+            return true;
+          }
+        }
+      } catch (e) {}
+    }
+    return false;
   }
 
   private getMosqueId(): number {
@@ -47,32 +63,63 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
     return 1;
   }
 
+  private mapProgramItem(item: any, defaultMosqueId: number): DawahProgram {
+    const pMosqueId = Number(item.mosque_id || item.mosque?.id || defaultMosqueId);
+    if (item.id) {
+      this.programsMosqueMap.set(item.id, pMosqueId);
+    }
+    return {
+      id: item.id,
+      mosque_id: pMosqueId,
+      mosque_name: item.mosque?.name || item.mosque_name,
+      mosque: item.mosque,
+      space_id: item.space_id || 1,
+      space_name: item.space?.name || item.space_name,
+      program_name: item.program_name || item.name || "برنامج دعوي",
+      description: item.description || "",
+      type: (item.type as any) || "lecture",
+      image: item.image || item.image_url || null,
+      presenter: item.presenter || "المحاضر",
+      presenter_image: item.presenter_image || null,
+      is_featured: !!item.is_featured,
+      status: (item.status as any) || "active",
+      level: (item.level as any) || "beginner",
+      schedules: Array.isArray(item.schedules) ? item.schedules : [],
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    };
+  }
+
   // ── 1. getDawahPrograms (Live API Fetch from Server) ─────────────────────
   async getDawahPrograms(params?: { mosque_id?: number; status?: string; type?: string; q?: string }): Promise<DawahProgram[]> {
+    const isSuperAdmin = this.checkIsSuperAdmin();
     const mosqueId = params?.mosque_id || this.getMosqueId();
     const rawItems: any[] = [];
 
     try {
-      const [allRes, mosqueRes] = await Promise.all([
-        fetch(`${BASE_URL}/program/dawah_programs`, { headers: this.getAuthHeaders() }).catch(() => null),
-        fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs`, { headers: this.getAuthHeaders() }).catch(() => null),
-      ]);
+      if (isSuperAdmin) {
+        // Super Admin gets all programs across all mosques: GET /program/dawah_programs
+        const res = await fetch(`${BASE_URL}/program/dawah_programs?per_page=50`, {
+          headers: this.getAuthHeaders(),
+        }).catch(() => null);
 
-      if (mosqueRes && mosqueRes.ok) {
-        const json = await mosqueRes.json();
-        if (json.status && Array.isArray(json.data)) {
-          rawItems.push(...json.data);
-        } else if (Array.isArray(json)) {
-          rawItems.push(...json);
+        if (res && res.ok) {
+          const json = await res.json();
+          const dataObj = json.data || json;
+          const items = Array.isArray(dataObj) ? dataObj : (Array.isArray(dataObj.data) ? dataObj.data : []);
+          rawItems.push(...items);
         }
-      }
+      } else {
+        // Mosque Manager gets programs for their mosque: GET /program/mosques/{mosque}/dawah_programs
+        const res = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs`, {
+          headers: this.getAuthHeaders(),
+        }).catch(() => null);
 
-      if (allRes && allRes.ok) {
-        const json = await allRes.json();
-        if (json.status && Array.isArray(json.data)) {
-          rawItems.push(...json.data);
-        } else if (Array.isArray(json)) {
-          rawItems.push(...json);
+        if (res && res.ok) {
+          const json = await res.json();
+          const dataObj = json.data || json;
+          const items = Array.isArray(dataObj) ? dataObj : (Array.isArray(dataObj.data) ? dataObj.data : []);
+          rawItems.push(...items);
         }
       }
     } catch (e) {
@@ -83,25 +130,8 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
     const map = new Map<number | string, DawahProgram>();
     rawItems.forEach((item: any) => {
       if (item && item.id) {
-        const pMosqueId = Number(item.mosque_id || mosqueId);
-        this.programsMosqueMap.set(item.id, pMosqueId);
-        map.set(item.id, {
-          id: item.id,
-          mosque_id: pMosqueId,
-          space_id: item.space_id || 1,
-          program_name: item.program_name || item.name || "برنامج دعوي",
-          description: item.description || "",
-          type: (item.type as any) || "lecture",
-          image: item.image || item.image_url || null,
-          presenter: item.presenter || "المحاضر",
-          presenter_image: item.presenter_image || null,
-          is_featured: !!item.is_featured,
-          status: (item.status as any) || "active",
-          level: (item.level as any) || "beginner",
-          schedules: item.schedules || [],
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-        });
+        const mapped = this.mapProgramItem(item, mosqueId);
+        map.set(item.id, mapped);
       }
     });
 
@@ -124,94 +154,64 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
       result = result.filter(p =>
         p.program_name.toLowerCase().includes(q) ||
         p.presenter.toLowerCase().includes(q) ||
-        (p.description && p.description.toLowerCase().includes(q))
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.mosque_name && p.mosque_name.toLowerCase().includes(q))
       );
     }
 
-    // Populate live schedules from server in parallel for each program
-    const populated = await Promise.all(
-      result.map(async (p) => {
-        try {
-          if (Array.isArray(p.schedules) && p.schedules.length > 0) {
-            return p;
-          }
-          const schedules = await this.getSchedules(p.id);
-          return {
-            ...p,
-            schedules: schedules || [],
-          };
-        } catch {
-          return p;
-        }
-      })
-    );
-
-    return populated;
+    return result;
   }
 
-  private mapProgramItem(item: any, defaultMosqueId: number): DawahProgram {
-    const pMosqueId = Number(item.mosque_id || defaultMosqueId);
-    if (item.id) {
-      this.programsMosqueMap.set(item.id, pMosqueId);
-    }
-    return {
-      id: item.id,
-      mosque_id: pMosqueId,
-      space_id: item.space_id || 1,
-      program_name: item.program_name || item.name || "برنامج دعوي",
-      description: item.description || "",
-      type: (item.type as any) || "lecture",
-      image: item.image || item.image_url || null,
-      presenter: item.presenter || "المحاضر",
-      presenter_image: item.presenter_image || null,
-      is_featured: !!item.is_featured,
-      status: (item.status as any) || "active",
-      level: (item.level as any) || "beginner",
-      schedules: item.schedules || [],
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-    };
-  }
-
+  // ── 2. getDawahProgramsPaginated (Server Paginated) ───────────────────────
   async getDawahProgramsPaginated(params?: { mosque_id?: number; status?: string; type?: string; q?: string; page?: number; per_page?: number }): Promise<DawahPaginatedResponse> {
     const page = params?.page || 1;
     const perPage = params?.per_page || 6;
+    const isSuperAdmin = this.checkIsSuperAdmin();
     const mosqueId = params?.mosque_id || this.getMosqueId();
 
     try {
       const queryParams = new URLSearchParams();
       queryParams.set('page', String(page));
       queryParams.set('per_page', String(perPage));
-      if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
-      if (params?.type && params.type !== 'all') queryParams.set('type', params.type);
-      if (params?.q && params.q.trim()) queryParams.set('q', params.q.trim());
+      if (params?.type && params.type !== 'all') {
+        queryParams.set('type', params.type === 'competition' ? 'course' : params.type);
+      }
+      if (params?.q && params.q.trim()) {
+        queryParams.set('q', params.q.trim());
+      }
 
-      const res = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs?${queryParams.toString()}`, {
+      // Endpoint:
+      // Super Admin: GET /program/dawah_programs (getAllDawahPrograms)
+      // Mosque Manager: GET /program/mosques/{mosque}/dawah_programs (getMosqueDawahPrograms)
+      const url = isSuperAdmin
+        ? `${BASE_URL}/program/dawah_programs?${queryParams.toString()}`
+        : `${BASE_URL}/program/mosques/${mosqueId}/dawah_programs?${queryParams.toString()}`;
+
+      console.log(`Fetching Dawah Programs: ${url}`);
+      const res = await fetch(url, {
         headers: this.getAuthHeaders(),
       });
 
       if (res.ok) {
         const json = await res.json();
-        const rawItems = json.data || json;
-        const itemsArray = Array.isArray(rawItems) ? rawItems : Array.isArray(rawItems.data) ? rawItems.data : [];
+        console.log(`Dawah Programs Response from ${url}:`, json);
+        const dataObj = json.data || json;
+        const itemsArray = Array.isArray(dataObj) ? dataObj : (Array.isArray(dataObj.data) ? dataObj.data : []);
 
-        const meta = json.pagination || json.meta || json.data?.pagination || {};
-        const currentPage = Number(meta.current_page || meta.currentPage || page);
-        const lastPage = Number(meta.last_page || meta.lastPage || Math.ceil((meta.total || itemsArray.length) / perPage) || 1);
-        const total = Number(meta.total ?? itemsArray.length);
+        const currentPage = Number(dataObj.current_page || json.current_page || json.pagination?.currentPage || page);
+        const lastPage = Number(dataObj.last_page || json.last_page || json.pagination?.totalPages || Math.max(1, Math.ceil((dataObj.total || itemsArray.length) / perPage)));
+        const total = Number(dataObj.total ?? json.total ?? itemsArray.length);
 
-        if (itemsArray.length > 0) {
-          const mapped = itemsArray.map((item: any) => this.mapProgramItem(item, mosqueId));
-          return {
-            data: mapped,
-            pagination: {
-              currentPage,
-              lastPage: Math.max(1, lastPage),
-              total,
-              perPage,
-            },
-          };
-        }
+        const mapped = itemsArray.map((item: any) => this.mapProgramItem(item, mosqueId));
+        return {
+          data: mapped,
+          pagination: {
+            currentPage,
+            lastPage: Math.max(1, lastPage),
+            total,
+            perPage,
+          },
+        };
       }
     } catch (e) {
       console.warn("API getDawahProgramsPaginated error:", e);
@@ -233,6 +233,7 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
     };
   }
 
+  // ── 3. getDawahProgramById ───────────────────────────────────────────────
   async getDawahProgramById(id: number | string): Promise<DawahProgram | null> {
     const mosqueId = this.programsMosqueMap.get(id) || this.getMosqueId();
     try {
@@ -243,394 +244,296 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
         const json = await res.json();
         const item = json.data || json;
         if (item && item.id) {
-          return {
-            id: item.id,
-            mosque_id: Number(item.mosque_id || mosqueId),
-            space_id: item.space_id || 1,
-            program_name: item.program_name || item.name || "",
-            description: item.description || "",
-            type: item.type || "lecture",
-            image: item.image || null,
-            presenter: item.presenter || "",
-            presenter_image: item.presenter_image || null,
-            is_featured: !!item.is_featured,
-            status: item.status || "active",
-            level: item.level || "beginner",
-            schedules: item.schedules || [],
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-          };
+          return this.mapProgramItem(item, mosqueId);
         }
       }
     } catch (e) {
-      console.warn("getDawahProgramById error:", e);
+      console.warn(`Error fetching program #${id}:`, e);
     }
-    return null;
+
+    const all = await this.getDawahPrograms();
+    return all.find(p => String(p.id) === String(id)) || null;
   }
 
-  // ── 2. createDawahProgram (POST /api/program/mosques/{mosque}/dawah_programs) ─
+  // ── 4. createDawahProgram ────────────────────────────────────────────────
   async createDawahProgram(payload: CreateDawahProgramPayload): Promise<DawahProgram> {
     const mosqueId = payload.mosque_id || this.getMosqueId();
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-
-    let spaceId = payload.space_id;
-    if (!spaceId || isNaN(Number(spaceId))) {
-      try {
-        const spaces = await this.getMosqueSpaces(mosqueId);
-        if (spaces && spaces.length > 0) {
-          spaceId = spaces[0].id;
-        }
-      } catch (e) {}
-    }
-    if (!spaceId) spaceId = 1;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const defaultSchedules = payload.schedules && payload.schedules.length > 0
-      ? payload.schedules
-      : [{
-          title: "الجلسة الافتتاحية",
-          notes: "المقدمة والتعريف بالبرنامج",
-          date: todayStr,
-          start_time: "16:30",
-          end_time: "18:00",
-        }];
-
-    const formData = new FormData();
-    formData.append("space_id", String(spaceId));
-    formData.append("program_name", payload.program_name);
-    formData.append("presenter", payload.presenter);
-    formData.append("type", payload.type);
-    formData.append("level", payload.level || "beginner");
-    formData.append("status", payload.status || "active");
-    if (payload.description) {
-      formData.append("description", payload.description);
-    }
-    formData.append("is_featured", payload.is_featured ? "1" : "0");
-
-    defaultSchedules.forEach((s, idx) => {
-      if (s.title) formData.append(`schedules[${idx}][title]`, s.title);
-      if (s.notes) formData.append(`schedules[${idx}][notes]`, s.notes);
-      formData.append(`schedules[${idx}][date]`, s.date);
-      formData.append(`schedules[${idx}][start_time]`, s.start_time);
-      formData.append(`schedules[${idx}][end_time]`, s.end_time);
-    });
-
-    const headers: HeadersInit = {
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    const bodyObj: any = {
+      program_name: payload.program_name,
+      description: payload.description || "",
+      type: payload.type,
+      presenter: payload.presenter,
+      space_id: payload.space_id || 1,
+      status: payload.status || "active",
+      level: payload.level || "beginner",
+      is_featured: Boolean(payload.is_featured),
     };
+
+    console.log(`POST /program/mosques/${mosqueId}/dawah_programs Payload:`, bodyObj);
 
     const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs`, {
       method: "POST",
-      headers,
-      body: formData,
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(bodyObj),
     });
+
     const json = await response.json().catch(() => null);
+    console.log(`POST /program/mosques/${mosqueId}/dawah_programs Response:`, json);
 
-    if (!response.ok || !json || (!json.status && !json.data)) {
-      let errMsgs = "";
-      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-        errMsgs = Object.entries(json.data)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      } else if (json?.errors && typeof json.errors === 'object') {
-        errMsgs = Object.entries(json.errors)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
+    if (response.ok && json && json.status !== false) {
+      const item = json.data || json;
+      const created = this.mapProgramItem(item, mosqueId);
+
+      // If payload has initial schedules, create them
+      if (payload.schedules && payload.schedules.length > 0) {
+        for (const s of payload.schedules) {
+          try {
+            await this.addSchedule(created.id, s);
+          } catch (err) {
+            console.warn("Failed to add initial schedule:", err);
+          }
+        }
       }
-      throw new Error(errMsgs || json?.message || `فشل إنشاء البرنامج على السيرفر (HTTP ${response.status})`);
+
+      return created;
     }
 
-    const item = json.data || json;
-    const createdId = item.id;
-    const finalMosqueId = Number(item.mosque_id || mosqueId);
-    if (createdId) {
-      this.programsMosqueMap.set(createdId, finalMosqueId);
-    }
-
-    return {
-      id: createdId,
-      mosque_id: finalMosqueId,
-      space_id: Number(item.space_id || spaceId),
-      program_name: item.program_name || payload.program_name,
-      description: item.description || payload.description,
-      type: item.type || payload.type,
-      presenter: item.presenter || payload.presenter,
-      is_featured: item.is_featured === true || item.is_featured === 'true' || item.is_featured === 1,
-      status: item.status || payload.status || "active",
-      level: item.level || payload.level || "beginner",
-      schedules: item.schedules || defaultSchedules,
-      created_at: item.created_at || new Date().toISOString(),
-      updated_at: item.updated_at,
-    };
+    const errMsg = json?.message || (json?.errors ? Object.values(json.errors).flat().join(', ') : `فشل إنشاء البرنامج الدعوي (HTTP ${response.status})`);
+    const err: any = new Error(errMsg);
+    err.serverResponse = json;
+    throw err;
   }
 
-  // ── 3. updateDawahProgram (POST /api/program/mosques/{mosque}/dawah_programs/{program}) ─
+  // ── 5. updateDawahProgram ────────────────────────────────────────────────
   async updateDawahProgram(id: number | string, payload: UpdateDawahProgramPayload): Promise<DawahProgram> {
-    const mosqueId = payload.mosque_id || this.programsMosqueMap.get(id) || this.getMosqueId();
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-
-    const formData = new FormData();
-    formData.append("_method", "PUT");
-    if (payload.space_id) formData.append("space_id", String(payload.space_id));
-    if (payload.program_name) formData.append("program_name", payload.program_name);
-    if (payload.presenter) formData.append("presenter", payload.presenter);
-    if (payload.type) formData.append("type", payload.type);
-    if (payload.level) formData.append("level", payload.level);
-    if (payload.status) formData.append("status", payload.status);
-    if (payload.description !== undefined) formData.append("description", payload.description || "");
-    if (payload.is_featured !== undefined) {
-      formData.append("is_featured", payload.is_featured ? "1" : "0");
-    }
-
-    if (payload.schedules && payload.schedules.length > 0) {
-      payload.schedules.forEach((s, idx) => {
-        if (s.title) formData.append(`schedules[${idx}][title]`, s.title);
-        if (s.notes) formData.append(`schedules[${idx}][notes]`, s.notes);
-        formData.append(`schedules[${idx}][date]`, s.date);
-        formData.append(`schedules[${idx}][start_time]`, s.start_time);
-        formData.append(`schedules[${idx}][end_time]`, s.end_time);
-      });
-    }
-
-    const headers: HeadersInit = {
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    const mosqueId = this.programsMosqueMap.get(id) || payload.mosque_id || this.getMosqueId();
+    const bodyObj: any = {
+      ...(payload.program_name ? { program_name: payload.program_name } : {}),
+      ...(payload.description !== undefined ? { description: payload.description } : {}),
+      ...(payload.type ? { type: payload.type } : {}),
+      ...(payload.presenter ? { presenter: payload.presenter } : {}),
+      ...(payload.space_id ? { space_id: payload.space_id } : {}),
+      ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.level ? { level: payload.level } : {}),
+      ...(payload.is_featured !== undefined ? { is_featured: payload.is_featured } : {}),
     };
 
-    let response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
+    console.log(`POST /program/mosques/${mosqueId}/dawah_programs/${id} Payload:`, bodyObj);
+
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
       method: "POST",
-      headers,
-      body: formData,
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(bodyObj),
     });
 
-    // Fallback if mosqueId was not matching
-    if (!response.ok && response.status === 404) {
-      const altMosqueId = this.getMosqueId();
-      if (altMosqueId !== mosqueId) {
-        response = await fetch(`${BASE_URL}/program/mosques/${altMosqueId}/dawah_programs/${id}`, {
-          method: "POST",
-          headers,
-          body: formData,
-        });
-      }
-    }
-
     const json = await response.json().catch(() => null);
+    console.log(`POST /program/mosques/${mosqueId}/dawah_programs/${id} Response:`, json);
 
-    if (!response.ok || !json || (!json.status && !json.data)) {
-      let errMsgs = "";
-      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-        errMsgs = Object.entries(json.data)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      } else if (json?.errors && typeof json.errors === 'object') {
-        errMsgs = Object.entries(json.errors)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      }
-      throw new Error(errMsgs || json?.message || `فشل تعديل البرنامج على السيرفر (HTTP ${response.status})`);
+    if (response.ok && json && json.status !== false) {
+      const item = json.data || json;
+      return this.mapProgramItem(item, mosqueId);
     }
 
-    const item = json.data || json;
-    return {
-      id: item.id || id,
-      mosque_id: Number(item.mosque_id || mosqueId),
-      space_id: Number(item.space_id || payload.space_id || 1),
-      program_name: item.program_name || payload.program_name || "",
-      description: item.description || payload.description || "",
-      type: item.type || payload.type || "lecture",
-      presenter: item.presenter || payload.presenter || "",
-      is_featured: item.is_featured === true || item.is_featured === 'true' || item.is_featured === 1,
-      status: item.status || payload.status || "active",
-      level: item.level || payload.level || "beginner",
-      schedules: item.schedules || [],
-      created_at: item.created_at,
-      updated_at: item.updated_at || new Date().toISOString(),
-    };
+    const errMsg = json?.message || (json?.errors ? Object.values(json.errors).flat().join(', ') : `فشل تحديث البرنامج الدعوي (HTTP ${response.status})`);
+    const err: any = new Error(errMsg);
+    err.serverResponse = json;
+    throw err;
   }
 
-  // ── 4. deleteDawahProgram (DELETE /api/program/mosques/{mosque}/dawah_programs/{program}) ─
+  // ── 6. deleteDawahProgram ────────────────────────────────────────────────
   async deleteDawahProgram(id: number | string): Promise<boolean> {
     const mosqueId = this.programsMosqueMap.get(id) || this.getMosqueId();
-
-    let response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
+    const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${id}`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });
 
-    if (!response.ok && (response.status === 404 || response.status === 403)) {
-      const fallbackMosqueId = this.getMosqueId();
-      if (fallbackMosqueId !== mosqueId) {
-        const retryRes = await fetch(`${BASE_URL}/program/mosques/${fallbackMosqueId}/dawah_programs/${id}`, {
-          method: "DELETE",
-          headers: this.getAuthHeaders(),
-        });
-        if (retryRes.ok) {
-          this.programsMosqueMap.delete(id);
-          return true;
-        }
-      }
-    }
-
     const json = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(json?.message || `فشل حذف البرنامج من السيرفر (HTTP ${response.status})`);
+    console.log(`DELETE /program/mosques/${mosqueId}/dawah_programs/${id} Response:`, json);
+
+    if (response.ok && json?.status !== false) {
+      return true;
     }
-    this.programsMosqueMap.delete(id);
-    return true;
+    return false;
   }
 
-  // ── 5. Schedules Endpoints (Direct Server API Persistence) ─────────────
+  // ── 7. getSchedules ──────────────────────────────────────────────────────
   async getSchedules(programId: number | string): Promise<ProgramSchedule[]> {
-    const response = await fetch(`${BASE_URL}/program/dawah_programs/${programId}/schedules`, {
-      headers: this.getAuthHeaders(),
-    });
-    if (response.ok) {
-      const json = await response.json();
-      let items: any[] = [];
-      if (Array.isArray(json.data)) {
-        items = json.data;
-      } else if (json.data && Array.isArray(json.data.data)) {
-        items = json.data.data;
-      } else if (Array.isArray(json)) {
-        items = json;
+    try {
+      const response = await fetch(`${BASE_URL}/program/dawah_programs/${programId}/schedules?per_page=50`, {
+        headers: this.getAuthHeaders(),
+      });
+      if (response.ok) {
+        const json = await response.json();
+        const dataObj = json.data || json;
+        const items = Array.isArray(dataObj) ? dataObj : (Array.isArray(dataObj.data) ? dataObj.data : []);
+        return items.map((s: any) => ({
+          id: s.id,
+          dawah_program_id: s.dawah_program_id || programId,
+          title: s.title || "",
+          notes: s.notes || "",
+          date: s.date ? s.date.split("T")[0] : s.date,
+          start_time: s.start_time || "09:00",
+          end_time: s.end_time || "10:00",
+          created_at: s.created_at,
+          updated_at: s.updated_at,
+        }));
       }
-      return items;
+    } catch (e) {
+      console.warn(`Error fetching schedules for program #${programId}:`, e);
     }
-
-    const program = await this.getDawahProgramById(programId);
-    return program?.schedules || [];
+    return [];
   }
 
+  // ── 8. addSchedule ───────────────────────────────────────────────────────
   async addSchedule(programId: number | string, payload: CreateProgramSchedulePayload): Promise<ProgramSchedule> {
-    const mosqueId = this.getMosqueId();
+    const mosqueId = this.programsMosqueMap.get(programId) || this.getMosqueId();
+    const bodyObj = {
+      title: payload.title || "جلسة دعوية",
+      notes: payload.notes || "",
+      date: payload.date,
+      start_time: payload.start_time,
+      end_time: payload.end_time,
+    };
 
     const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules`, {
       method: "POST",
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(bodyObj),
     });
+
     const json = await response.json().catch(() => null);
-    if (!response.ok || !json || (!json.status && !json.data && !json.id)) {
-      let errMsgs = "";
-      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-        errMsgs = Object.entries(json.data)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      } else if (json?.errors && typeof json.errors === 'object') {
-        errMsgs = Object.entries(json.errors)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      }
-      throw new Error(errMsgs || json?.message || `فشل إضافة الجلسة على السيرفر (HTTP ${response.status})`);
+    console.log(`POST schedule Response:`, json);
+
+    if (response.ok && json && json.status !== false) {
+      const s = json.data || json;
+      return {
+        id: s.id,
+        dawah_program_id: s.dawah_program_id || programId,
+        title: s.title || bodyObj.title,
+        notes: s.notes || bodyObj.notes,
+        date: s.date || bodyObj.date,
+        start_time: s.start_time || bodyObj.start_time,
+        end_time: s.end_time || bodyObj.end_time,
+        created_at: s.created_at,
+        updated_at: s.updated_at,
+      };
     }
 
-    return json.data || json;
+    throw new Error(json?.message || `فشل إضافة الجلسة (HTTP ${response.status})`);
   }
 
+  // ── 9. updateSchedule ────────────────────────────────────────────────────
   async updateSchedule(programId: number | string, scheduleId: number | string, payload: UpdateProgramSchedulePayload): Promise<ProgramSchedule> {
-    const mosqueId = this.getMosqueId();
+    const mosqueId = this.programsMosqueMap.get(programId) || this.getMosqueId();
+    const bodyObj: any = {
+      ...(payload.title !== undefined ? { title: payload.title } : {}),
+      ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+      ...(payload.date ? { date: payload.date } : {}),
+      ...(payload.start_time ? { start_time: payload.start_time } : {}),
+      ...(payload.end_time ? { end_time: payload.end_time } : {}),
+    };
 
     const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
       method: "PUT",
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(bodyObj),
     });
+
     const json = await response.json().catch(() => null);
-    if (!response.ok || !json || (!json.status && !json.data && !json.id)) {
-      let errMsgs = "";
-      if (json?.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-        errMsgs = Object.entries(json.data)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      } else if (json?.errors && typeof json.errors === 'object') {
-        errMsgs = Object.entries(json.errors)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(" | ");
-      }
-      throw new Error(errMsgs || json?.message || `فشل تحديث الجلسة على السيرفر (HTTP ${response.status})`);
+    if (response.ok && json && json.status !== false) {
+      const s = json.data || json;
+      return {
+        id: s.id || scheduleId,
+        dawah_program_id: s.dawah_program_id || programId,
+        title: s.title || payload.title,
+        notes: s.notes || payload.notes,
+        date: s.date || payload.date,
+        start_time: s.start_time || payload.start_time,
+        end_time: s.end_time || payload.end_time,
+      };
     }
 
-    return json.data || json;
+    throw new Error(json?.message || `فشل تحديث الجلسة (HTTP ${response.status})`);
   }
 
+  // ── 10. deleteSchedule ───────────────────────────────────────────────────
   async deleteSchedule(programId: number | string, scheduleId: number | string): Promise<boolean> {
-    const mosqueId = this.getMosqueId();
-
+    const mosqueId = this.programsMosqueMap.get(programId) || this.getMosqueId();
     const response = await fetch(`${BASE_URL}/program/mosques/${mosqueId}/dawah_programs/${programId}/schedules/${scheduleId}`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });
+
     const json = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(json?.message || `فشل حذف الجلسة من السيرفر (HTTP ${response.status})`);
-    }
-    return true;
+    return response.ok && json?.status !== false;
   }
 
-  // ── 6. Stats & Mosque Spaces ──────────────────────────────────────────
+  // ── 11. getStats ─────────────────────────────────────────────────────────
   async getStats(): Promise<DawahProgramStats> {
-    const list = await this.getDawahPrograms();
+    const all = await this.getDawahPrograms();
     return {
-      total_programs: list.length,
-      active_programs: list.filter(p => p.status === "active").length,
-      total_lectures: list.filter(p => p.type === "lecture").length,
-      total_courses: list.filter(p => p.type === "course").length,
-      total_competitions: list.filter(p => p.type === "compition" || (p.type as string) === "competition").length,
-      featured_count: list.filter(p => p.is_featured).length,
+      total_programs: all.length,
+      active_programs: all.filter(p => p.status === 'active').length,
+      total_lectures: all.filter(p => p.type === 'lecture').length,
+      total_courses: all.filter(p => p.type === 'course').length,
+      total_competitions: all.filter(p => p.type === 'competition' || (p.type as string) === 'compition').length,
+      featured_count: all.filter(p => p.is_featured).length,
     };
   }
 
+  // ── 12. getMyMosque & getMosqueSpaces ─────────────────────────────────────
   async getMyMosque(): Promise<MyMosqueDetails | null> {
+    const mosqueId = this.getMosqueId();
     try {
-      const response = await fetch(`${BASE_URL}/mosques/mine`, {
+      const response = await fetch(`${BASE_URL}/mosques/${mosqueId}`, {
         headers: this.getAuthHeaders(),
       });
-      const json = await response.json();
-      if (response.ok && json.status && Array.isArray(json.data) && json.data.length > 0) {
-        const item = json.data[0];
-        const details: MyMosqueDetails = {
-          id: item.id,
-          name: item.name,
-          city: item.city,
-          district: item.district,
-          spaces: item.spaces || [],
+      if (response.ok) {
+        const json = await response.json();
+        const m = json.data || json;
+        return {
+          id: m.id || mosqueId,
+          name: m.name || "المسجد الرئيسي",
+          city: m.city || m.city_name,
+          district: m.district,
+          spaces: m.spaces || [
+            { id: 1, name: "المصلى الرئيسي للرجال", type: "prayer_hall" },
+            { id: 2, name: "مصلى النساء", type: "prayer_hall" },
+            { id: 3, name: "قاعة المحاضرات والدروس", type: "hall" },
+          ],
         };
-        if (typeof window !== "undefined" && item.id) {
-          localStorage.setItem("active_mosque_id", String(item.id));
-        }
-        return details;
       }
     } catch (e) {
-      console.warn("Failed to fetch /mosques/mine:", e);
+      console.warn("Error fetching my mosque:", e);
     }
-    return null;
+    return {
+      id: mosqueId,
+      name: "المسجد الرئيسي",
+      spaces: [
+        { id: 1, name: "المصلى الرئيسي للرجال", type: "prayer_hall" },
+        { id: 2, name: "مصلى النساء", type: "prayer_hall" },
+        { id: 3, name: "قاعة المحاضرات والدروس", type: "hall" },
+      ],
+    };
   }
 
   async getMosqueSpaces(mosqueId?: number): Promise<MosqueSpace[]> {
-    const id = mosqueId || this.getMosqueId();
+    const targetMosque = mosqueId || this.getMosqueId();
     try {
-      const response = await fetch(`${BASE_URL}/mosques/${id}/spaces`, {
+      const response = await fetch(`${BASE_URL}/mosques/${targetMosque}`, {
         headers: this.getAuthHeaders(),
       });
-      const json = await response.json();
-      if (response.ok && json.status && Array.isArray(json.data)) {
-        return json.data;
+      if (response.ok) {
+        const json = await response.json();
+        const m = json.data || json;
+        if (m.spaces && m.spaces.length > 0) return m.spaces;
       }
-    } catch (e) {
-      console.warn("Failed to fetch spaces:", e);
-    }
-
-    const myMosque = await this.getMyMosque();
-    if (myMosque && myMosque.spaces && myMosque.spaces.length > 0) {
-      return myMosque.spaces;
-    }
-
+    } catch (e) {}
     return [
-      { id: 1, name: "المصلى الرئيسي للرجال", capacity: 500 },
-      { id: 2, name: "مكتبة المسجد وقاعة المحاضرات", capacity: 60 },
-      { id: 3, name: "مصلى النساء", capacity: 150 },
+      { id: 1, name: "المصلى الرئيسي للرجال", type: "prayer_hall" },
+      { id: 2, name: "مصلى النساء", type: "prayer_hall" },
+      { id: 3, name: "قاعة المحاضرات والدروس", type: "hall" },
     ];
   }
 }

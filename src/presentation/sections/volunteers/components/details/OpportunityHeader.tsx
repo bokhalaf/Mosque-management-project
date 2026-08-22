@@ -16,7 +16,7 @@ interface OpportunityHeaderProps {
     completedTasks: number;
     progressPercent: number;
   };
-  onCloseOpportunity: () => void;
+  onCloseOpportunity?: () => void;
   onOpenEdit?: () => void;
 }
 
@@ -31,11 +31,11 @@ export function OpportunityHeader({
   return (
     <div className="bg-card border border-border/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
       {/* Title & Badges */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <span
-              className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-bold border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${
                 isOpen
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-muted text-muted-foreground border-border'
@@ -72,7 +72,7 @@ export function OpportunityHeader({
             </button>
           )}
 
-          {isOpen && (
+          {isOpen && onCloseOpportunity && (
             <button
               onClick={onCloseOpportunity}
               className="p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl transition-all flex items-center justify-center shadow-sm"

@@ -6,23 +6,37 @@
 import React, { useState } from 'react';
 import { 
   Building2, Search, Plus, Star, MapPin, Clock, User, CheckCircle2, 
-  Wrench, AlertCircle, Trash2, Edit3, Eye, Terminal, RefreshCw, X, ShieldCheck, Sparkles, Filter 
+  Wrench, AlertCircle, Trash2, Edit3, Eye, Terminal, RefreshCw, X, ShieldCheck, Sparkles, Filter,
+  ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useMosques } from '../../hooks/useMosques';
 import { MosqueDetail } from '../../../domain/entities/Mosque';
+import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
 
 interface MosquesListSectionProps {
   onNavigateToAdd?: () => void;
+  onViewDetails?: (id: string | number) => void;
+  onNavigateToEdit?: (id: string | number) => void;
 }
 
-export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps = {}) {
+export function MosquesListSection({ 
+  onNavigateToAdd, 
+  onViewDetails, 
+  onNavigateToEdit 
+}: MosquesListSectionProps = {}) {
   const router = useRouter();
 
   const {
     mosques,
     filteredMosques,
+    paginatedMosques,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
     stats,
     loading,
     error,
@@ -34,6 +48,13 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
     setStatusFilter,
     featuredFilter,
     setFeaturedFilter,
+    cityFilter,
+    setCityFilter,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    geoCatalog,
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
@@ -50,6 +71,8 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
   const [selectedMosque, setSelectedMosque] = useState<MosqueDetail | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingMosque, setEditingMosque] = useState<MosqueDetail | null>(null);
+  const [mosqueToDelete, setMosqueToDelete] = useState<MosqueDetail | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
   const [formName, setFormName] = useState('');
@@ -64,6 +87,10 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
   const [submitting, setSubmitting] = useState(false);
 
   const openCreateModal = () => {
+    if (onNavigateToAdd) {
+      onNavigateToAdd();
+      return;
+    }
     setEditingMosque(null);
     setFormName('');
     setFormCity('الرياض');
@@ -71,10 +98,26 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
     setFormAddress('');
     setFormImam('');
     setFormKhatib('');
-    setFormWorkingHours('24 ساعة');
+    setFormWorkingHours('5:00 AM - 10:00 PM');
     setFormStatus('active');
     setFormIsFeatured(false);
     setShowCreateModal(true);
+  };
+
+  const handleEditClick = (mosque: MosqueDetail) => {
+    if (onNavigateToEdit) {
+      onNavigateToEdit(mosque.id);
+      return;
+    }
+    openEditModal(mosque);
+  };
+
+  const handleViewClick = (mosque: MosqueDetail) => {
+    if (onViewDetails) {
+      onViewDetails(mosque.id);
+      return;
+    }
+    setSelectedMosque(mosque);
   };
 
   const openEditModal = (mosque: MosqueDetail) => {
@@ -85,10 +128,23 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
     setFormAddress(mosque.address || '');
     setFormImam(mosque.imam || '');
     setFormKhatib(mosque.khatib || '');
-    setFormWorkingHours(mosque.working_hours || '24 ساعة');
+    setFormWorkingHours(mosque.working_hours || '5:00 AM - 10:00 PM');
     setFormStatus(mosque.status || 'active');
     setFormIsFeatured(Boolean(mosque.is_featured));
     setShowCreateModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!mosqueToDelete) return;
+    setIsDeleting(true);
+    try {
+      await handleDeleteMosque(mosqueToDelete.id);
+      setMosqueToDelete(null);
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSubmitForm = async (e: React.FormEvent) => {
@@ -150,7 +206,7 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
             </button>
 
             <button
-              onClick={loadMosques}
+              onClick={() => loadMosques()}
               className="p-2.5 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl transition-all"
               title="تحديث البيانات"
             >
@@ -249,43 +305,111 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="bg-card border border-border rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-          {/* Search Box */}
-          <div className="relative w-full md:w-96">
-            <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث في اسم المسجد، المدينة، الحي، الإمام..."
-              className="w-full pl-4 pr-10 py-2 bg-muted/50 border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/60"
-            />
+        {/* Filter & Search Bar */}
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Search Box */}
+            <div className="relative w-full md:w-80 lg:w-96">
+              <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث في المساجد عبر السيرفر..."
+                className="w-full pl-4 pr-10 py-2 bg-muted/50 border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/60"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* City & Sort Dropdowns */}
+            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+              {/* City Filter */}
+              <select
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="px-3 py-2 bg-muted/50 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary shrink-0"
+              >
+                <option value="all">جميع المدن والمحافظات</option>
+                {geoCatalog.map((gov) => (
+                  <optgroup key={gov.id} label={gov.name}>
+                    <option value={gov.id}>{gov.name} (المحافظة)</option>
+                    {gov.cities?.map((city) => (
+                      <option key={city.id} value={city.id}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+
+              {/* Sort By */}
+              <select
+                value={`${sortBy}:${sortOrder}`}
+                onChange={(e) => {
+                  const [sb, so] = e.target.value.split(':');
+                  setSortBy(sb);
+                  setSortOrder(so as 'asc' | 'desc');
+                }}
+                className="px-3 py-2 bg-muted/50 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary shrink-0"
+              >
+                <option value="created_at:desc">الأحدث أولاً</option>
+                <option value="name:asc">الاسم (أ - ي)</option>
+                <option value="name:desc">الاسم (ي - أ)</option>
+                <option value="average_rating:desc">الأعلى تقييماً</option>
+                <option value="city:asc">المدينة</option>
+              </select>
+
+              {(statusFilter !== 'all' || featuredFilter !== 'all' || cityFilter !== 'all' || searchQuery) && (
+                <button
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setFeaturedFilter('all');
+                    setCityFilter('all');
+                    setSearchQuery('');
+                  }}
+                  className="px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1"
+                  title="إلغاء جميع الفلاتر"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>إعادة تعيين</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Status & Featured Filters */}
-          <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-            <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground shrink-0">
+          {/* Status & Featured Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-border/60">
+            <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground shrink-0 pl-1">
               <Filter className="w-3.5 h-3.5" /> الحالة:
             </div>
-            {['all', 'active', 'maintenance', 'inactive'].map((s) => (
+            {[
+              { id: 'all', label: 'الكل' },
+              { id: 'active', label: 'نشط' },
+              { id: 'maintenance', label: 'تحت الصيانة' },
+              { id: 'inactive', label: 'غير نشط' },
+              { id: 'closed', label: 'مغلق' },
+            ].map((s) => (
               <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
+                key={s.id}
+                onClick={() => setStatusFilter(s.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                  statusFilter === s
+                  statusFilter === s.id
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'bg-muted/50 border border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {s === 'all' && 'الكل'}
-                {s === 'active' && 'نشط 🟢'}
-                {s === 'maintenance' && 'تحت الصيانة 🛠️'}
-                {s === 'inactive' && 'غير نشط 🔴'}
+                {s.label}
               </button>
             ))}
 
-            <div className="h-4 w-px bg-border my-auto mx-1" />
+            <div className="h-4 w-px bg-border my-auto mx-1 shrink-0" />
 
             <button
               onClick={() => setFeaturedFilter(featuredFilter === 'featured' ? 'all' : 'featured')}
@@ -304,7 +428,7 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
         {/* Mosques Cards Grid */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[1, 2, 3, 4].map((n) => (
+            {[1, 2, 3, 4, 5, 6].map((n) => (
               <div key={n} className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-4 shadow-sm">
                 <div className="h-40 bg-muted rounded-2xl w-full" />
                 <div className="h-6 w-2/3 bg-muted rounded-md" />
@@ -317,13 +441,13 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
             <AlertCircle className="w-12 h-12 text-red-500" />
             <h3 className="text-lg font-bold text-foreground">{error}</h3>
             <button
-              onClick={loadMosques}
+              onClick={() => loadMosques()}
               className="px-4 py-2 bg-primary text-primary-foreground font-bold text-sm rounded-xl shadow-md"
             >
               إعادة المحاولة
             </button>
           </div>
-        ) : filteredMosques.length === 0 ? (
+        ) : totalItems === 0 ? (
           <div className="bg-card border border-border rounded-3xl p-12 flex flex-col items-center justify-center text-center shadow-sm space-y-3">
             <Building2 className="w-12 h-12 text-muted-foreground/40" />
             <h3 className="text-base font-black text-foreground">لا توجد مساجد مطابقة للبحث</h3>
@@ -332,124 +456,184 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredMosques.map((mosque) => (
-              <div
-                key={mosque.id}
-                className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between group"
-              >
-                {/* Image & Header Overlay */}
-                <div className="relative h-44 w-full bg-muted overflow-hidden">
-                  <img
-                    src={mosque.image}
-                    alt={mosque.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {paginatedMosques.map((mosque) => (
+                <div
+                  key={mosque.id}
+                  className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between group"
+                >
+                  {/* Image & Header Overlay */}
+                  <div className="relative h-44 w-full bg-muted overflow-hidden">
+                    <img
+                      src={mosque.image}
+                      alt={mosque.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                  {/* Status Badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-2">
-                    {mosque.status === 'active' && (
-                      <span className="px-3 py-1 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> نشط
-                      </span>
-                    )}
-                    {mosque.status === 'maintenance' && (
-                      <span className="px-3 py-1 bg-amber-500/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
-                        <Wrench className="w-3 h-3" /> تحت الصيانة
-                      </span>
-                    )}
-                    {mosque.status === 'inactive' && (
-                      <span className="px-3 py-1 bg-red-500/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> غير نشط
-                      </span>
-                    )}
+                    {/* Status Badge */}
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      {mosque.status === 'active' && (
+                        <span className="px-3 py-1 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> نشط
+                        </span>
+                      )}
+                      {mosque.status === 'maintenance' && (
+                        <span className="px-3 py-1 bg-amber-500/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
+                          <Wrench className="w-3 h-3" /> تحت الصيانة
+                        </span>
+                      )}
+                      {mosque.status === 'inactive' && (
+                        <span className="px-3 py-1 bg-red-500/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> غير نشط
+                        </span>
+                      )}
+                      {mosque.status === 'closed' && (
+                        <span className="px-3 py-1 bg-slate-600/90 backdrop-blur-md text-white text-[10px] font-black rounded-full shadow-md flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> مغلق مؤقتاً
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Toggle Featured Star Button */}
+                    <button
+                      onClick={() => handleToggleFeatured(mosque.id)}
+                      disabled={actionLoadingId === mosque.id}
+                      className={`absolute top-3 left-3 p-2 rounded-full backdrop-blur-md border transition-all shadow-md ${
+                        mosque.is_featured
+                          ? 'bg-amber-500 text-white border-amber-400'
+                          : 'bg-black/40 border-white/20 text-white hover:bg-amber-500'
+                      }`}
+                      title={mosque.is_featured ? 'إلغاء التمييز' : 'تمييز المسجد في الصفحة الرئيسية'}
+                    >
+                      <Star className={`w-4 h-4 ${mosque.is_featured ? 'fill-current' : ''}`} />
+                    </button>
+
+                    <div className="absolute bottom-3 right-3 left-3 text-white">
+                      <h3 
+                        onClick={() => handleViewClick(mosque)}
+                        className="text-lg font-black line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+                      >
+                        {mosque.name}
+                      </h3>
+                      <p className="text-xs text-white/80 font-bold flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-primary shrink-0" />
+                        <span>{mosque.city} - {mosque.district}</span>
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Toggle Featured Star Button */}
+                  {/* Body Details */}
+                  <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                    <div className="space-y-2 text-xs font-bold text-muted-foreground">
+                      <div className="flex items-center justify-between py-1 border-b border-border/40">
+                        <span>الإمام المسؤول:</span>
+                        <span className="text-foreground">{mosque.imam || 'غير محدد'}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-border/40">
+                        <span>الخطيب:</span>
+                        <span className="text-foreground">{mosque.khatib || 'غير محدد'}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span>ساعات العمل:</span>
+                        <span className="text-foreground font-mono ltr">{mosque.working_hours || '5:00 AM - 10:00 PM'}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+                      {/* Status Switcher Quick Menu (Clean, without emojis) */}
+                      <select
+                        value={mosque.status || 'active'}
+                        onChange={(e: any) => handleUpdateStatus(mosque.id, e.target.value)}
+                        disabled={actionLoadingId === mosque.id}
+                        className="px-2.5 py-1.5 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary cursor-pointer hover:bg-muted transition-colors"
+                      >
+                        <option value="active">نشط ومهيأ</option>
+                        <option value="maintenance">تحت الصيانة</option>
+                        <option value="inactive">غير نشط</option>
+                        <option value="closed">مغلق مؤقتاً</option>
+                      </select>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleViewClick(mosque)}
+                          className="p-2 bg-card border border-border text-foreground hover:bg-primary hover:text-primary-foreground rounded-xl transition-all shadow-sm"
+                          title="عرض التفاصيل الكاملة"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => handleEditClick(mosque)}
+                          className="p-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl transition-all shadow-sm"
+                          title="تعديل المسجد"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => setMosqueToDelete(mosque)}
+                          disabled={actionLoadingId === mosque.id}
+                          className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all disabled:opacity-50 shadow-sm"
+                          title="حذف المسجد"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls (6 items per page) */}
+            {totalPages > 1 && (
+              <div className="bg-card border border-border rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <p className="text-xs text-muted-foreground font-bold">
+                  عرض <span className="text-foreground font-black">{(currentPage - 1) * itemsPerPage + 1}</span> -{' '}
+                  <span className="text-foreground font-black">{Math.min(currentPage * itemsPerPage, totalItems)}</span> من إجمالي{' '}
+                  <span className="text-primary font-black">{totalItems}</span> مسجد
+                </p>
+
+                <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => handleToggleFeatured(mosque.id)}
-                    disabled={actionLoadingId === mosque.id}
-                    className={`absolute top-3 left-3 p-2 rounded-full backdrop-blur-md border transition-all shadow-md ${
-                      mosque.is_featured
-                        ? 'bg-amber-500 text-white border-amber-400'
-                        : 'bg-black/40 border-white/20 text-white hover:bg-amber-500'
-                    }`}
-                    title={mosque.is_featured ? 'إلغاء التمييز' : 'تمييز المسجد في الصفحة الرئيسية'}
+                    onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    <Star className={`w-4 h-4 ${mosque.is_featured ? 'fill-current' : ''}`} />
+                    <ChevronRight className="w-4 h-4" />
+                    <span>السابق</span>
                   </button>
 
-                  <div className="absolute bottom-3 right-3 left-3 text-white">
-                    <h3 className="text-lg font-black line-clamp-1">{mosque.name}</h3>
-                    <p className="text-xs text-white/80 font-bold flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-primary shrink-0" />
-                      <span>{mosque.city} - {mosque.district}</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Body Details */}
-                <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="space-y-2 text-xs font-bold text-muted-foreground">
-                    <div className="flex items-center justify-between py-1 border-b border-border/40">
-                      <span>الإمام المسؤول:</span>
-                      <span className="text-foreground">{mosque.imam || 'غير محدد'}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1 border-b border-border/40">
-                      <span>الخطيب:</span>
-                      <span className="text-foreground">{mosque.khatib || 'غير محدد'}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span>ساعات العمل:</span>
-                      <span className="text-foreground">{mosque.working_hours || 'أوقات الصلوات'}</span>
-                    </div>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                          currentPage === page
+                            ? 'bg-primary text-primary-foreground shadow-sm font-black'
+                            : 'bg-muted/40 border border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
-                    {/* Status Switcher Quick Menu */}
-                    <select
-                      value={mosque.status}
-                      onChange={(e: any) => handleUpdateStatus(mosque.id, e.target.value)}
-                      disabled={actionLoadingId === mosque.id}
-                      className="px-2.5 py-1.5 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none"
-                    >
-                      <option value="active">تنشيط 🟢</option>
-                      <option value="maintenance">صيانة 🛠️</option>
-                      <option value="inactive">إيقاف 🔴</option>
-                    </select>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setSelectedMosque(mosque)}
-                        className="p-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl transition-all"
-                        title="عرض التفاصيل"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => openEditModal(mosque)}
-                        className="p-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl transition-all"
-                        title="تعديل المسجد"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteMosque(mosque.id)}
-                        disabled={actionLoadingId === mosque.id}
-                        className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all disabled:opacity-50"
-                        title="حذف المسجد"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <span>التالي</span>
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
@@ -586,6 +770,19 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1.5">
+                  ساعات العمل (working_hours) — مثال: 5:00 AM - 10:00 PM
+                </label>
+                <input
+                  type="text"
+                  value={formWorkingHours}
+                  onChange={(e) => setFormWorkingHours(e.target.value)}
+                  placeholder="5:00 AM - 10:00 PM"
+                  className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary font-mono ltr text-left"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1.5">حالة المسجد</label>
@@ -594,9 +791,10 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
                     onChange={(e: any) => setFormStatus(e.target.value)}
                     className="w-full px-3 py-2.5 bg-muted/40 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                   >
-                    <option value="active">نشط ومتاح 🟢</option>
-                    <option value="maintenance">تحت الصيانة 🛠️</option>
-                    <option value="inactive">غير نشط 🔴</option>
+                    <option value="active">نشط ومهيأ</option>
+                    <option value="maintenance">تحت الصيانة</option>
+                    <option value="inactive">غير نشط</option>
+                    <option value="closed">مغلق مؤقتاً</option>
                   </select>
                 </div>
 
@@ -608,7 +806,7 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
                       onChange={(e) => setFormIsFeatured(e.target.checked)}
                       className="w-4 h-4 rounded text-primary border-border focus:ring-primary"
                     />
-                    <span>تمييز المسجد بالصفحة الرئيسية ⭐</span>
+                    <span>تمييز المسجد بالصفحة الرئيسية</span>
                   </label>
                 </div>
               </div>
@@ -635,6 +833,18 @@ export function MosquesListSection({ onNavigateToAdd }: MosquesListSectionProps 
           </div>
         </div>
       )}
+
+      {/* MODAL 3: Delete Confirm Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(mosqueToDelete)}
+        title="حذف المسجد نهائياً"
+        description="هل أنت متأكد من رغبتك في حذف هذا المسجد من النظام بشكل نهائي؟ لا يمكن التراجع عن هذا الإجراء."
+        itemName={mosqueToDelete?.name}
+        confirmButtonText="نعم، احذف المسجد"
+        isDeleting={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setMosqueToDelete(null)}
+      />
     </div>
   );
 }

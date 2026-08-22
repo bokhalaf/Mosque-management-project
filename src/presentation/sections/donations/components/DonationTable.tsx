@@ -4,7 +4,7 @@
 // ==============================
 
 import React from 'react';
-import { Eye, Printer, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { Donation } from '../../../../domain/entities/Donation';
 
 interface DonationTableProps {
@@ -139,18 +139,6 @@ export function DonationTable({
                         title="عرض التفاصيل"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => onPrintReceipt?.(donation.id)}
-                        disabled={printingId === donation.id}
-                        className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all disabled:opacity-50" 
-                        title="تحميل وطباعة الإيصال (PDF)"
-                      >
-                        {printingId === donation.id ? (
-                          <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-                        ) : (
-                          <Printer className="w-4 h-4" />
-                        )}
                       </button>
                     </div>
                   </td>

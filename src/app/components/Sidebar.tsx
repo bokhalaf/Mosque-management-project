@@ -57,12 +57,9 @@ const NAV: NavSection[] = [
     label: "إدارة المتطوعين",
     icon: HeartHandshake,
     items: [
+      { id: "create-opportunity", label: "إضافة فرصة", href: "/volunteers/opportunities/create" },
       { id: "all-opportunities", label: "الفرص التطوعية", href: "/volunteers/opportunities" },
-      { id: "create-opportunity", label: "إنشاء فرصة جديدة", href: "/volunteers/opportunities/create" },
-      { id: "all-applications", label: "طلبات التقديم", href: "/volunteers/applications" },
-      { id: "assign-tasks", label: "إسناد المهام", href: "/volunteers/tasks" },
-      { id: "log-hours", label: "تسجيل الساعات والتقييم", href: "/volunteers/logs" },
-      { id: "certificates", label: "إصدار الشهادات", href: "/volunteers/certificates" },
+      { id: "tasks", label: "متابعة المهام", href: "/volunteers/tasks" },
     ],
   },
   {
@@ -238,15 +235,24 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto min-h-0 p-4 space-y-1.5 scrollbar-thin touch-auto" aria-label="أقسام النظام">
           {NAV.map((section) => {
-            const userRoles = user?.roles || (typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth_user") || "{}")?.roles : []) || [];
-            const isSuperAdmin = userRoles.includes("super_admin") || Boolean(typeof window !== "undefined" && JSON.parse(localStorage.getItem("auth_user") || "{}")?.is_super_admin);
+            const rawUser = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth_user") || "{}") : {};
+            const userRoles = user?.roles || rawUser?.roles || [rawUser?.role || ''];
+            const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin") || Boolean(rawUser?.is_super_admin) || rawUser?.role === 'super_admin' || rawUser?.role === 'admin' || (typeof window !== "undefined" && localStorage.getItem("user_role") === "super_admin");
 
             if (section.id === "mosques" && !isSuperAdmin) return null;
 
-            const visibleItems = section.items.filter((i) => !(isSuperAdmin && i.id === "create-task"));
+            const visibleItems = section.items.filter((i) => {
+              if (isSuperAdmin) {
+                if (i.id === "create-task") return false;
+                if (i.id === "add-donation") return false;
+                if (i.id === "create-campaign") return false;
+                if (i.id === "add-sermon") return false;
+                if (i.id === "create-opportunity") return false;
+              }
+              return true;
+            });
             const isActive = section.href === pathname || visibleItems.some(i => pathname.startsWith(i.href));
             const isExpanded = expanded.includes(section.id);
             const Icon = section.icon;

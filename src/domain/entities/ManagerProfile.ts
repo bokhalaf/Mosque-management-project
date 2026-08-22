@@ -20,9 +20,11 @@ export interface ProfilePersonalInfo {
 export interface ProfileMosqueInfo {
   id: number;
   name: string;
+  image?: string;
   code?: string;
   imam_name?: string;
   khatib_name?: string;
+  working_hours?: string;
   city_district?: string;
   status?: string;
 }
@@ -72,6 +74,7 @@ export interface ManagerProfile {
   mosque_code: string;
   imam_name?: string;
   khatib_name?: string;
+  working_hours?: string;
   city: string;
   district: string;
   address: string;

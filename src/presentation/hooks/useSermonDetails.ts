@@ -134,6 +134,50 @@ export function useSermonDetails(sermonId: string | number) {
     }
   }, [upcomingSelection, sermonId, addDebugLog, showToast]);
 
+  const handleApproveSermon = useCallback(async () => {
+    if (!sermon) return;
+    setActionLoading(true);
+    try {
+      await sermonRepo.approveSermon(sermon.id);
+      addDebugLog(
+        `POST /api/sermons/${sermon.id}/approve`,
+        `${BASE_URL}/sermons/${sermon.id}/approve`,
+        200,
+        { status: 'approved', id: sermon.id }
+      );
+      setSermon(prev => prev ? { ...prev, status: 'approved' } : null);
+      showToast('تم قبول واعتماد الخطبة وإضافتها للأرشيف بنجاح!', 'success');
+    } catch (err: any) {
+      console.error('Error approving sermon:', err);
+      showToast(err.message || 'فشل قبول الخطبة', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [sermon, addDebugLog, showToast]);
+
+  const handleRejectSermon = useCallback(async (reason?: string) => {
+    if (!sermon) return;
+    setActionLoading(true);
+    const rejectionReason = reason || 'يرجى مراجعة الخطبة وتعديلها';
+    try {
+      await sermonRepo.rejectSermon(sermon.id, rejectionReason);
+      addDebugLog(
+        `POST /api/sermons/${sermon.id}/reject`,
+        `${BASE_URL}/sermons/${sermon.id}/reject`,
+        200,
+        { status: 'rejected', id: sermon.id, notes: rejectionReason }
+      );
+      setSermon(prev => prev ? { ...prev, status: 'rejected', notes: rejectionReason } : null);
+      showToast('تم رفض الخطبة وتسجيل سبب الرفض بنجاح', 'error');
+    } catch (err: any) {
+      console.error('Error rejecting sermon:', err);
+      showToast(err.message || 'فشل رفض الخطبة', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [sermon, addDebugLog, showToast]);
+
+
   const copyContent = useCallback(() => {
     if (sermon?.content) {
       navigator.clipboard.writeText(sermon.content);
@@ -153,6 +197,8 @@ export function useSermonDetails(sermonId: string | number) {
     copyContent,
     handleSelectForFriday,
     handleCancelFridaySelection,
+    handleApproveSermon,
+    handleRejectSermon,
     // Debug Inspector
     showDebugTerminal,
     setShowDebugTerminal,
@@ -161,3 +207,4 @@ export function useSermonDetails(sermonId: string | number) {
     clearDebugLogs,
   };
 }
+

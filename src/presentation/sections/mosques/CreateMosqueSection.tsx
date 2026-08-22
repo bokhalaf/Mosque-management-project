@@ -10,28 +10,51 @@ import { PageHeader } from '../../../app/components/PageHeader';
 import {
   Building2, Upload, X, MapPin, Clock, User, Star,
   CheckCircle2, Loader2, Sparkles, Navigation, Globe,
-  ShieldCheck, AlertCircle, Info, ChevronRight
+  ShieldCheck, AlertCircle, Info, ChevronRight, LocateFixed,
+  ExternalLink, Compass, Layers, Terminal
 } from 'lucide-react';
 import { useMosques } from '../../hooks/useMosques';
 import { useToast } from '../../../app/components/ui/Toast';
 import { GeoGovernorate, GeoCity, GeoDistrict } from '../../../domain/entities/Mosque';
+import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';
+import { QuranPerson } from '../../../domain/entities/QuranPeople';
+import { InteractiveMapLocationPicker } from './components/InteractiveMapLocationPicker';
+
+const cadresRepo = new QuranPeopleRepositoryImpl();
 
 interface CreateMosqueSectionProps {
   onBack: () => void;
 }
 
 export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
-  const { handleCreateMosque, geoCatalog, geoLoading } = useMosques();
+  const {
+    handleCreateMosque,
+    geoCatalog,
+    geoLoading,
+    showDebugTerminal,
+    setShowDebugTerminal,
+    debugLogs,
+    addDebugLog,
+    clearDebugLogs,
+  } = useMosques();
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isLocating, setIsLocating] = useState(false);
+  const [coordsPaste, setCoordsPaste] = useState('');
+
+  // Mosque Managers List from Cadres
+  const [managersList, setManagersList] = useState<QuranPerson[]>([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
     name: '',
-    workingHours: '24 ساعة',
+    workingHours: '5:00 AM - 10:00 PM',
     status: 'active' as 'active' | 'inactive' | 'maintenance' | 'closed',
     isFeatured: false,
     selectedGovId: '' as string | number,
+
     cityId: '' as string | number,
     districtId: '' as string | number,
     address: '',
@@ -44,6 +67,22 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
     imagePreview: null as string | null,
   });
 
+  // Load Managers
+  useEffect(() => {
+    const loadManagers = async () => {
+      setLoadingManagers(true);
+      try {
+        const res = await cadresRepo.getPeople({ role: 'mosque_manager', per_page: 50 });
+        if (res?.data) setManagersList(res.data);
+      } catch (e) {
+        console.warn('Failed to load mosque managers:', e);
+      } finally {
+        setLoadingManagers(false);
+      }
+    };
+    loadManagers();
+  }, []);
+
   // Extract cities based on selected governorate
   const currentGov = useMemo(() => {
     return geoCatalog.find(g => String(g.id) === String(formData.selectedGovId));
@@ -52,7 +91,6 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
   const availableCities = useMemo(() => {
     if (!currentGov) return [];
     if (currentGov.cities && currentGov.cities.length > 0) return currentGov.cities;
-    // Fallback if governorate is itself a direct city item
     return [{ id: currentGov.id, name: currentGov.name, lat: currentGov.lat, lng: currentGov.lng, districts: [] }];
   }, [currentGov]);
 
@@ -98,13 +136,70 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
   // Handle City Change
   const handleCityChange = (cityId: string) => {
     const city = availableCities.find(c => String(c.id) === String(cityId));
+    const firstDist = city?.districts?.[0];
     setFormData(prev => ({
       ...prev,
       cityId,
-      districtId: '',
+      districtId: firstDist?.id ? String(firstDist.id) : '',
       latitude: city?.lat ? String(city.lat) : prev.latitude,
       longitude: city?.lng ? String(city.lng) : prev.longitude,
     }));
+  };
+
+  // Handle District Change
+  const handleDistrictChange = (distId: string) => {
+    const dist = availableDistricts.find(d => String(d.id) === String(distId));
+    setFormData(prev => ({
+      ...prev,
+      districtId: distId,
+      latitude: dist?.lat ? String(dist.lat) : prev.latitude,
+      longitude: dist?.lng ? String(dist.lng) : prev.longitude,
+    }));
+  };
+
+  // GPS Current Location Picker
+  const handleGetLocationGPS = () => {
+    if (!navigator.geolocation) {
+      showToast('المتصفح لا يدعم جلب الموقع الجغرافي', 'error');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setFormData(prev => ({
+          ...prev,
+          latitude: String(lat),
+          longitude: String(lng),
+        }));
+        setIsLocating(false);
+        showToast('تم تحديد الإحداثيات الحالية لموقعك بنجاح!', 'success');
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn('GPS error:', err);
+        showToast('تعذر جلب موقع GPS. يرجى التأكد من تفعيل إذن الموقع', 'error');
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  // Coordinates Parser from input / maps link
+  const handleParseCoords = (val: string) => {
+    setCoordsPaste(val);
+    if (!val.trim()) return;
+
+    // Pattern: 33.5138, 36.2765 or @33.5138,36.2765 or q=33.5138,36.2765
+    const match = val.match(/(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)/);
+    if (match && match[1] && match[3]) {
+      setFormData(prev => ({
+        ...prev,
+        latitude: match[1],
+        longitude: match[3],
+      }));
+      showToast('تم استخراج خط الطول والعرض وتعيينهما بنجاح', 'success');
+    }
   };
 
   // Handle Image Change
@@ -151,21 +246,22 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
 
       await handleCreateMosque({
         name: formData.name.trim(),
-        image: formData.imageFile,
+        image: formData.imageFile || undefined,
         city_id: Number(formData.cityId),
         district_id: formData.districtId ? Number(formData.districtId) : undefined,
         city: cityName,
-        district: districtName,
+        district: districtName || undefined,
         address: formData.address.trim() || undefined,
         latitude: formData.latitude ? Number(formData.latitude) : undefined,
         longitude: formData.longitude ? Number(formData.longitude) : undefined,
-        working_hours: formData.workingHours.trim() || '24 ساعة',
+        working_hours: formData.workingHours.trim() || '5:00 AM - 10:00 PM',
         status: formData.status,
         is_featured: formData.isFeatured,
         imam: formData.imam.trim() || undefined,
         khatib: formData.khatib.trim() || undefined,
         manager_id: formData.managerId ? Number(formData.managerId) : undefined,
       });
+
 
       onBack();
     } catch (err: any) {
@@ -177,6 +273,9 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
   };
 
   const selectedCityName = currentCity?.name || currentGov?.name || 'المدينة المختارة';
+  const selectedDistrictName = availableDistricts.find(d => String(d.id) === String(formData.districtId))?.name || '';
+  const latNum = parseFloat(formData.latitude) || 33.5138;
+  const lngNum = parseFloat(formData.longitude) || 36.2765;
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
@@ -194,11 +293,22 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold transition-all shadow-sm"
+              title="مراقب استجابة السيرفر المباشرة"
+            >
+              <Terminal className="w-4 h-4 text-emerald-400" />
+              <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onBack}
               className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs font-bold transition-colors"
             >
               إلغاء
             </button>
+
             <button
               type="button"
               onClick={() => handleSubmit()}
@@ -221,7 +331,48 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
         }
       />
 
-      <div className="px-4 md:px-8 pt-4">
+      <div className="px-4 md:px-8 pt-4 space-y-6">
+
+        {/* Live Debug Inspector Box */}
+        {showDebugTerminal && (
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-200 font-mono text-xs space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
+                <h3 className="font-bold text-white text-sm">مراقب الـ API المباشر لإضافة المسجد (Create Mosque Server Inspector)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={clearDebugLogs}
+                className="text-[10px] text-slate-400 hover:text-white px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg"
+              >
+                مسح السجل
+              </button>
+            </div>
+
+            {debugLogs.length === 0 ? (
+              <p className="text-slate-500 italic">لا توجد طلبات مسجلة حالياً. اضغط "إشهار وحفظ المسجد" لمعاينة استجابة السيرفر هنا فوراً.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto ltr text-left">
+                {debugLogs.map((log, idx) => (
+                  <div key={idx} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-emerald-400">
+                      <span className="font-bold">[{log.time}] {log.action}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
+                        HTTP {log.status}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-mono">{log.url}</p>
+                    <pre className="text-[10px] bg-slate-950 p-2 rounded text-slate-300 overflow-x-auto">
+                      {JSON.stringify(log.response, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Main Form Column (8 Cols) */}
@@ -259,22 +410,46 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 
                 {/* Working Hours */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-primary" />
-                    أوقات العمل والفتح *
+                  <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                      أوقات العمل (Working Hours) *
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono">5:00 AM - 10:00 PM</span>
                   </label>
-                  <select
-                    value={formData.workingHours}
-                    onChange={(e) => setFormData({ ...formData, workingHours: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
-                    dir="rtl"
-                  >
-                    <option value="24 ساعة">24 ساعة (مفتوح دائماً)</option>
-                    <option value="من أذان الفجر حتى صلاة العشاء">من أذان الفجر حتى صلاة العشاء</option>
-                    <option value="أوقات الصلوات الخمس">أوقات الصلوات الخمس فقط</option>
-                    <option value="من صلاة الظهر حتى العشاء">من صلاة الظهر حتى العشاء</option>
-                  </select>
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      value={formData.workingHours}
+                      onChange={(e) => setFormData({ ...formData, workingHours: e.target.value })}
+                      placeholder="مثال: 5:00 AM - 10:00 PM"
+                      className="w-full px-4 py-2 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground font-mono ltr text-left"
+                      required
+                    />
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { label: 'الفجر - العشاء', val: '5:00 AM - 10:00 PM' },
+                        { label: '24 ساعة', val: '12:00 AM - 11:59 PM' },
+                        { label: 'الظهر - العشاء', val: '11:30 AM - 10:30 PM' },
+                        { label: 'فترة موسعة', val: '4:30 AM - 11:00 PM' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, workingHours: preset.val })}
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-all ${
+                            formData.workingHours === preset.val
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+
 
                 {/* Status */}
                 <div className="space-y-1.5">
@@ -312,12 +487,12 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 </div>
               </div>
 
-              {/* Section 2: Geo Location Selection */}
+              {/* Section 2: Geo Location Selection & Map Picker */}
               <div className="pt-4 border-t border-border space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Globe className="w-4 h-4 text-primary" />
-                    <h4 className="text-sm font-bold text-foreground">الموقع الجغرافي والإحداثيات (Geo Catalog)</h4>
+                    <h4 className="text-sm font-bold text-foreground">الموقع الجغرافي والإحداثيات (Geo Catalog & Coordinates)</h4>
                   </div>
                   {geoLoading && (
                     <span className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -326,10 +501,11 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                   )}
                 </div>
 
+                {/* 3-Level Hierarchy: Governorate -> City -> District */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Governorate */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">المحافظة / المنطقة *</label>
+                    <label className="text-xs font-bold text-foreground">1. المحافظة *</label>
                     <select
                       value={formData.selectedGovId}
                       onChange={(e) => handleGovChange(e.target.value)}
@@ -346,7 +522,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
 
                   {/* City Selection */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">المدينة (City ID) *</label>
+                    <label className="text-xs font-bold text-foreground">2. المدينة (City ID) *</label>
                     <select
                       value={formData.cityId}
                       onChange={(e) => handleCityChange(e.target.value)}
@@ -364,18 +540,18 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
 
                   {/* District Selection */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">الحي / المنطقة (District)</label>
+                    <label className="text-xs font-bold text-foreground">3. الحي / المنطقة (District)</label>
                     <select
                       value={formData.districtId}
-                      onChange={(e) => setFormData({ ...formData, districtId: e.target.value })}
+                      onChange={(e) => handleDistrictChange(e.target.value)}
                       className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
                       dir="rtl"
                       disabled={availableDistricts.length === 0}
                     >
-                      <option value="">{availableDistricts.length === 0 ? 'لا توجد أحياء فرعية' : 'اختر الحي...'}</option>
+                      <option value="">{availableDistricts.length === 0 ? 'لا توجد أحياء فرعية مسجلة' : 'اختر الحي...'}</option>
                       {availableDistricts.map(dist => (
                         <option key={dist.id} value={dist.id}>
-                          {dist.name}
+                          {dist.name} (ID: {dist.id})
                         </option>
                       ))}
                     </select>
@@ -392,41 +568,45 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                     type="text"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="مثال: طريق الملك فهد، بجوار الحديقة العامة، حي الروضة"
+                    placeholder="مثال: طريق الملك فهد، بجوار الحديقة العامة، شارع الإيمان"
                     className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground placeholder:text-muted-foreground"
                     dir="rtl"
                   />
                 </div>
 
-                {/* Coordinates (Latitude & Longitude) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Navigation className="w-3.5 h-3.5 text-muted-foreground" />
-                      خط العرض (Latitude)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={formData.latitude}
-                      onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                      placeholder="مثال: 33.5138"
-                      className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
-                    />
+                {/* Interactive Location Controls: Map + GPS + Quick Paste */}
+                <div className="p-4 md:p-5 bg-muted/30 border border-border rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2 border-b border-border/50 pb-2.5">
+                    <Compass className="w-4 h-4 text-primary" />
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">تحديد الموقع الجغرافي للمسجد على الخريطة (GPS)</h4>
+                      <p className="text-[11px] text-muted-foreground">يمكنك البحث بالاسم أو اختيار وتحديد إحداثيات المسجد بدقة على الخريطة التفاعلية</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Navigation className="w-3.5 h-3.5 text-muted-foreground" />
-                      خط الطول (Longitude)
+                  <InteractiveMapLocationPicker
+                    latitude={formData.latitude}
+                    longitude={formData.longitude}
+                    onChange={(lat, lng) => setFormData({ ...formData, latitude: lat, longitude: lng })}
+                    address={formData.address}
+                    onAddressSelect={(newAddress) => {
+                      if (!formData.address) {
+                        setFormData(prev => ({ ...prev, address: newAddress }));
+                      }
+                    }}
+                  />
+
+                  {/* Quick Paste Coordinate / Maps Link */}
+                  <div className="space-y-1 pt-2 border-t border-border/40">
+                    <label className="text-[11px] font-bold text-muted-foreground">
+                      إلصاق سريع لإحداثيات أو رابط خرائط (مثال: 33.5138, 36.2765)
                     </label>
                     <input
-                      type="number"
-                      step="any"
-                      value={formData.longitude}
-                      onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                      placeholder="مثال: 36.2765"
-                      className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
+                      type="text"
+                      value={coordsPaste}
+                      onChange={(e) => handleParseCoords(e.target.value)}
+                      placeholder="الصق الإحداثيات هنا وسيقوم النظام باستخراجها وتعبئتها فوراً..."
+                      className="w-full px-3 py-1.5 bg-card border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-mono"
                     />
                   </div>
                 </div>
@@ -465,14 +645,20 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">معرّف المدير (Manager ID)</label>
-                    <input
-                      type="number"
+                    <label className="text-xs font-bold text-foreground">مدير المسجد (Manager)</label>
+                    <select
                       value={formData.managerId}
                       onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
-                      placeholder="مثال: 5"
                       className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
-                    />
+                      dir="rtl"
+                    >
+                      <option value="">-- اختياري: اختر مدير المسجد --</option>
+                      {managersList.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (ID: {m.id}) {m.mosque_name ? `• ${m.mosque_name}` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -591,7 +777,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                     <h5 className="font-bold text-sm truncate">{formData.name || 'اسم المسجد يظهر هنا'}</h5>
                     <p className="text-[11px] text-white/80 flex items-center gap-1 truncate mt-0.5">
                       <MapPin className="w-3 h-3 shrink-0 text-primary" />
-                      <span>{selectedCityName} {formData.address ? `• ${formData.address}` : ''}</span>
+                      <span>{selectedCityName} {selectedDistrictName ? `• ${selectedDistrictName}` : ''} {formData.address ? `• ${formData.address}` : ''}</span>
                     </p>
                   </div>
                 </div>
@@ -630,15 +816,15 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
               <ul className="space-y-2 text-xs text-muted-foreground leading-relaxed">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>الربط مع دليل الـ Geo Catalog يضمن ظهور المسجد للمصلين في نطاق البحث الجغرافي الصحيح.</span>
+                  <span>الربط الهرمي (محافظة ثم مدينة ثم حي) يضمن صحة الـ `city_id` و `district_id` المطلوبة في الـ API.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>تعبئة الإحداثيات تلقائياً تتم بناء على مركز المدينة، ويمكن تعديلها بدقة لموقع المسجد.</span>
+                  <span>يمكنك استخدام زر GPS لتحديد إحداثيات المسجد الحالية بدقة أو لصق رابط Google Maps مباشرة.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>يمكن للسوبر أدمن تعديل حالة التمييز والصيانة في أي وقت من لوحة دليل المساجد.</span>
+                  <span>المعاينة التفاعلية المباشرة للخريطة تتيح التحقق من الموقع قبل اعتماد الحفظ والإشهار.</span>
                 </li>
               </ul>
             </div>
@@ -650,3 +836,5 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
     </div>
   );
 }
+
+

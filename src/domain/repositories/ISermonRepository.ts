@@ -22,7 +22,8 @@ export interface ISermonRepository {
   // Admin Actions for Sermons (Super Admin)
   getMostSelectedSermons(): Promise<Sermon | Sermon[] | null>;
   approveSermon(id: string | number): Promise<void>;
-  rejectSermon(id: string | number): Promise<void>;
+  rejectSermon(id: string | number, reason?: string): Promise<void>;
+
 
   // Sermon Selections API
   getSermonSelections(params?: { from_date?: string; to_date?: string }): Promise<SermonSelection[]>;

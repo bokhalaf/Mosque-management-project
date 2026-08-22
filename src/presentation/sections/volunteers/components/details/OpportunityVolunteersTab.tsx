@@ -166,7 +166,7 @@ export function OpportunityVolunteersTab({
 
                         <button
                           onClick={() => onOpenLogHours(app)}
-                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 border border-purple-500/20 rounded-xl text-xs font-bold transition-all"
+                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
                         >
                           <Clock className="w-3.5 h-3.5" />
                           <span>تسجيل ساعات</span>
@@ -175,7 +175,7 @@ export function OpportunityVolunteersTab({
 
                       <button
                         onClick={() => onIssueCertificate(app.volunteer_id, app.volunteer_name)}
-                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20 rounded-xl text-[11px] font-bold transition-all"
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-[11px] font-bold transition-all"
                       >
                         <Award className="w-3.5 h-3.5" />
                         <span>إصدار شهادة تطوع</span>

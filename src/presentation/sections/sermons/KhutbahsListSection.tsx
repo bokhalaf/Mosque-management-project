@@ -354,7 +354,11 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {pendingSermons.map((sermon) => (
-                  <div key={sermon.id} className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4 hover:border-primary/40 transition-all">
+                  <div
+                    key={sermon.id}
+                    onClick={() => onViewDetails && onViewDetails(sermon.id)}
+                    className="bg-card border border-border hover:border-primary/50 hover:bg-muted/20 rounded-2xl p-6 shadow-sm space-y-4 transition-all cursor-pointer group"
+                  >
                     <div className="flex items-center justify-between">
                       <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
                         طلب قيد المراجعة
@@ -363,7 +367,9 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-black text-foreground mb-1 line-clamp-2">{sermon.title}</h4>
+                      <h4 className="text-sm font-black text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                        {sermon.title}
+                      </h4>
                       <p className="text-xs font-bold text-primary">الخطيب: {sermon.speaker_name || sermon.preacher || 'غير محدد'}</p>
                     </div>
 
@@ -371,37 +377,20 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
                       {sermon.content || 'لا يوجد نص توضيحي مدخل.'}
                     </p>
 
-                    {/* Action Buttons: Approve / Reject with Spinner Loading */}
-                    <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+                    {/* Open Details For Review & Decision */}
+                    <div className="pt-3 border-t border-border flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => handleApprovePendingSermon(sermon.id)}
-                        disabled={processingSermonId === sermon.id}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                        onClick={() => onViewDetails && onViewDetails(sermon.id)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-md shadow-primary/20"
                       >
-                        {processingSermonId === sermon.id ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Check className="w-4 h-4" />
-                        )}
-                        <span>قبول الخطبة</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleRejectPendingSermon(sermon.id)}
-                        disabled={processingSermonId === sermon.id}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-600 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                      >
-                        {processingSermonId === sermon.id ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <X className="w-4 h-4" />
-                        )}
-                        <span>رفض الطلب</span>
+                        <Eye className="w-4 h-4" />
+                        <span>مراجعة نص الخطبة واتخاذ القرار (قبول / رفض)</span>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
+
             )}
           </div>
         )}
@@ -530,13 +519,20 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
           pendingSermons={pendingSermons}
           pendingPagination={pendingPagination}
           deletingSermonId={deletingSermonId}
+          processingSermonId={processingSermonId}
+          isSuperAdmin={isSuperAdmin}
           onPageChange={setPendingPage}
-          onDeleteSermon={handleDeletePendingSermon}
+          onSelectSermon={(id) => {
+            setShowPendingModal(false);
+            if (onViewDetails) onViewDetails(id);
+          }}
           onApproveSermon={handleApprovePendingSermon}
           onRejectSermon={handleRejectPendingSermon}
+          onDeleteSermon={handleDeletePendingSermon}
           onClose={() => setShowPendingModal(false)}
         />
       )}
+
 
       {showHistoryModal && (
         <HistoryModal

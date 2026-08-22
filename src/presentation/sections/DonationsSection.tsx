@@ -44,6 +44,26 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
     clearDebugLogs,
   } = useDonations();
 
+  const isSuperAdmin = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
+      const role = String(user.role || user.user_type || user.role_name || '').toLowerCase();
+      const roles = user.roles || [];
+      return (
+        role === 'super_admin' ||
+        role === 'admin' ||
+        role === 'administrator' ||
+        user.is_super_admin === true ||
+        roles.includes('super_admin') ||
+        roles.includes('admin') ||
+        localStorage.getItem("user_role") === "super_admin"
+      );
+    } catch (e) {
+      return false;
+    }
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       {/* Page Header */}
@@ -74,12 +94,14 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
               <span>تحديث</span>
             </button>
 
-            <button
-              onClick={onAddDonation}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-            >
-              <Plus className="w-4 h-4" /> <span>إضافة تبرع</span>
-            </button>
+            {!isSuperAdmin && (
+              <button
+                onClick={onAddDonation}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+              >
+                <Plus className="w-4 h-4" /> <span>إضافة تبرع</span>
+              </button>
+            )}
 
             <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm">
               <Download className="w-4 h-4 text-muted-foreground" />

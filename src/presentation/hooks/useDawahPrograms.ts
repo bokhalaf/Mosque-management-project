@@ -86,6 +86,23 @@ export function useDawahPrograms() {
   const getMyMosqueUC = useMemo(() => new GetMyMosqueUseCase(repository), [repository]);
   const getMosqueSpacesUC = useMemo(() => new GetMosqueSpacesUseCase(repository), [repository]);
 
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+          if (roles.includes('super_admin') || Boolean(user.is_super_admin)) {
+            setIsSuperAdmin(true);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   const addDebugLog = useCallback((action: string, url: string, status: number | string, response: any) => {
     setDebugLogs(prev => [
       { action, url, status, response, time: new Date().toLocaleTimeString('ar-SA') },
@@ -124,12 +141,14 @@ export function useDawahPrograms() {
       }
 
       addDebugLog(
-        "GET /api/program/mosques/{mosque}/dawah_programs",
-        `https://mms-backend-rose.vercel.app/api/program/mosques/${mosqueData?.id || 1}/dawah_programs?page=${page}&per_page=6`,
+        isSuperAdmin ? "GET /api/program/dawah_programs (getAllDawahPrograms)" : "GET /api/program/mosques/{mosque}/dawah_programs",
+        isSuperAdmin
+          ? `https://mms-backend-rose.vercel.app/api/program/dawah_programs?page=${page}&per_page=6`
+          : `https://mms-backend-rose.vercel.app/api/program/mosques/${mosqueData?.id || 1}/dawah_programs?page=${page}&per_page=6`,
         200,
         {
           status: true,
-          message: "تم جلب البرامج المرقّمة من السيرفر بنجاح",
+          message: isSuperAdmin ? "تم جلب جميع البرامج الدعوية بنجاح (سوبر أدمن)" : "تم جلب البرامج الدعوية للمسجد بنجاح",
           data: paginatedResult.data,
           pagination: paginatedResult.pagination,
           stats: statsData,
@@ -141,7 +160,7 @@ export function useDawahPrograms() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedType, searchQuery, repository, getStatsUC, getMyMosqueUC, getMosqueSpacesUC, addDebugLog]);
+  }, [page, selectedType, searchQuery, repository, getStatsUC, getMyMosqueUC, getMosqueSpacesUC, addDebugLog, isSuperAdmin]);
 
   useEffect(() => {
     loadData();

@@ -103,9 +103,11 @@ export class ManagerProfileRepositoryImpl implements IManagerProfileRepository {
 
         mosque_id: mInfo.id || 1,
         mosque_name: mInfo.name || "جامع الراجحي الكبير",
+        mosque_image: mInfo.image || mInfo.image_url || "",
         mosque_code: mInfo.code || "MSQ-0001",
-        imam_name: mInfo.imam_name || "غير محدد",
-        khatib_name: mInfo.khatib_name || "غير محدد",
+        imam_name: mInfo.imam_name || mInfo.imam || "غير محدد",
+        khatib_name: mInfo.khatib_name || mInfo.khatib || "غير محدد",
+        working_hours: Array.isArray(mInfo.working_hours) ? mInfo.working_hours.join(' - ') : (mInfo.working_hours || "طوال اليوم (مفتوح للصلوات الخمس)"),
         city: city,
         district: district,
         address: mInfo.city_district || `${city} ${district}`.trim(),

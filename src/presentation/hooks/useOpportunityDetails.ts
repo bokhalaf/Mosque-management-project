@@ -101,13 +101,25 @@ export function useOpportunityDetails(opportunityId: number | string) {
         getApplicationsUC.execute(opportunityId),
       ]);
 
-      if (!opp) {
-        throw new Error('الفرصة التطوعية المطلوبة غير موجودة');
-      }
+      const enrichTasksWithApps = (rawTasks: VolunteerTask[], rawApps: VolunteerApplication[]) => {
+        return rawTasks.map(task => {
+          if (task.application_id) {
+            const matchedApp = rawApps.find(a => String(a.id) === String(task.application_id));
+            if (matchedApp && matchedApp.volunteer_name && (!task.volunteer_name || task.volunteer_name === 'غير مسند' || task.volunteer_name === 'متطوع مسند')) {
+              return {
+                ...task,
+                volunteer_name: matchedApp.volunteer_name,
+                volunteer_id: matchedApp.volunteer_id || task.volunteer_id,
+              };
+            }
+          }
+          return task;
+        });
+      };
 
       setOpportunity(opp);
-      setTasks(oppTasks);
       setApplications(oppApps);
+      setTasks(enrichTasksWithApps(oppTasks, oppApps));
     } catch (err: any) {
       console.error('Error fetching opportunity details:', err);
       setError(err.message || 'تعذر جلب تفاصيل الفرصة التطوعية من السيرفر');
@@ -128,14 +140,25 @@ export function useOpportunityDetails(opportunityId: number | string) {
       const newTask = await createTaskUC.execute(opportunityId, taskDescription.trim());
       // Re-fetch tasks from server to stay in sync
       const freshTasks = await getTasksUC.execute(opportunityId);
-      setTasks(freshTasks);
+      setTasks(prev => {
+        const enriched = freshTasks.map(task => {
+          if (task.application_id) {
+            const matchedApp = applications.find(a => String(a.id) === String(task.application_id));
+            if (matchedApp && matchedApp.volunteer_name) {
+              return { ...task, volunteer_name: matchedApp.volunteer_name };
+            }
+          }
+          return task;
+        });
+        return enriched;
+      });
       showToast('تمت إضافة المهمة بالسيرفر بنجاح', 'success');
       return newTask;
     } catch (err: any) {
       showToast(err.message || 'فشل إضافة المهمة بالسيرفر', 'error');
       throw err;
     }
-  }, [opportunityId, createTaskUC, getTasksUC, showToast]);
+  }, [opportunityId, createTaskUC, getTasksUC, applications, showToast]);
 
   const handleAssignTask = useCallback(async (payload: AssignTaskPayload) => {
     try {
@@ -145,7 +168,18 @@ export function useOpportunityDetails(opportunityId: number | string) {
       });
       // Re-fetch tasks from server
       const freshTasks = await getTasksUC.execute(opportunityId);
-      setTasks(freshTasks);
+      setTasks(prev => {
+        const enriched = freshTasks.map(task => {
+          if (task.application_id) {
+            const matchedApp = applications.find(a => String(a.id) === String(task.application_id));
+            if (matchedApp && matchedApp.volunteer_name) {
+              return { ...task, volunteer_name: matchedApp.volunteer_name };
+            }
+          }
+          return task;
+        });
+        return enriched;
+      });
       showToast('تم إسناد المهمة للمتطوع بالسيرفر بنجاح', 'success');
       setSelectedAppForTask(null);
       return newTask;
@@ -153,7 +187,7 @@ export function useOpportunityDetails(opportunityId: number | string) {
       showToast(err.message || 'فشل إسناد المهمة', 'error');
       throw err;
     }
-  }, [opportunityId, assignTaskUC, getTasksUC, showToast]);
+  }, [opportunityId, assignTaskUC, getTasksUC, applications, showToast]);
 
   const handleApproveApplication = useCallback(async (appId: number | string) => {
     try {

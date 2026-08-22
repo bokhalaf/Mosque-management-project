@@ -12,6 +12,7 @@ interface CampaignCardProps {
   onViewDetails: (id: string) => void;
   onEdit: (campaign: Campaign) => void;
   onDelete: (campaign: Campaign) => void;
+  isSuperAdmin?: boolean;
 }
 
 export function CampaignCard({
@@ -19,6 +20,7 @@ export function CampaignCard({
   onViewDetails,
   onEdit,
   onDelete,
+  isSuperAdmin = false,
 }: CampaignCardProps) {
   const target = Number(campaign.target_amount || campaign.targetAmount || 0);
   const raised = Number(campaign.collected_amount || campaign.raisedAmount || 0);
@@ -180,21 +182,25 @@ export function CampaignCard({
             <span>عرض التفاصيل</span>
           </button>
 
-          <button
-            onClick={() => onEdit(campaign)}
-            className="p-2 bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all border border-border"
-            title="تعديل الحملة"
-          >
-            <Edit3 className="w-4 h-4" />
-          </button>
+          {!isSuperAdmin && (
+            <>
+              <button
+                onClick={() => onEdit(campaign)}
+                className="p-2 bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all border border-border"
+                title="تعديل الحملة"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
 
-          <button
-            onClick={() => onDelete(campaign)}
-            className="p-2 bg-muted hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-xl transition-all border border-border"
-            title="حذف الحملة"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+              <button
+                onClick={() => onDelete(campaign)}
+                className="p-2 bg-muted hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-xl transition-all border border-border"
+                title="حذف الحملة"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

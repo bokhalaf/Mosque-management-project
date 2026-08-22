@@ -1,10 +1,16 @@
 // ==============================
 // Presentation Hook — useTameems
+// إدارة قائمة التعاميم + إصدار تعميم عام (سوبر أدمن) + إصدار تعميم للمسجد (مدير مسجد)
 // ==============================
 
 import { useState, useEffect, useCallback } from 'react';
 import { TameemRepositoryImpl } from '../../data/repositories/TameemRepositoryImpl';
-import { Tameem, CreateTameemPayload, UpdateTameemPayload } from '../../domain/entities/Tameem';
+import { 
+  Tameem, 
+  CreateTameemPayload, 
+  CreateTameemForMosquePayload, 
+  UpdateTameemPayload 
+} from '../../domain/entities/Tameem';
 import { useToast } from '../../app/components/ui/Toast';
 
 const tameemRepo = new TameemRepositoryImpl();
@@ -26,7 +32,10 @@ export function useTameems() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [readFilter, setReadFilter] = useState<string>('all');
+  // Two tabs for non-superadmin: 'my' (الواردة إليك) as default, 'sent' (الصادرة منك)
+  const [tabFilter, setTabFilter] = useState<'my' | 'sent'>('my');
 
+  const [currentUserId, setCurrentUserId] = useState<string | number | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isMosqueManager, setIsMosqueManager] = useState(false);
 
@@ -55,15 +64,39 @@ export function useTameems() {
         const userStr = localStorage.getItem('auth_user');
         if (userStr) {
           const user = JSON.parse(userStr);
-          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
-          if (roles.includes('super_admin') || Boolean(user.is_super_admin)) {
+          const uid = user.id || user.user_id;
+          setCurrentUserId(uid);
+
+          const rawRoles: any[] = Array.isArray(user.roles)
+            ? user.roles
+            : (user.role ? [user.role] : []);
+
+          const normalizedRoles = rawRoles.map((r: any) => {
+            if (typeof r === 'string') return r.toLowerCase();
+            if (r && typeof r === 'object') return (r.name || r.slug || r.role || '').toLowerCase();
+            return '';
+          });
+
+          const isSuper = normalizedRoles.some(r => 
+            r.includes('admin') || 
+            r.includes('super') || 
+            r.includes('region')
+          ) || Boolean(user.is_super_admin);
+
+          const isManager = normalizedRoles.some(r => 
+            r.includes('mosque_manager') || 
+            r === 'manager'
+          );
+
+          if (isSuper) {
             setIsSuperAdmin(true);
-          }
-          if (roles.includes('mosque_manager') || user.role === 'mosque_manager') {
+          } else if (isManager) {
             setIsMosqueManager(true);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Error parsing auth_user in useTameems:", e);
+      }
     }
   }, []);
 
@@ -71,28 +104,54 @@ export function useTameems() {
     setLoading(true);
     setError(null);
     try {
-      const result = await tameemRepo.getTameems(1, 50);
+      let result;
+      if (isSuperAdmin) {
+        // Super Admin gets all circulars from GET /api/tameems (listTameems)
+        result = await tameemRepo.getTameems(1, 50);
+        addDebugLog('GET /api/tameems', 'https://mms-backend-rose.vercel.app/api/tameems', 200, result);
+      } else if (tabFilter === 'sent') {
+        result = await tameemRepo.getSentTameems(1, 50);
+        addDebugLog('GET /api/tameems/sent', 'https://mms-backend-rose.vercel.app/api/tameems/sent', 200, result);
+      } else {
+        result = await tameemRepo.getMyTameems(1, 50);
+        addDebugLog('GET /api/tameems/my-tameems', 'https://mms-backend-rose.vercel.app/api/tameems/my-tameems', 200, result);
+      }
       setTameems(result.data || []);
-      addDebugLog('GET /api/tameems', 'https://mms-backend-rose.vercel.app/api/tameems', 200, result);
     } catch (err: any) {
       console.error('Error loading tameems:', err);
       setError(err.message || 'تعذر تحميل قائمة التعاميم من السيرفر');
     } finally {
       setLoading(false);
     }
-  }, [addDebugLog]);
+  }, [isSuperAdmin, tabFilter, addDebugLog]);
 
   useEffect(() => {
     loadTameems();
   }, [loadTameems]);
 
-  // Handle Mark as Read (Mosque Manager)
+  // Handle Mark as Read (Only for incoming tameems by non-admin)
   const handleMarkAsRead = useCallback(async (id: string | number) => {
     setActionLoadingId(id);
     try {
       await tameemRepo.markTameemAsRead(id);
-      addDebugLog(`POST /api/tameems/${id}/read`, `https://mms-backend-rose.vercel.app/api/tameems/${id}/read`, 200, { status: 'read', id });
-      showToast('تم تعيين التعميم كمقروء بنجاح', 'success');
+      addDebugLog(`PATCH /api/tameems/${id}/read`, `https://mms-backend-rose.vercel.app/api/tameems/${id}/read`, 200, { status: 'read', id });
+      
+      // Optimistically update local tameems state
+      setTameems(prev => prev.map(t => {
+        if (String(t.id) === String(id)) {
+          const now = new Date().toISOString();
+          const updatedRecipients = t.recipients?.map(r => ({ ...r, is_read: true, read_at: r.read_at || now })) || [];
+          return {
+            ...t,
+            is_read: true,
+            read_at: now,
+            recipients: updatedRecipients,
+          };
+        }
+        return t;
+      }));
+
+      showToast('تم تأكيد الاطلاع والقراءة بنجاح', 'success');
       await loadTameems();
     } catch (err: any) {
       console.error('Error marking tameem as read:', err);
@@ -102,7 +161,7 @@ export function useTameems() {
     }
   }, [loadTameems, showToast, addDebugLog]);
 
-  // Handle Create Tameem (Super Admin)
+  // Handle Create General Tameem (Super Admin)
   const handleCreateTameem = useCallback(async (payload: CreateTameemPayload) => {
     try {
       const created = await tameemRepo.createTameem(payload);
@@ -117,7 +176,22 @@ export function useTameems() {
     }
   }, [loadTameems, showToast, addDebugLog]);
 
-  // Handle Edit Tameem (Super Admin)
+  // Handle Create Mosque Tameem (Mosque Manager)
+  const handleCreateTameemForMosque = useCallback(async (payload: CreateTameemForMosquePayload) => {
+    try {
+      const created = await tameemRepo.createTameemForMosque(payload);
+      addDebugLog('POST /api/tameems/for-mosque', 'https://mms-backend-rose.vercel.app/api/tameems/for-mosque', 200, created);
+      showToast('تم إرسال التعميم لمنسوبي المسجد بنجاح!', 'success');
+      await loadTameems();
+      return created;
+    } catch (err: any) {
+      console.error('Error creating tameem for mosque:', err);
+      showToast(err.message || 'فشل إرسال التعميم للمسجد', 'error');
+      throw err;
+    }
+  }, [loadTameems, showToast, addDebugLog]);
+
+  // Handle Edit Tameem (Super admin or sender)
   const handleUpdateTameem = useCallback(async (id: string | number, payload: UpdateTameemPayload) => {
     try {
       const updated = await tameemRepo.updateTameem(id, payload);
@@ -132,7 +206,7 @@ export function useTameems() {
     }
   }, [loadTameems, showToast, addDebugLog]);
 
-  // Handle Delete Tameem (Super Admin)
+  // Handle Delete Tameem (Super admin or sender)
   const handleDeleteTameem = useCallback(async (id: string | number) => {
     setActionLoadingId(id);
     try {
@@ -166,6 +240,7 @@ export function useTameems() {
     filteredTameems,
     loading,
     error,
+    currentUserId,
     isSuperAdmin,
     isMosqueManager,
     actionLoadingId,
@@ -175,6 +250,8 @@ export function useTameems() {
     setPriorityFilter,
     readFilter,
     setReadFilter,
+    tabFilter,
+    setTabFilter,
     showDebugTerminal,
     setShowDebugTerminal,
     debugLogs,
@@ -183,6 +260,7 @@ export function useTameems() {
     loadTameems,
     handleMarkAsRead,
     handleCreateTameem,
+    handleCreateTameemForMosque,
     handleUpdateTameem,
     handleDeleteTameem,
   };

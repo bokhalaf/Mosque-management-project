@@ -72,21 +72,21 @@ export function VolunteerStatsBanner({
         value={stats.total_opportunities ?? 0}
         icon={HeartHandshake}
         colorStyle="bg-primary/10 text-primary border-primary/20"
-        subtitle="جميع الفرص المسجلة بالسيرفر"
+        subtitle="جميع الفرص المسجلة بمسجدك"
       />
 
-      {/* 2. الفرص التطوعية النشطة */}
+      {/* 2. المتطوعون */}
       <StatCard
-        title="الفرص التطوعية النشطة"
-        value={stats.active_opportunities ?? 0}
+        title="المتطوعون"
+        value={stats.approved_volunteers ?? 0}
         icon={CheckCircle2}
         colorStyle="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-        subtitle="متاحة فقط"
+        subtitle="إجمالي المتطوعين المسجلين بالمسجد"
       />
 
-      {/* 3. الطلبات قيد الانتظار (أولاً وفي نهاية الكاردات) */}
+      {/* 3. قيد الانتظار */}
       <StatCard
-        title="الطلبات قيد الانتظار"
+        title="قيد الانتظار"
         value={stats.pending_applications ?? 0}
         icon={Clock}
         colorStyle="bg-amber-500/10 text-amber-500 border-amber-500/20"

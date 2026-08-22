@@ -21,7 +21,18 @@ export interface ProgramSchedule {
 export interface DawahProgram {
   id: number | string;
   mosque_id: number;
+  mosque_name?: string;
+  mosque?: {
+    id: number;
+    name: string;
+    image?: string | null;
+    status?: string;
+    is_featured?: boolean;
+    city?: string | null;
+    district?: string | null;
+  };
   space_id?: number;
+  space_name?: string;
   program_name: string;
   description?: string;
   type: DawahProgramType;
@@ -60,6 +71,7 @@ export interface CreateDawahProgramPayload {
 export interface UpdateDawahProgramPayload extends Partial<CreateDawahProgramPayload> {}
 
 export interface CreateProgramSchedulePayload {
+  dawah_program_id?: number | string;
   title?: string;
   notes?: string;
   date: string;
@@ -69,10 +81,19 @@ export interface CreateProgramSchedulePayload {
 
 export interface UpdateProgramSchedulePayload extends Partial<CreateProgramSchedulePayload> {}
 
+export interface DawahProgramStats {
+  total_programs: number;
+  active_programs: number;
+  total_lectures: number;
+  total_courses: number;
+  total_competitions: number;
+  featured_count: number;
+}
+
 export interface MosqueSpace {
-  id: number;
-  mosque_id?: number;
+  id: number | string;
   name: string;
+  type?: string;
   capacity?: number;
 }
 
@@ -84,24 +105,12 @@ export interface MyMosqueDetails {
   spaces?: MosqueSpace[];
 }
 
-export interface DawahProgramStats {
-  total_programs: number;
-  active_programs: number;
-  total_lectures: number;
-  total_courses: number;
-  total_competitions: number;
-  featured_count: number;
-}
-
-export interface DawahPaginationState {
-  currentPage: number;
-  lastPage: number;
-  total: number;
-  perPage: number;
-}
-
 export interface DawahPaginatedResponse {
   data: DawahProgram[];
-  pagination: DawahPaginationState;
+  pagination: {
+    currentPage: number;
+    lastPage: number;
+    total: number;
+    perPage: number;
+  };
 }
-

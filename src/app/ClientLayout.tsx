@@ -17,6 +17,7 @@ type AuthRoute = "login" | "forgot-password" | "reset-password";
 // ── Inner layout (has access to ToastProvider context) ──
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [authRoute, setAuthRoute] = useState<AuthRoute>("login");
   const [isDark, setIsDark] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -25,6 +26,25 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { showToast } = useToast();
   const { logout, loading: logoutLoading } = useLogout();
+
+  // Restore authenticated session from localStorage on mount
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("auth_token");
+        const userStr = localStorage.getItem("auth_user");
+        if (token && userStr) {
+          const parsedUser = JSON.parse(userStr);
+          setCurrentUser(parsedUser);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to restore auth session:", e);
+    } finally {
+      setIsAuthChecking(false);
+    }
+  }, []);
 
   // Close sidebar on navigation and reset scroll
   useEffect(() => {
@@ -72,6 +92,17 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
       mainRef.current.scrollTop += deltaY;
     }
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="flex h-[100dvh] w-full items-center justify-center bg-background text-foreground font-['Cairo']" dir="rtl">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-muted-foreground">جاري التحقق من الجلسة...</span>
+        </div>
+      </div>
+    );
+  }
 
   // ── Auth screens ──────────────────────────────────────
   if (!isAuthenticated) {

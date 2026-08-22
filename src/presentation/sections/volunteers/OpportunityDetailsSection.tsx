@@ -60,6 +60,24 @@ export function OpportunityDetailsSection({
     router,
   } = useOpportunityDetails(opportunityId);
 
+  const isSuperAdmin = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const rawUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const userRole = localStorage.getItem('user_role') || rawUser.role || '';
+      const roles = rawUser.roles || [];
+      return (
+        userRole === 'super_admin' ||
+        userRole === 'admin' ||
+        roles.includes('super_admin') ||
+        roles.includes('admin') ||
+        Boolean(rawUser.is_super_admin)
+      );
+    } catch {
+      return false;
+    }
+  }, []);
+
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showCloseModal, setShowCloseModal] = useState<boolean>(false);
   const [isClosing, setIsClosing] = useState<boolean>(false);
@@ -203,8 +221,8 @@ export function OpportunityDetailsSection({
         <OpportunityHeader
           opportunity={opportunity}
           stats={stats}
-          onCloseOpportunity={() => setShowCloseModal(true)}
-          onOpenEdit={() => setShowEditModal(true)}
+          onCloseOpportunity={!isSuperAdmin ? () => setShowCloseModal(true) : undefined}
+          onOpenEdit={!isSuperAdmin ? () => setShowEditModal(true) : undefined}
         />
 
         {/* Tab Navigation */}

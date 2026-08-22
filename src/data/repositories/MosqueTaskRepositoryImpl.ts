@@ -39,6 +39,20 @@ export class MosqueTaskRepositoryImpl implements IMosqueTaskRepository {
 
     const priority: MosqueTaskPriority = item.is_important ? 'high' : (item.priority || 'medium');
     const description = item.notes || item.description || "";
+    const dueDate = item.due_date || item.date || new Date().toISOString().split('T')[0];
+
+    // Calculate day offset relative to current date (0 = today, 1 = tomorrow, etc.)
+    let dayOffset = Number(item.day_offset ?? item.offset ?? 0);
+    if (item.due_date) {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const d = new Date(item.due_date);
+        d.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (!isNaN(diffDays)) dayOffset = diffDays;
+      } catch (e) {}
+    }
 
     return {
       id: item.id || item.task_id || String(Date.now()),
@@ -48,13 +62,13 @@ export class MosqueTaskRepositoryImpl implements IMosqueTaskRepository {
       description,
       category,
       priority,
-      due_date: item.due_date || item.date || new Date().toISOString().split('T')[0],
+      due_date: dueDate,
       due_time: item.due_time || item.time || "10:00",
       time: item.due_time || item.time || "10:00",
       status,
       is_completed: isCompleted,
       assigned_to: item.assigned_to || item.user_name || item.employee_name || null,
-      day_offset: Number(item.day_offset ?? item.offset ?? 0),
+      day_offset: dayOffset,
       created_at: item.created_at,
       updated_at: item.updated_at,
     };
@@ -64,8 +78,10 @@ export class MosqueTaskRepositoryImpl implements IMosqueTaskRepository {
     if (!json) return [];
     if (Array.isArray(json)) return json;
     if (Array.isArray(json.data)) return json.data;
+    if (json.data && Array.isArray(json.data.tasks)) return json.data.tasks;
     if (json.data && Array.isArray(json.data.data)) return json.data.data;
     if (json.data && typeof json.data === 'object') {
+      if (Array.isArray(json.data.items)) return json.data.items;
       const vals = Object.values(json.data).find(v => Array.isArray(v));
       if (vals) return vals as any[];
     }
@@ -112,15 +128,36 @@ export class MosqueTaskRepositoryImpl implements IMosqueTaskRepository {
         const res = await fetch(url, { headers: this.getAuthHeaders() });
         if (res.ok) {
           const json = await res.json();
-          const items = this.extractItems(json);
-          if (items.length > 0) {
-            return items.map((item, idx) => ({
-              key: item.key || String(idx),
-              label: item.label || item.day_name || 'اليوم',
-              date: item.date || new Date().toISOString().split('T')[0],
-              day_offset: Number(item.day_offset ?? item.offset ?? idx),
-              count: Number(item.count || item.tasks_count || 0),
-            }));
+          if (json && json.data) {
+            const d = json.data;
+            if (typeof d === 'object' && !Array.isArray(d)) {
+              const now = new Date();
+              const todayStr = now.toISOString().split('T')[0];
+              
+              const tomorrow = new Date(now);
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+              const dayAfter = new Date(now);
+              dayAfter.setDate(dayAfter.getDate() + 2);
+              const dayAfterStr = dayAfter.toISOString().split('T')[0];
+
+              return [
+                { key: 'today', label: 'اليوم', date: todayStr, day_offset: 0, count: Number(d.today ?? 0) },
+                { key: 'tomorrow', label: 'غداً', date: tomorrowStr, day_offset: 1, count: Number(d.tomorrow ?? 0) },
+                { key: 'day_after', label: 'بعد غد', date: dayAfterStr, day_offset: 2, count: Number(d.day_after ?? 0) },
+                { key: 'friday', label: 'الجمعة القادمة', date: '', day_offset: 98, count: Number(d.friday ?? 0) },
+                { key: 'next_week', label: 'الأسبوع القادم', date: '', day_offset: 99, count: Number(d.next_week ?? 0) },
+              ];
+            } else if (Array.isArray(d)) {
+              return d.map((item, idx) => ({
+                key: item.key || String(idx),
+                label: item.label || item.day_name || 'اليوم',
+                date: item.date || new Date().toISOString().split('T')[0],
+                day_offset: Number(item.day_offset ?? item.offset ?? idx),
+                count: Number(item.count || item.tasks_count || 0),
+              }));
+            }
           }
         }
       } catch (e) {
@@ -178,14 +215,13 @@ export class MosqueTaskRepositoryImpl implements IMosqueTaskRepository {
   async createMosqueTask(payload: CreateMosqueTaskPayload): Promise<MosqueTask> {
     const url = `${BASE_URL}/mosque/tasks`;
 
-    const bodyObj = {
+    const bodyObj: Record<string, any> = {
       title: payload.title?.trim() || payload.task_name?.trim() || "مهمة مسجد جديدة",
       category: payload.category || 'prayer_worship',
       due_date: payload.due_date || new Date().toISOString().split('T')[0],
       due_time: payload.due_time || "10:00",
-      is_completed: false,
-      is_important: payload.priority === 'high',
-      notes: payload.description?.trim() || null,
+      is_important: Boolean(payload.priority === 'high' || (payload as any).is_important),
+      notes: payload.description?.trim() || (payload as any).notes?.trim() || null,
     };
 
     let lastError = "فشل إنشاء مهمة المسجد بالسيرفر";

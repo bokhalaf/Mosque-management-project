@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Calendar, Clock, Trash2, Edit, User, Sparkles, MapPin, Mic, GraduationCap, Trophy, Layers
+  Calendar, Clock, Trash2, Edit, User, Sparkles, MapPin, Mic, GraduationCap, Trophy, Layers, Landmark
 } from 'lucide-react';
 import { DawahProgram, MosqueSpace } from '../../../../domain/entities/DawahProgram';
 
@@ -24,7 +24,8 @@ export function DawahProgramCard({
   deletingId,
 }: DawahProgramCardProps) {
   const spaceObj = spaces.find((s) => Number(s.id) === Number(program.space_id));
-  const spaceName = spaceObj?.name || 'المصلى الرئيسي للرجال';
+  const spaceName = spaceObj?.name || program.space_name || 'المصلى الرئيسي للرجال';
+  const mosqueName = program.mosque?.name || program.mosque_name;
 
   // Gray / Neutral badge for program type
   const getTypeBadge = (type: string) => {
@@ -107,6 +108,14 @@ export function DawahProgramCard({
 
         {/* Details grid */}
         <div className="bg-muted/40 rounded-xl p-3 mb-4 space-y-2 text-xs">
+          {mosqueName && (
+            <div className="flex items-center gap-2 text-foreground font-medium">
+              <Landmark className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-muted-foreground">المسجد:</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-400 truncate">{mosqueName}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 text-foreground font-medium">
             <User className="w-3.5 h-3.5 text-primary shrink-0" />
             <span className="text-muted-foreground">المحاضر:</span>

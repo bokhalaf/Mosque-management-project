@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Printer, Wallet, User, Calendar, Tag, ShieldCheck,
+  Wallet, User, Calendar, Tag, ShieldCheck,
   CheckCircle2, Mail, ExternalLink, FileText, Phone,
   Receipt, Download, AlertCircle, RefreshCw, Terminal, Paperclip, HeartHandshake,
   Copy, Check
@@ -161,25 +161,15 @@ export function DonationDetailsSection({ donationId, onBack }: DonationDetailsSe
             <button
               onClick={handleDownloadReceipt}
               disabled={downloadingReceipt}
-              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-md shadow-primary/20 disabled:opacity-60"
               title="تحميل ملف الإيصال الرسمي (PDF)"
             >
               {downloadingReceipt ? (
-                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                <Download className="w-4 h-4 text-primary" />
+                <Download className="w-4 h-4" />
               )}
-              <span>تحميل الإيصال (PDF)</span>
-            </button>
-
-            <button
-              onClick={handleDownloadReceipt}
-              disabled={downloadingReceipt}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
-              title="طباعة إيصال التبرع"
-            >
-              <Printer className="w-4 h-4" />
-              <span>طباعة الإيصال</span>
+              <span>{downloadingReceipt ? 'جاري التحميل...' : 'تحميل الإيصال (PDF)'}</span>
             </button>
           </div>
         }
@@ -417,10 +407,19 @@ export function DonationDetailsSection({ donationId, onBack }: DonationDetailsSe
                     <button
                       onClick={handleDownloadReceipt}
                       disabled={downloadingReceipt}
-                      className="w-full py-2.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20 disabled:opacity-60"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>تحميل الإيصال (PDF)</span>
+                      {downloadingReceipt ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>جاري جلب وتحميل الإيصال...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          <span>تحميل الإيصال (PDF)</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
