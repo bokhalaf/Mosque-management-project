@@ -47,13 +47,21 @@ export function QuranPeopleManagementSection() {
   const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
   const [showInvitationsModal, setShowInvitationsModal] = useState<boolean>(false);
   const [selectedPerson, setSelectedPerson] = useState<QuranPerson | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | number | null>(null);
 
   const handleChangeStatus = async (id: string | number, newStatus: 'active' | 'inactive') => {
+    setUpdatingStatusId(id);
     try {
       const res = await changeUserStatus(id, newStatus);
-      showToast(res.message || (newStatus === 'active' ? 'تم تفعيل الحساب بنجاح ✅' : 'تم تجميد الحساب بنجاح 🔒'), 'success');
+      if (res.success) {
+        showToast(res.message || (newStatus === 'active' ? 'تم تفعيل الحساب بنجاح ✅' : 'تم تجميد الحساب بنجاح 🔒'), 'success');
+      } else {
+        showToast(res.message || 'فشل تغيير حالة الحساب', 'error');
+      }
     } catch (err: any) {
       showToast(err.message || 'حدث خطأ أثناء تغيير حالة الحساب', 'error');
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -209,6 +217,7 @@ export function QuranPeopleManagementSection() {
                   <StaffTableRow
                     key={person.id}
                     person={person}
+                    isUpdatingStatus={updatingStatusId === person.id}
                     onViewDetails={(p) => setSelectedPerson(p)}
                     onChangeStatus={handleChangeStatus}
                   />

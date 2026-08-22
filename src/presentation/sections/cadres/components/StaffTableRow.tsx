@@ -1,18 +1,20 @@
 import React from 'react';
 import {
   GraduationCap, Shield, Users, Mail, Phone, Clock,
-  CheckCircle2, AlertCircle, Lock, Eye
+  CheckCircle2, AlertCircle, Lock, Eye, Loader2
 } from 'lucide-react';
 import { QuranPerson } from '../../../../domain/entities/QuranPeople';
 
 interface StaffTableRowProps {
   person: QuranPerson;
+  isUpdatingStatus?: boolean;
   onViewDetails?: (person: QuranPerson) => void;
   onChangeStatus: (id: string | number, newStatus: 'active' | 'inactive') => void;
 }
 
 export function StaffTableRow({
   person,
+  isUpdatingStatus,
   onViewDetails,
   onChangeStatus,
 }: StaffTableRowProps) {
@@ -104,10 +106,14 @@ export function StaffTableRow({
             </button>
           )}
 
-          {isActive ? (
+          {isUpdatingStatus ? (
+            <div className="p-2 flex items-center justify-center">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            </div>
+          ) : isActive ? (
             <button
               onClick={() => onChangeStatus(person.id, 'inactive')}
-              className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-xl transition-all"
+              className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-xl transition-all active:scale-95"
               title="تجميد الحساب (PATCH /api/users/{user}/status)"
             >
               <Lock className="w-4 h-4" />
@@ -115,7 +121,7 @@ export function StaffTableRow({
           ) : (
             <button
               onClick={() => onChangeStatus(person.id, 'active')}
-              className="p-2 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all"
+              className="p-2 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all active:scale-95"
               title="تفعيل الحساب (PATCH /api/users/{user}/status)"
             >
               <CheckCircle2 className="w-4 h-4" />
