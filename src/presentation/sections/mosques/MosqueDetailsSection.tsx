@@ -515,13 +515,13 @@ export function MosqueDetailsSection({
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
-                  <span className="text-muted-foreground block text-[11px]">المدينة المسجلة (city / city_id):</span>
-                  <span className="text-foreground text-sm">{mosque.city || 'دمشق'} {mosque.city_id ? `(ID: ${mosque.city_id})` : ''}</span>
+                  <span className="text-muted-foreground block text-[11px]">المدينة المسجلة:</span>
+                  <span className="text-foreground text-sm font-bold">{mosque.city || 'دمشق'}</span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
-                  <span className="text-muted-foreground block text-[11px]">الحي / المنطقة (district / district_id):</span>
-                  <span className="text-foreground text-sm">{mosque.district || 'المزة'} {mosque.district_id ? `(ID: ${mosque.district_id})` : ''}</span>
+                  <span className="text-muted-foreground block text-[11px]">الحي / المنطقة:</span>
+                  <span className="text-foreground text-sm font-bold">{mosque.district || 'المزة'}</span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1 md:col-span-2">

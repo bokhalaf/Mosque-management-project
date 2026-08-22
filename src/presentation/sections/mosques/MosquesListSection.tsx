@@ -7,13 +7,16 @@ import React, { useState } from 'react';
 import { 
   Building2, Search, Plus, Star, MapPin, Clock, User, CheckCircle2, 
   Wrench, AlertCircle, Trash2, Edit3, Eye, Terminal, RefreshCw, X, ShieldCheck, Sparkles, Filter,
-  ChevronRight, ChevronLeft
+  ChevronRight, ChevronLeft, UserPlus, Mail
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useMosques } from '../../hooks/useMosques';
 import { MosqueDetail } from '../../../domain/entities/Mosque';
 import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
+import { InviteStaffModal } from '../cadres/components/InviteStaffModal';
+import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';
+import { useToast } from '../../../app/components/ui/Toast';
 
 interface MosquesListSectionProps {
   onNavigateToAdd?: () => void;
@@ -73,6 +76,11 @@ export function MosquesListSection({
   const [editingMosque, setEditingMosque] = useState<MosqueDetail | null>(null);
   const [mosqueToDelete, setMosqueToDelete] = useState<MosqueDetail | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Invite Mosque Manager Modal State
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteInitialMosqueId, setInviteInitialMosqueId] = useState<string | number | undefined>(undefined);
+  const { showToast } = useToast();
 
   // Form State
   const [formName, setFormName] = useState('');
@@ -211,6 +219,18 @@ export function MosquesListSection({
               title="تحديث البيانات"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+
+            <button
+              onClick={() => {
+                setInviteInitialMosqueId(undefined);
+                setInviteModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+              title="إرسال دعوة تعيين مدير مسجد (POST /api/invitations/send)"
+            >
+              <UserPlus className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>دعوة مدير مسجد</span>
             </button>
 
             <button
@@ -558,6 +578,17 @@ export function MosquesListSection({
 
                       <div className="flex items-center gap-1.5">
                         <button
+                          onClick={() => {
+                            setInviteInitialMosqueId(mosque.id);
+                            setInviteModalOpen(true);
+                          }}
+                          className="p-2 bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white border border-amber-500/20 rounded-xl transition-all shadow-sm"
+                          title="إرسال دعوة تعيين مدير لهذا المسجد"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
                           onClick={() => handleViewClick(mosque)}
                           className="p-2 bg-card border border-border text-foreground hover:bg-primary hover:text-primary-foreground rounded-xl transition-all shadow-sm"
                           title="عرض التفاصيل الكاملة"
@@ -772,7 +803,7 @@ export function MosquesListSection({
 
               <div>
                 <label className="block text-xs font-bold text-foreground mb-1.5">
-                  ساعات العمل (working_hours) — مثال: 5:00 AM - 10:00 PM
+                  ساعات العمل
                 </label>
                 <input
                   type="text"
@@ -798,15 +829,16 @@ export function MosquesListSection({
                   </select>
                 </div>
 
-                <div className="flex items-center pt-6">
-                  <label className="flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">تمييز المسجد</label>
+                  <label className="flex items-center gap-2 px-3 py-2.5 bg-muted/40 border border-border rounded-xl text-xs font-bold text-foreground cursor-pointer h-[38px]">
                     <input
                       type="checkbox"
                       checked={formIsFeatured}
                       onChange={(e) => setFormIsFeatured(e.target.checked)}
                       className="w-4 h-4 rounded text-primary border-border focus:ring-primary"
                     />
-                    <span>تمييز المسجد بالصفحة الرئيسية</span>
+                    <span>تمييز</span>
                   </label>
                 </div>
               </div>
@@ -845,6 +877,30 @@ export function MosquesListSection({
         onConfirm={handleConfirmDelete}
         onClose={() => setMosqueToDelete(null)}
       />
+
+      {/* MODAL 4: Invite Mosque Manager Modal */}
+      {inviteModalOpen && (
+        <InviteStaffModal
+          onClose={() => {
+            setInviteModalOpen(false);
+            setInviteInitialMosqueId(undefined);
+          }}
+          isSuperAdmin={true}
+          initialRole="mosque_manager"
+          initialMosqueId={inviteInitialMosqueId}
+          mosquesList={mosques}
+          onSendInvitation={async (payload) => {
+            const quranRepo = new QuranPeopleRepositoryImpl();
+            const res = await quranRepo.sendInvitation(payload);
+            if (res.success) {
+              showToast(res.message || 'تم إرسال دعوة مدير المسجد بنجاح عبر السيرفر ✅', 'success');
+            } else {
+              showToast(res.message || 'تعذر إرسال الدعوة من السيرفر', 'error');
+            }
+            return res;
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -22,11 +22,11 @@ export interface QuranPerson {
 
 
 export interface SendInvitationPayload {
-  mosque_id: number;
+  mosque_id?: number | string;
   email: string;
-  phone: string;
-  role: 'teacher' | 'halaqa_supervisor'; // Exact API role values
-  name: string;
+  phone?: string;
+  role: 'mosque_manager' | 'teacher' | 'halaqa_supervisor' | string; // Exact API role values
+  name?: string;
   notes?: string;
 }
 

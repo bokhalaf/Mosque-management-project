@@ -410,12 +410,9 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 
                 {/* Working Hours */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-primary" />
-                      أوقات العمل (Working Hours) *
-                    </span>
-                    <span className="text-[10px] text-muted-foreground font-mono">5:00 AM - 10:00 PM</span>
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-primary" />
+                    <span>أوقات العمل *</span>
                   </label>
                   <div className="space-y-1.5">
                     <input
@@ -455,7 +452,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                    الحالة التشغيلية *
+                    <span>الحالة التشغيلية *</span>
                   </label>
                   <select
                     value={formData.status}
@@ -471,8 +468,12 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 </div>
 
                 {/* Featured Checkbox */}
-                <div className="space-y-1.5 flex flex-col justify-end">
-                  <label className="flex items-center gap-2 p-2.5 bg-muted/60 hover:bg-muted border border-border/50 rounded-xl cursor-pointer transition-colors">
+                <div className="space-y-1.5 flex flex-col justify-start">
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-500" />
+                    <span>تمييز المسجد</span>
+                  </label>
+                  <label className="flex items-center gap-2 px-3 py-2.5 bg-muted/60 hover:bg-muted border border-border/50 rounded-xl cursor-pointer transition-colors h-[38px]">
                     <input
                       type="checkbox"
                       checked={formData.isFeatured}
@@ -481,7 +482,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                     />
                     <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                       <Star className={`w-3.5 h-3.5 ${formData.isFeatured ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
-                      <span>تمييز في الواجهة</span>
+                      <span>تمييز</span>
                     </div>
                   </label>
                 </div>
@@ -502,7 +503,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 </div>
 
                 {/* 3-Level Hierarchy: Governorate -> City -> District */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className={`grid grid-cols-1 gap-4 ${availableDistricts.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
                   {/* Governorate */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground">1. المحافظة *</label>
@@ -522,7 +523,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
 
                   {/* City Selection */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">2. المدينة (City ID) *</label>
+                    <label className="text-xs font-bold text-foreground">2. المدينة *</label>
                     <select
                       value={formData.cityId}
                       onChange={(e) => handleCityChange(e.target.value)}
@@ -532,30 +533,31 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                     >
                       {availableCities.map(city => (
                         <option key={city.id} value={city.id}>
-                          {city.name} (ID: {city.id})
+                          {city.name}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  {/* District Selection */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">3. الحي / المنطقة (District)</label>
-                    <select
-                      value={formData.districtId}
-                      onChange={(e) => handleDistrictChange(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
-                      dir="rtl"
-                      disabled={availableDistricts.length === 0}
-                    >
-                      <option value="">{availableDistricts.length === 0 ? 'لا توجد أحياء فرعية مسجلة' : 'اختر الحي...'}</option>
-                      {availableDistricts.map(dist => (
-                        <option key={dist.id} value={dist.id}>
-                          {dist.name} (ID: {dist.id})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* District Selection (Shown only when districts exist) */}
+                  {availableDistricts.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-foreground">3. الحي / المنطقة</label>
+                      <select
+                        value={formData.districtId}
+                        onChange={(e) => handleDistrictChange(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
+                        dir="rtl"
+                      >
+                        <option value="">اختر الحي...</option>
+                        {availableDistricts.map(dist => (
+                          <option key={dist.id} value={dist.id}>
+                            {dist.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* Street Address */}
@@ -612,14 +614,14 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                 </div>
               </div>
 
-              {/* Section 3: Personnel & Manager Assignment */}
+              {/* Section 3: Personnel */}
               <div className="pt-4 border-t border-border space-y-4">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-primary" />
                   <h4 className="text-sm font-bold text-foreground">الكادر الإداري والديني</h4>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground">إمام المسجد</label>
                     <input
@@ -642,23 +644,6 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                       className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
                       dir="rtl"
                     />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">مدير المسجد (Manager)</label>
-                    <select
-                      value={formData.managerId}
-                      onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-muted border border-transparent focus:border-primary rounded-xl text-xs outline-none transition-all text-foreground"
-                      dir="rtl"
-                    >
-                      <option value="">-- اختياري: اختر مدير المسجد --</option>
-                      {managersList.map(m => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} (ID: {m.id}) {m.mosque_name ? `• ${m.mosque_name}` : ''}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
               </div>

@@ -6,7 +6,7 @@
 // ==============================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Mail, X, RefreshCw, Send, Clock, CheckCircle2, AlertCircle, GraduationCap, Shield, Users } from 'lucide-react';
+import { Mail, X, RefreshCw, Send, Clock, CheckCircle2, AlertCircle, GraduationCap, Shield, Users, Building2 } from 'lucide-react';
 import { QuranPeopleRepositoryImpl } from '../../../../data/repositories/QuranPeopleRepositoryImpl';
 import { useToast } from '../../../../app/components/ui/Toast';
 
@@ -70,10 +70,11 @@ export function StaffInvitationsModal({ isOpen, onClose }: StaffInvitationsModal
 
   const getRoleBadge = (role?: string) => {
     switch (role) {
+      case 'mosque_manager':
+        return { label: 'مدير مسجد', icon: Building2 };
       case 'teacher':
         return { label: 'معلم قرآن', icon: GraduationCap };
       case 'halaqa_supervisor':
-      case 'mosque_manager':
         return { label: 'مشرف حلقة', icon: Shield };
       case 'student':
       default:

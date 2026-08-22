@@ -506,11 +506,10 @@ export class MosqueRepositoryImpl implements IMosqueRepository {
     if (payload.latitude !== undefined && payload.latitude !== '') formData.append('latitude', String(payload.latitude));
     if (payload.longitude !== undefined && payload.longitude !== '') formData.append('longitude', String(payload.longitude));
     
-    // Send working_hours as array entries: working_hours[0], etc.
-    const whArray = this.normalizeWorkingHours(payload.working_hours);
-    whArray.forEach((wh, idx) => {
-      formData.append(`working_hours[${idx}]`, wh);
-    });
+    // Send working_hours as string
+    if (payload.working_hours) {
+      formData.append('working_hours', String(payload.working_hours).trim());
+    }
 
     formData.append('status', payload.status || 'active');
     formData.append('is_featured', payload.is_featured ? '1' : '0');
@@ -525,7 +524,7 @@ export class MosqueRepositoryImpl implements IMosqueRepository {
       city_id: payload.city_id,
       district_id: payload.district_id,
       status: payload.status,
-      working_hours: whArray,
+      working_hours: payload.working_hours,
       hasImage: isFile,
     });
 
@@ -566,11 +565,10 @@ export class MosqueRepositoryImpl implements IMosqueRepository {
 
     if (payload.name) formData.append('name', String(payload.name).trim());
     
-    // Send working_hours as array entries: working_hours[0], etc.
-    const whArray = this.normalizeWorkingHours(payload.working_hours);
-    whArray.forEach((wh, idx) => {
-      formData.append(`working_hours[${idx}]`, wh);
-    });
+    // Send working_hours as string
+    if (payload.working_hours !== undefined) {
+      formData.append('working_hours', String(payload.working_hours).trim());
+    }
 
     if (payload.imam !== undefined && payload.imam !== null) formData.append('imam', String(payload.imam).trim());
     if (payload.khatib !== undefined && payload.khatib !== null) formData.append('khatib', String(payload.khatib).trim());

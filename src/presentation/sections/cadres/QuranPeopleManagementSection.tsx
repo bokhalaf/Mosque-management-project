@@ -288,6 +288,7 @@ export function QuranPeopleManagementSection() {
         <StaffDetailsModal
           person={selectedPerson}
           onClose={() => setSelectedPerson(null)}
+          onChangeStatus={handleChangeStatus}
         />
       )}
     </div>

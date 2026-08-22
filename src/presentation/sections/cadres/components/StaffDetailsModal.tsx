@@ -1,15 +1,17 @@
 'use client';
 
-import React from 'react';
-import { X, User, Mail, Phone, Calendar, Shield, GraduationCap, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, User, Mail, Phone, Calendar, Shield, GraduationCap, CheckCircle2, Clock, AlertCircle, Lock, Unlock, RefreshCw } from 'lucide-react';
 import { QuranPerson } from '../../../../domain/entities/QuranPeople';
 
 interface StaffDetailsModalProps {
   person: QuranPerson | null;
   onClose: () => void;
+  onChangeStatus?: (id: string | number, newStatus: 'active' | 'inactive') => Promise<void> | void;
 }
 
-export function StaffDetailsModal({ person, onClose }: StaffDetailsModalProps) {
+export function StaffDetailsModal({ person, onClose, onChangeStatus }: StaffDetailsModalProps) {
+  const [updating, setUpdating] = useState(false);
   if (!person) return null;
 
   const getRoleBadge = (role: string) => {
@@ -110,7 +112,49 @@ export function StaffDetailsModal({ person, onClose }: StaffDetailsModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border bg-muted/10 flex justify-end">
+        <div className="p-4 border-t border-border bg-muted/10 flex items-center justify-between gap-2">
+          {onChangeStatus && person.status !== 'pending_invitation' ? (
+            person.status === 'active' ? (
+              <button
+                type="button"
+                disabled={updating}
+                onClick={async () => {
+                  setUpdating(true);
+                  try {
+                    await onChangeStatus(person.id, 'inactive');
+                    onClose();
+                  } finally {
+                    setUpdating(false);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/20 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+              >
+                {updating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                <span>تجميد الحساب</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={updating}
+                onClick={async () => {
+                  setUpdating(true);
+                  try {
+                    await onChangeStatus(person.id, 'active');
+                    onClose();
+                  } finally {
+                    setUpdating(false);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-500/20 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+              >
+                {updating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>تفعيل الحساب</span>
+              </button>
+            )
+          ) : (
+            <div />
+          )}
+
           <button
             onClick={onClose}
             className="px-5 py-2 bg-muted hover:bg-muted/80 text-foreground font-bold text-xs rounded-xl transition-all"

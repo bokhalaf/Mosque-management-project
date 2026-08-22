@@ -226,10 +226,21 @@ export class QuranPeopleRepositoryImpl implements IQuranPeopleRepository {
   async sendInvitation(payload: SendInvitationPayload): Promise<{ success: boolean; message: string; invitation?: any }> {
     const url = `${BASE_URL}/invitations/send`;
     try {
+      const body: Record<string, any> = {
+        email: payload.email,
+        role: payload.role,
+      };
+      if (payload.mosque_id !== undefined && payload.mosque_id !== null && payload.mosque_id !== '') {
+        body.mosque_id = Number(payload.mosque_id);
+      }
+      if (payload.name) body.name = payload.name;
+      if (payload.phone) body.phone = payload.phone;
+      if (payload.notes) body.notes = payload.notes;
+
       const response = await fetch(url, {
         method: "POST",
         headers: this.getAuthHeaders(),
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
 
       const json = await response.json().catch(() => null);
@@ -340,14 +351,17 @@ export class QuranPeopleRepositoryImpl implements IQuranPeopleRepository {
       const json = await response.json().catch(() => null);
       apiResponse = json;
 
-      if (response.ok && json) {
-        apiSuccess = json.status ?? true;
+      if (response.ok && json && json.status !== false) {
+        apiSuccess = true;
         apiMessage = json.message || apiMessage;
-      } else if (json?.message) {
-        apiMessage = json.message;
+      } else {
+        apiSuccess = false;
+        apiMessage = this.extractErrorMessage(json, json?.message || 'تعذر تغيير حالة الحساب');
       }
     } catch (e: any) {
       console.warn("API changeUserStatus error:", e);
+      apiSuccess = false;
+      apiMessage = e.message || 'حدث خطأ في الاتصال أثناء تغيير حالة الحساب';
     }
 
     return {
