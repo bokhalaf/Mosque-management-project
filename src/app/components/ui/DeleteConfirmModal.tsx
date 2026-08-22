@@ -11,25 +11,40 @@ import { AlertTriangle, Loader2, Trash2 } from 'lucide-react';
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   title: string;
-  description: string;
+  description?: string;
+  message?: string;
   itemName?: string;
   confirmButtonText?: string;
+  confirmText?: string;
+  cancelText?: string;
   isDeleting?: boolean;
+  loading?: boolean;
   onConfirm: () => void | Promise<void>;
-  onClose: () => void;
+  onClose?: () => void;
+  onCancel?: () => void;
 }
 
 export function DeleteConfirmModal({
   isOpen,
   title,
   description,
+  message,
   itemName,
-  confirmButtonText = 'نعم، حذف',
-  isDeleting = false,
+  confirmButtonText,
+  confirmText,
+  cancelText = 'إلغاء',
+  isDeleting,
+  loading,
   onConfirm,
   onClose,
+  onCancel,
 }: DeleteConfirmModalProps) {
   if (!isOpen) return null;
+
+  const finalDescription = description || message || '';
+  const finalConfirmText = confirmButtonText || confirmText || 'نعم، حذف';
+  const finalIsDeleting = isDeleting ?? loading ?? false;
+  const handleClose = onCancel || onClose || (() => {});
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 font-['Cairo']">
@@ -42,9 +57,11 @@ export function DeleteConfirmModal({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-black text-foreground">{title}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {description}
-            </p>
+            {finalDescription && (
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {finalDescription}
+              </p>
+            )}
             {itemName && (
               <p className="text-xs font-bold text-foreground bg-muted/50 px-3 py-1.5 rounded-xl border border-border mt-2 inline-block">
                 {itemName}
@@ -57,20 +74,20 @@ export function DeleteConfirmModal({
         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border/60">
           <button
             type="button"
-            onClick={onClose}
-            disabled={isDeleting}
+            onClick={handleClose}
+            disabled={finalIsDeleting}
             className="px-5 py-2.5 bg-muted text-foreground font-bold text-xs rounded-xl hover:bg-muted/80 transition-colors disabled:opacity-50"
           >
-            إلغاء
+            {cancelText}
           </button>
 
           <button
             type="button"
             onClick={onConfirm}
-            disabled={isDeleting}
+            disabled={finalIsDeleting}
             className="flex items-center gap-2 px-6 py-2.5 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {isDeleting ? (
+            {finalIsDeleting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>جاري الحذف...</span>
@@ -78,7 +95,7 @@ export function DeleteConfirmModal({
             ) : (
               <>
                 <Trash2 className="w-4 h-4" />
-                <span>{confirmButtonText}</span>
+                <span>{finalConfirmText}</span>
               </>
             )}
           </button>

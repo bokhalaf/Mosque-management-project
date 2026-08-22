@@ -10,15 +10,18 @@ import { Sparkles } from 'lucide-react';
 
 interface MosqueVolunteerLoaderProps {
   message?: string;
+  text?: string;
   subMessage?: string;
   minHeight?: string;
 }
 
 export function MosqueVolunteerLoader({
-  message = 'جاري جلب بيانات المتطوعين والفرص من السيرفر...',
+  message,
+  text,
   subMessage = 'يرجى الانتظار لحظات للتحقق وتحديث القوائم',
   minHeight = 'min-h-[380px]',
 }: MosqueVolunteerLoaderProps) {
+  const displayMessage = text || message || 'جاري جلب بيانات المتطوعين والفرص من السيرفر...';
   return (
     <div className={`flex flex-col items-center justify-center p-8 bg-card/60 backdrop-blur-sm border border-border/80 rounded-3xl shadow-sm ${minHeight} font-['Cairo'] relative overflow-hidden animate-in fade-in duration-300`}>
       {/* Background Islamic Radial Glow */}
@@ -109,7 +112,7 @@ export function MosqueVolunteerLoader({
       {/* Loading Texts */}
       <div className="text-center space-y-1.5 z-10">
         <h4 className="text-sm sm:text-base font-black text-foreground flex items-center justify-center gap-2">
-          <span>{message}</span>
+          <span>{displayMessage}</span>
         </h4>
         {subMessage && (
           <p className="text-xs text-muted-foreground font-medium max-w-sm">
