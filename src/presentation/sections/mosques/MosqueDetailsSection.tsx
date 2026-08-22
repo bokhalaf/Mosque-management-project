@@ -216,9 +216,6 @@ export function MosqueDetailsSection({
     );
   }
 
-  const latNum = mosque.latitude ? Number(mosque.latitude) : 33.5138;
-  const lngNum = mosque.longitude ? Number(mosque.longitude) : 36.2765;
-
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-16">
       {/* Top Page Header */}
@@ -304,11 +301,17 @@ export function MosqueDetailsSection({
 
         {/* Hero Mosque Banner */}
         <div className="relative h-64 md:h-80 w-full rounded-3xl overflow-hidden border border-border shadow-md group">
-          <img
-            src={mosque.image || 'https://images.unsplash.com/photo-1542662565-7e4b66bae529?w=1200&q=80'}
-            alt={mosque.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          />
+          {mosque.image ? (
+            <img
+              src={mosque.image}
+              alt={mosque.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/30 via-slate-900 to-slate-950 flex items-center justify-center">
+              <Building2 className="w-24 h-24 text-primary/30" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
           {/* Top Overlays */}
@@ -350,28 +353,29 @@ export function MosqueDetailsSection({
           {/* Bottom Banner Content */}
           <div className="absolute bottom-6 right-6 left-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-4 text-white">
             <div className="space-y-1.5">
-              <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-xs font-bold text-white/90">
-                المعرف المركزي (ID): #{mosque.id}
-              </span>
               <h1 className="text-2xl md:text-3xl font-black">{mosque.name}</h1>
-              <p className="text-xs md:text-sm text-white/80 font-bold flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary shrink-0" />
-                <span>{mosque.city || 'غير محدد'} - {mosque.district || 'غير محدد'}</span>
-                {mosque.address && <span className="opacity-75">({mosque.address})</span>}
-              </p>
+              {([mosque.city, mosque.district, mosque.address].some(Boolean)) && (
+                <p className="text-xs md:text-sm text-white/80 font-bold flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary shrink-0" />
+                  <span>{[mosque.city, mosque.district].filter(Boolean).join(' - ') || mosque.address}</span>
+                  {mosque.address && mosque.city && <span className="opacity-75">({mosque.address})</span>}
+                </p>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <a
-                href={`https://www.google.com/maps?q=${latNum},${lngNum}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-xs font-bold transition-all shadow-md"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>فتح بالخرائط</span>
-              </a>
-            </div>
+            {mosque.latitude && mosque.longitude && (
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://www.google.com/maps?q=${mosque.latitude},${mosque.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-xs font-bold transition-all shadow-md"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>فتح بالخرائط</span>
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
@@ -447,41 +451,30 @@ export function MosqueDetailsSection({
           </div>
         </div>
 
-        {/* ── Key Info Stat Cards (Strictly aligned with OpenAPI getMosque) ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* ── Key Info Stat Cards (3 Clean Cards from Server) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-1.5">
             <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-primary" />
-              الإمام المسؤول (imam)
+              إمام المسجد
             </span>
-            <p className="text-sm font-black text-foreground">{mosque.imam || 'غير محدد'}</p>
+            <p className="text-sm font-black text-foreground">{mosque.imam || '—'}</p>
           </div>
 
           <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-1.5">
             <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-primary" />
-              خطيب الجمعة (khatib)
+              خطيب الجمعة
             </span>
-            <p className="text-sm font-black text-foreground">{mosque.khatib || 'غير محدد'}</p>
+            <p className="text-sm font-black text-foreground">{mosque.khatib || '—'}</p>
           </div>
 
           <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-1.5">
             <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-primary" />
-              أوقات العمل (working_hours)
+              أوقات العمل
             </span>
-            <p className="text-sm font-black text-foreground font-mono ltr text-right">{mosque.working_hours || '5:00 AM - 10:00 PM'}</p>
-          </div>
-
-          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-1.5">
-            <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              التقييم والمراجعات
-            </span>
-            <p className="text-sm font-black text-foreground flex items-center gap-1.5">
-              <span>{mosque.average_rating ? Number(mosque.average_rating).toFixed(1) : '5.0'} / 5</span>
-              <span className="text-xs text-muted-foreground font-normal">({mosque.reviews_count || 0} مراجعة)</span>
-            </p>
+            <p className="text-sm font-black text-foreground font-mono ltr text-right">{mosque.working_hours || '—'}</p>
           </div>
         </div>
 
@@ -510,44 +503,52 @@ export function MosqueDetailsSection({
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
-                  <span className="text-muted-foreground block text-[11px]">مدير المسجد المعين (manager_id):</span>
-                  <span className="text-foreground text-sm">{mosque.manager_id ? `المستخدم رقم #${mosque.manager_id}` : 'غير معين'}</span>
+                  <span className="text-muted-foreground block text-[11px]">الحالة التشغيلية:</span>
+                  <span className="text-foreground text-sm font-bold">
+                    {mosque.status === 'active' ? 'نشط ومهيأ' : mosque.status === 'maintenance' ? 'تحت الصيانة' : mosque.status === 'closed' ? 'مغلق مؤقتاً' : 'غير نشط'}
+                  </span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
-                  <span className="text-muted-foreground block text-[11px]">المدينة المسجلة:</span>
-                  <span className="text-foreground text-sm font-bold">{mosque.city || 'دمشق'}</span>
+                  <span className="text-muted-foreground block text-[11px]">المدينة:</span>
+                  <span className="text-foreground text-sm font-bold">{mosque.city || '—'}</span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1">
                   <span className="text-muted-foreground block text-[11px]">الحي / المنطقة:</span>
-                  <span className="text-foreground text-sm font-bold">{mosque.district || 'المزة'}</span>
+                  <span className="text-foreground text-sm font-bold">{mosque.district || '—'}</span>
                 </div>
 
                 <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-1 md:col-span-2">
                   <span className="text-muted-foreground block text-[11px]">العنوان التفصيلي والشارع:</span>
-                  <span className="text-foreground text-sm leading-relaxed">{mosque.address || 'العنوان الرئيسي للجامع'}</span>
+                  <span className="text-foreground text-sm leading-relaxed">{mosque.address || '—'}</span>
                 </div>
               </div>
             </div>
 
             {/* Dates & Auditing Card */}
-            <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-sm">
-              <div className="flex items-center gap-2 border-b border-border pb-3">
-                <Calendar className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-black text-foreground">سجل الإنشاء والتحديث</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold">
-                <div className="p-3 bg-muted/30 rounded-xl border border-border">
-                  <span className="text-muted-foreground block text-[11px] mb-1">تاريخ التسجيل والإنشاء (created_at):</span>
-                  <span className="text-foreground font-mono">{formatDate(mosque.created_at)}</span>
+            {(mosque.created_at || mosque.updated_at) && (
+              <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-border pb-3">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-black text-foreground">سجل الإنشاء والتحديث</h3>
                 </div>
-                <div className="p-3 bg-muted/30 rounded-xl border border-border">
-                  <span className="text-muted-foreground block text-[11px] mb-1">آخر تحديث للبيانات (updated_at):</span>
-                  <span className="text-foreground font-mono">{formatDate(mosque.updated_at)}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold">
+                  {mosque.created_at && (
+                    <div className="p-3 bg-muted/30 rounded-xl border border-border">
+                      <span className="text-muted-foreground block text-[11px] mb-1">تاريخ التسجيل والإنشاء:</span>
+                      <span className="text-foreground font-mono">{formatDate(mosque.created_at)}</span>
+                    </div>
+                  )}
+                  {mosque.updated_at && (
+                    <div className="p-3 bg-muted/30 rounded-xl border border-border">
+                      <span className="text-muted-foreground block text-[11px] mb-1">آخر تحديث للبيانات:</span>
+                      <span className="text-foreground font-mono">{formatDate(mosque.updated_at)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Left Column: Location & Coordinates (4 Cols) */}
@@ -562,29 +563,31 @@ export function MosqueDetailsSection({
               <div className="space-y-3 text-xs font-bold text-foreground">
                 <div className="p-3 bg-muted/40 rounded-xl border border-border">
                   <span className="text-muted-foreground block mb-1">المدينة والحي:</span>
-                  <span>{mosque.city || 'دمشق'} - {mosque.district || 'المزة'}</span>
+                  <span>{[mosque.city, mosque.district].filter(Boolean).join(' - ') || '—'}</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
                   <div className="p-2.5 bg-muted/40 rounded-xl border border-border">
                     <span className="text-muted-foreground block text-[10px]">Lat (العرض):</span>
-                    <span>{mosque.latitude || '33.5138'}</span>
+                    <span>{mosque.latitude ?? '—'}</span>
                   </div>
                   <div className="p-2.5 bg-muted/40 rounded-xl border border-border">
                     <span className="text-muted-foreground block text-[10px]">Lng (الطول):</span>
-                    <span>{mosque.longitude || '36.2765'}</span>
+                    <span>{mosque.longitude ?? '—'}</span>
                   </div>
                 </div>
 
-                <a
-                  href={`https://www.google.com/maps?q=${latNum},${lngNum}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 rounded-xl font-bold transition-all shadow-sm text-xs"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>عرض في خرائط Google</span>
-                </a>
+                {mosque.latitude && mosque.longitude ? (
+                  <a
+                    href={`https://www.google.com/maps?q=${mosque.latitude},${mosque.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 rounded-xl font-bold transition-all shadow-sm text-xs"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>عرض في خرائط Google</span>
+                  </a>
+                ) : null}
               </div>
             </div>
 
