@@ -237,17 +237,6 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
                   <span className={`px-3 py-1 rounded-lg font-bold border ${getStatusBadgeStyles(currentStatus)}`}>{getStatusLabel(currentStatus)}</span>
                   <span className={`px-3 py-1 rounded-lg font-bold border ${getPriorityStyles(complaint.priority)}`}>{getPriorityLabel(complaint.priority)}</span>
                   <span className="text-muted-foreground flex items-center gap-1"><Calendar className="w-4 h-4" /> {formatDate(complaint.created_at)}</span>
-                  {isAssignedToAdmin ? (
-                    <span className="px-3 py-1 rounded-lg font-bold border bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-xs flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>مسندة للسوبر أدمن (متاح الإجراءات)</span>
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1 rounded-lg font-bold border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>تعالج عند مدير المسجد فقط</span>
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
@@ -422,22 +411,9 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
 
               {!canTakeAction ? (
                 /* When assigned_admin_id is null and user is Super Admin: Only handled by Mosque Manager */
-                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-2.5 text-xs">
-                  <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
-                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span>تعالج عند مدير المسجد فقط</span>
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed text-[11px]">
-                    هذه الشكوى غير مسندة للسوبر أدمن (assigned_admin_id: null)، وتتم معالجتها واتخاذ الإجراءات عليها من قبل مدير المسجد المسؤول فقط.
-                  </p>
-                  <button
-                    onClick={() => setShowAssignModal(true)}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>إسناد الشكوى للسوبر أدمن لاتخاذ الإجراءات</span>
-                  </button>
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  <span>تعالج عند مدير المسجد فقط</span>
                 </div>
               ) : (
                 /* Active Status Update Pipeline when canTakeAction is true */
