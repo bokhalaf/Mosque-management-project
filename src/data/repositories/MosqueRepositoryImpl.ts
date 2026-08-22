@@ -7,80 +7,9 @@ import { IMosqueRepository, PaginatedMosques, CreateMosquePayload, MosqueFilterO
 
 export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
-const DEFAULT_GEO_CATALOG: GeoGovernorate[] = [
-  {
-    id: 1,
-    name: "دمشق",
-    lat: 33.5138,
-    lng: 36.2765,
-    cities: [
-      {
-        id: 101,
-        name: "دوما",
-        lat: 33.5722,
-        lng: 36.4022,
-        districts: [
-          { id: 1001, name: "المزة", lat: 33.5024, lng: 36.238 },
-          { id: 1002, name: "الميدان", lat: 33.4912, lng: 36.3015 },
-          { id: 1003, name: "كفرسوسة", lat: 33.4988, lng: 36.2745 },
-          { id: 1004, name: "الصالحية", lat: 33.5285, lng: 36.2912 }
-        ]
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: "ريف دمشق",
-    lat: 33.55,
-    lng: 36.35,
-    cities: [
-      {
-        id: 201,
-        name: "داريا",
-        lat: 33.4583,
-        lng: 36.2389,
-        districts: [
-          { id: 2001, name: "حي الفردوس", lat: 33.46, lng: 36.24 }
-        ]
-      }
-    ]
-  },
-  {
-    id: 3,
-    name: "حلب",
-    lat: 36.2021,
-    lng: 37.1343,
-    cities: [
-      {
-        id: 301,
-        name: "حلب المدينة",
-        lat: 36.2021,
-        lng: 37.1343,
-        districts: [
-          { id: 3001, name: "الشهباء", lat: 36.215, lng: 37.14 },
-          { id: 3002, name: "سيف الدولة", lat: 36.195, lng: 37.12 }
-        ]
-      }
-    ]
-  },
-  {
-    id: 4,
-    name: "حمص",
-    lat: 34.7324,
-    lng: 36.7137,
-    cities: [
-      {
-        id: 401,
-        name: "حمص المدينة",
-        lat: 34.7324,
-        lng: 36.7137,
-        districts: [
-          { id: 4001, name: "الخالدية", lat: 34.74, lng: 36.71 }
-        ]
-      }
-    ]
-  }
-];
+// Fallback empty: we NEVER use fake city IDs — city_id must come from real /api/geo response
+const DEFAULT_GEO_CATALOG: GeoGovernorate[] = [];
+
 
 const MOCK_MOSQUES: MosqueDetail[] = [
 
@@ -185,11 +114,16 @@ export class MosqueRepositoryImpl implements IMosqueRepository {
       whStr = item.working_hours.filter(Boolean).join(' - ');
     }
 
+    // Resolve city_id: may come as top-level city_id or nested inside city.id
+    const resolvedCityId = item.city_id ?? item.city?.id ?? undefined;
+    // Resolve district_id: may come as top-level district_id or nested inside district.id
+    const resolvedDistrictId = item.district_id ?? item.district?.id ?? undefined;
+
     return {
       id: item.id,
       name: item.name || item.title || '',
-      city_id: item.city_id,
-      district_id: item.district_id,
+      city_id: resolvedCityId,
+      district_id: resolvedDistrictId,
       city: item.city?.name || (typeof item.city === 'string' ? item.city : '') || item.city_name || '',
       district: item.district?.name || (typeof item.district === 'string' ? item.district : '') || item.district_name || '',
       address: item.address || '',
