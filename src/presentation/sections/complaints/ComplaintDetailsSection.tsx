@@ -187,6 +187,8 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
     );
   }
 
+  const isAssignedToAdmin = Boolean(complaint.assigned_admin_id);
+  const canTakeAction = isMosqueManager || isAssignedToAdmin;
   const senderName = complaint.is_anonymous ? 'فاعل خير (مجهول)' : (complaint.user?.name || complaint.email || 'مصلي / زائر');
   const complaintNumber = complaint.complaint_number || `CMP-${complaint.id}`;
 
@@ -199,7 +201,7 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
         breadcrumbs={[{ label: 'الشكاوى والاقتراحات' }, { label: 'تفاصيل الشكوى', active: true }]}
         actions={
           <div className="flex gap-2">
-            {isMosqueManager && (
+            {isMosqueManager && !isAssignedToAdmin && (
               <button
                 onClick={() => setShowAssignModal(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
@@ -235,6 +237,17 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
                   <span className={`px-3 py-1 rounded-lg font-bold border ${getStatusBadgeStyles(currentStatus)}`}>{getStatusLabel(currentStatus)}</span>
                   <span className={`px-3 py-1 rounded-lg font-bold border ${getPriorityStyles(complaint.priority)}`}>{getPriorityLabel(complaint.priority)}</span>
                   <span className="text-muted-foreground flex items-center gap-1"><Calendar className="w-4 h-4" /> {formatDate(complaint.created_at)}</span>
+                  {isAssignedToAdmin ? (
+                    <span className="px-3 py-1 rounded-lg font-bold border bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-xs flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>مسندة للسوبر أدمن (متاح الإجراءات)</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-lg font-bold border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>تعالج عند مدير المسجد فقط</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -403,100 +416,125 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
               </div>
             </div>
 
-            {/* Interactive Action Buttons for Status Update — Strict Forward Pipeline */}
+            {/* Interactive Action Buttons for Status Update */}
             <div className="border-t border-border pt-4 space-y-3">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">إجراءات تغيير الحالة</p>
 
-              {/* Case 1: Pending (جديدة) */}
-              {(currentStatus === 'pending' || (currentStatus as string) === 'new') && (
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => openStatusModal('in_progress')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-amber-500" />
-                      <span>تحويل إلى (قيد المعالجة)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => openStatusModal('canceled')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Archive className="w-4 h-4 text-red-500" />
-                      <span>إغلاق الشكوى</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Case 2: In Progress (قيد المعالجة) */}
-              {(currentStatus === 'in_progress' || (currentStatus as string) === 'review') && (
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => openStatusModal('resolved')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>تحديد الشكوى كـ (تم الحل)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => openStatusModal('canceled')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Archive className="w-4 h-4 text-red-500" />
-                      <span>إغلاق الشكوى</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Case 3: Terminal Status (تم الحل / مغلقة) */}
-              {(currentStatus === 'resolved' || currentStatus === 'canceled' || (currentStatus as string) === 'closed') && (
-                <div className={`p-4 rounded-xl border text-xs font-bold space-y-1.5 ${
-                  currentStatus === 'resolved'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    {currentStatus === 'resolved' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    ) : (
-                      <Archive className="w-4 h-4 text-red-500 shrink-0" />
-                    )}
-                    <span>
-                      {currentStatus === 'resolved'
-                        ? 'تم إكمال الشكوى وتحديدها كمحلولة بنجاح (حالة نهائية).'
-                        : 'تم إغلاق هذه الشكوى نهائياً (حالة نهائية).'}
-                    </span>
+              {!canTakeAction ? (
+                /* When assigned_admin_id is null and user is Super Admin: Only handled by Mosque Manager */
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-2.5 text-xs">
+                  <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>تعالج عند مدير المسجد فقط</span>
                   </div>
-                  <p className="text-[10px] opacity-80 leading-relaxed font-normal">
-                    لا يمكن التراجع أو تغيير الحالة بعد اكتمال أو إغلاق الشكوى.
+                  <p className="text-muted-foreground leading-relaxed text-[11px]">
+                    هذه الشكوى غير مسندة للسوبر أدمن (assigned_admin_id: null)، وتتم معالجتها واتخاذ الإجراءات عليها من قبل مدير المسجد المسؤول فقط.
                   </p>
-                </div>
-              )}
-              {/* Assign to Super Admin (Mosque Manager Role Action) */}
-              {isMosqueManager && (
-                <div className="pt-2 border-t border-border/70">
                   <button
                     onClick={() => setShowAssignModal(true)}
                     disabled={updatingStatus}
-                    className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    <UserPlus className="w-4 h-4" />
-                    <span>رفع الشكوى للسوبر أدمن (إسناد)</span>
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>إسناد الشكوى للسوبر أدمن لاتخاذ الإجراءات</span>
                   </button>
                 </div>
+              ) : (
+                /* Active Status Update Pipeline when canTakeAction is true */
+                <>
+                  {/* Case 1: Pending (جديدة) */}
+                  {(currentStatus === 'pending' || (currentStatus as string) === 'new') && (
+                    <div className="space-y-2.5">
+                      <button
+                        onClick={() => openStatusModal('in_progress')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-500" />
+                          <span>تحويل إلى (قيد المعالجة)</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => openStatusModal('canceled')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Archive className="w-4 h-4 text-red-500" />
+                          <span>إغلاق الشكوى</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Case 2: In Progress (قيد المعالجة) */}
+                  {(currentStatus === 'in_progress' || (currentStatus as string) === 'review') && (
+                    <div className="space-y-2.5">
+                      <button
+                        onClick={() => openStatusModal('resolved')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <span>تحديد الشكوى كـ (تم الحل)</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => openStatusModal('canceled')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Archive className="w-4 h-4 text-red-500" />
+                          <span>إغلاق الشكوى</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Case 3: Terminal Status (تم الحل / مغلقة) */}
+                  {(currentStatus === 'resolved' || currentStatus === 'canceled' || (currentStatus as string) === 'closed') && (
+                    <div className={`p-4 rounded-xl border text-xs font-bold space-y-1.5 ${
+                      currentStatus === 'resolved'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {currentStatus === 'resolved' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <Archive className="w-4 h-4 text-red-500 shrink-0" />
+                        )}
+                        <span>
+                          {currentStatus === 'resolved'
+                            ? 'تم إكمال الشكوى وتحديدها كمحلولة بنجاح (حالة نهائية).'
+                            : 'تم إغلاق هذه الشكوى نهائياً (حالة نهائية).'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] opacity-80 leading-relaxed font-normal">
+                        لا يمكن التراجع أو تغيير الحالة بعد اكتمال أو إغلاق الشكوى.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Assign to Super Admin (Mosque Manager Role Action) */}
+                  {isMosqueManager && !isAssignedToAdmin && (
+                    <div className="pt-2 border-t border-border/70">
+                      <button
+                        onClick={() => setShowAssignModal(true)}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span>رفع الشكوى للسوبر أدمن (إسناد)</span>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -47,6 +47,8 @@ export interface ComplaintItem {
   email?: string | null;
   is_anonymous?: boolean;
   admin_notes?: string | null;
+  assigned_admin_id?: number | null;
+  assigned_admin?: ComplaintUser | null;
   mosque_id?: number;
   mosque?: MosqueRef | null;
   user?: ComplaintUser | null;
