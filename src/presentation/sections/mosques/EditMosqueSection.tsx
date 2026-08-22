@@ -254,6 +254,21 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
       return;
     }
 
+    if (!formData.imam.trim()) {
+      showToast('يرجى إدخال اسم إمام المسجد', 'error');
+      return;
+    }
+
+    if (!formData.khatib.trim()) {
+      showToast('يرجى إدخال اسم خطيب المسجد', 'error');
+      return;
+    }
+
+    if (!formData.imagePreview) {
+      showToast('يرجى اختيار صورة للمسجد', 'error');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const cityName = currentCity?.name || currentGov?.name || mosque?.city || 'دمشق';
@@ -585,10 +600,11 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-primary" />
-                    <span>اسم الإمام المسؤول</span>
+                    <span>اسم الإمام المسؤول *</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.imam}
                     onChange={(e) => setFormData({ ...formData, imam: e.target.value })}
                     placeholder="مثال: الشيخ د. عبد الرحمن السديس"
@@ -600,10 +616,11 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-primary" />
-                    <span>اسم خطيب الجمعة</span>
+                    <span>اسم خطيب الجمعة *</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.khatib}
                     onChange={(e) => setFormData({ ...formData, khatib: e.target.value })}
                     placeholder="مثال: الشيخ د. صالح بن حميد"

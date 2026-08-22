@@ -238,6 +238,21 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
       return;
     }
 
+    if (!formData.imam.trim()) {
+      showToast('يرجى إدخال اسم إمام المسجد', 'error');
+      return;
+    }
+
+    if (!formData.khatib.trim()) {
+      showToast('يرجى إدخال اسم خطيب المسجد', 'error');
+      return;
+    }
+
+    if (!formData.imageFile) {
+      showToast('يرجى رفع صورة غلاف للمسجد (صورة المسجد مطلوبة)', 'error');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -246,7 +261,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
 
       await handleCreateMosque({
         name: formData.name.trim(),
-        image: formData.imageFile || undefined,
+        image: formData.imageFile,
         city_id: Number(formData.cityId),
         district_id: formData.districtId ? Number(formData.districtId) : undefined,
         city: cityName,
@@ -257,9 +272,8 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
         working_hours: formData.workingHours.trim() || '5:00 AM - 10:00 PM',
         status: formData.status,
         is_featured: formData.isFeatured,
-        imam: formData.imam.trim() || undefined,
-        khatib: formData.khatib.trim() || undefined,
-        manager_id: formData.managerId ? Number(formData.managerId) : undefined,
+        imam: formData.imam.trim(),
+        khatib: formData.khatib.trim(),
       });
 
 
@@ -623,9 +637,10 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">إمام المسجد</label>
+                    <label className="text-xs font-bold text-foreground">إمام المسجد *</label>
                     <input
                       type="text"
+                      required
                       value={formData.imam}
                       onChange={(e) => setFormData({ ...formData, imam: e.target.value })}
                       placeholder="مثال: الشيخ د. عبد الرحمن"
@@ -635,9 +650,10 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">خطيب الجمعة</label>
+                    <label className="text-xs font-bold text-foreground">خطيب الجمعة *</label>
                     <input
                       type="text"
+                      required
                       value={formData.khatib}
                       onChange={(e) => setFormData({ ...formData, khatib: e.target.value })}
                       placeholder="مثال: الشيخ د. صالح"
@@ -652,7 +668,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
               <div className="pt-4 border-t border-border space-y-3">
                 <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Upload className="w-3.5 h-3.5 text-primary" />
-                  صورة غلاف المسجد (Mosque Image Upload)
+                  <span>صورة غلاف المسجد (مطلوبة) *</span>
                 </label>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -675,7 +691,7 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
                       <Upload className="w-6 h-6" />
                     </div>
                     <span className="text-xs font-bold text-foreground">
-                      {formData.imageFile ? formData.imageFile.name : 'انقر لاختيار أو سحب صورة المسجد هنا'}
+                      {formData.imageFile ? formData.imageFile.name : 'انقر لاختيار أو سحب صورة المسجد هنا (إلزامي) *'}
                     </span>
                     <span className="text-[10px] text-muted-foreground">صيغ مدعومة: JPG, PNG, WEBP حتى 5MB</span>
                     <input
