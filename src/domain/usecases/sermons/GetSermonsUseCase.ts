@@ -20,7 +20,7 @@ export class GetSermonsUseCase {
     archivedPage: number = 1,
     pendingPage: number = 1,
     archivedLimit: number = 6,
-    pendingLimit: number = 3
+    pendingLimit: number = 6
   ): Promise<SermonsPageData> {
     const [archivedRes, pendingRes, upcomingSelection, selectionsHistory] = await Promise.all([
       this.sermonRepository.getArchivedSermons(archivedPage, archivedLimit),

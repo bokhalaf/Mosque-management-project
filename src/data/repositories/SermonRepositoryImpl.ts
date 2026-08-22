@@ -64,14 +64,46 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
   // Helper to map API sermon format safely
   private formatSermon(item: any): Sermon {
+    if (!item) return {} as any;
     const rawStatus = item.status || (item.is_pending ? 'pending' : (item.is_approved ? 'approved' : 'archived'));
     return {
-      ...item,
-      speaker_name: item.speaker_name || item.preacher || 'الشيخ الخطيب',
-      sermon_date: item.sermon_date || item.date || item.created_at?.split('T')[0],
-      content: item.content || item.description || item.notes || '',
+      id: item.id ?? item.sermon_id,
+      title: item.title || item.name || item.topic || item.subject || 'خطبة الجمعة',
+      speaker_name: item.speaker_name || item.preacher || item.imam_name || item.author || (item.user?.name) || 'الشيخ الخطيب',
+      sermon_date: item.sermon_date || item.date || item.delivery_date || item.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      content: item.content || item.description || item.text || item.body || item.notes || '',
+      category: item.category || item.type || 'faith',
       status: rawStatus,
+      attachments: item.attachments || item.files || [],
+      ...item,
     };
+  }
+
+  private extractItemsAndPagination(json: any, page: number = 1, limit: number = 6): PaginatedSermons {
+    let items: any[] = [];
+    let serverPagination: any = json?.pagination || json?.meta;
+
+    if (Array.isArray(json)) {
+      items = json;
+    } else if (Array.isArray(json?.data)) {
+      items = json.data;
+    } else if (json?.data && typeof json.data === 'object') {
+      if (Array.isArray(json.data.data)) {
+        items = json.data.data;
+        serverPagination = serverPagination || json.data;
+      } else if (Array.isArray(json.data.items)) {
+        items = json.data.items;
+      } else if (Array.isArray(json.data.sermons)) {
+        items = json.data.sermons;
+      } else if (json.data.id) {
+        items = [json.data];
+      }
+    } else if (Array.isArray(json?.items)) {
+      items = json.items;
+    }
+
+    const formatted = items.map(item => this.formatSermon(item));
+    return this.buildPaginatedResult(formatted, page, limit, serverPagination);
   }
 
   private buildPaginatedResult(items: Sermon[], page: number = 1, limit: number = 6, serverPagination?: any): PaginatedSermons {
@@ -93,7 +125,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
       };
     }
 
-    // Local slicing fallback (when offline or mock data)
+    // Local slicing fallback
     const totalItems = items.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));
     const currentPage = Math.min(totalPages, Math.max(1, page));
@@ -123,11 +155,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
       console.log("getSermons API Response:", json);
 
       if (response.ok && json && json.status !== false) {
-        const items: any[] = Array.isArray(json) 
-          ? json 
-          : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        const formatted = items.map(item => this.formatSermon(item));
-        return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
+        return this.extractItemsAndPagination(json, page, limit);
       }
     } catch (e) {
       console.warn("Failed fetching sermons from API:", e);
@@ -135,51 +163,71 @@ export class SermonRepositoryImpl implements ISermonRepository {
     return this.buildPaginatedResult(MOCK_ARCHIVED_SERMONS, page, limit);
   }
 
-  // ── 2. getArchivedSermons (GET /api/sermons/archived) ───────────────
+  // ── 2. getArchivedSermons (GET /api/sermons/archived or /api/sermons) ───────────────
   async getArchivedSermons(page: number = 1, limit: number = 6): Promise<PaginatedSermons> {
-    try {
-      const response = await fetch(`${BASE_URL}/sermons/archived?page=${page}&per_page=${limit}&limit=${limit}`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
+    const urls = [
+      `${BASE_URL}/sermons/archived?page=${page}&per_page=${limit}&limit=${limit}`,
+      `${BASE_URL}/sermons?status=approved&page=${page}&per_page=${limit}&limit=${limit}`,
+      `${BASE_URL}/sermons?page=${page}&per_page=${limit}&limit=${limit}`,
+    ];
 
-      const json = await response.json().catch(() => null);
-      console.log("getArchivedSermons API Response:", json);
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
 
-      if (response.ok && json && json.status !== false) {
-        const items: any[] = Array.isArray(json)
-          ? json
-          : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'archived' }));
-        return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
+        const json = await response.json().catch(() => null);
+        console.log(`getArchivedSermons (${url}) API Response:`, json);
+
+        if (response.ok && json && json.status !== false) {
+          const result = this.extractItemsAndPagination(json, page, limit);
+          if (result.data && result.data.length > 0) {
+            return result;
+          }
+          if (json.status === true || Array.isArray(json.data) || json.data?.data) {
+            return result;
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed fetching from ${url}:`, e);
       }
-    } catch (e) {
-      console.warn("Failed fetching archived sermons:", e);
     }
 
     return this.buildPaginatedResult(MOCK_ARCHIVED_SERMONS, page, limit);
   }
 
-  // ── 3. getPendingSermons (GET /api/sermons/pending) ─────────────────
+  // ── 3. getPendingSermons (GET /api/sermons/pending or /api/sermons?status=pending) ─────────────────
   async getPendingSermons(page: number = 1, limit: number = 6): Promise<PaginatedSermons> {
-    try {
-      const response = await fetch(`${BASE_URL}/sermons/pending?page=${page}&per_page=${limit}&limit=${limit}`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
+    const urls = [
+      `${BASE_URL}/sermons/pending?page=${page}&per_page=${limit}&limit=${limit}`,
+      `${BASE_URL}/sermons?status=pending&page=${page}&per_page=${limit}&limit=${limit}`,
+      `${BASE_URL}/admin/sermons/pending?page=${page}&per_page=${limit}&limit=${limit}`,
+    ];
 
-      const json = await response.json().catch(() => null);
-      console.log("getPendingSermons API Response:", json);
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
 
-      if (response.ok && json && json.status !== false) {
-        const items: any[] = Array.isArray(json)
-          ? json
-          : (Array.isArray(json.data) ? json.data : (json.data?.data || []));
-        const formatted = items.map(item => ({ ...this.formatSermon(item), status: 'pending' }));
-        return this.buildPaginatedResult(formatted, page, limit, json.pagination || json.meta);
+        const json = await response.json().catch(() => null);
+        console.log(`getPendingSermons (${url}) API Response:`, json);
+
+        if (response.ok && json && json.status !== false) {
+          const result = this.extractItemsAndPagination(json, page, limit);
+          if (result.data && result.data.length > 0) {
+            return result;
+          }
+          if (json.status === true || Array.isArray(json.data) || json.data?.data) {
+            return result;
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed fetching pending sermons from ${url}:`, e);
       }
-    } catch (e) {
-      console.warn("Failed fetching pending sermons:", e);
     }
 
     return this.buildPaginatedResult(MOCK_PENDING_SERMONS, page, limit);
@@ -422,78 +470,47 @@ export class SermonRepositoryImpl implements ISermonRepository {
     return null;
   }
 
-  // ── 6.3 approveSermon (POST /api/sermons/{id}/approve) ──────────────
-  async approveSermon(id: string | number): Promise<void> {
-    const urlsToTry = [
-      { url: `${BASE_URL}/sermons/${id}/approve`, method: "POST" },
-      { url: `${BASE_URL}/sermons/${id}/approve`, method: "PUT" },
-      { url: `${BASE_URL}/sermons/${id}/approve`, method: "PATCH" },
-      { url: `${BASE_URL}/admin/sermons/${id}/approve`, method: "POST" },
-      { url: `${BASE_URL}/sermons/approve/${id}`, method: "POST" },
-    ];
-
-    let lastError: string | null = null;
-    for (const item of urlsToTry) {
-      try {
-        const response = await fetch(item.url, {
-          method: item.method,
-          headers: this.getAuthHeaders(),
-        });
-        const json = await response.json().catch(() => null);
-        console.log(`${item.method} ${item.url} Response:`, json);
-
-        if (response.ok && json?.status !== false) {
-          return;
-        }
-        if (json?.message) {
-          lastError = json.message;
-        }
-      } catch (e: any) {
-        console.warn(`Error calling approve endpoint ${item.url}:`, e);
-        lastError = e.message;
-      }
-    }
-  }
-
-  // ── 6.4 rejectSermon (POST /api/sermons/{id}/reject) ────────────────
-  async rejectSermon(id: string | number, reason?: string): Promise<void> {
-    const notesValue = reason || 'يرجى مراجعة وتعديل الخطبة';
-    const bodyData = JSON.stringify({
-      notes: notesValue,
-      reason: notesValue,
-      rejection_reason: notesValue,
+  // ── 6.3 approveSermon (PUT /api/sermons/{id}/approve) ──────────────
+  async approveSermon(id: string | number): Promise<any> {
+    const url = `${BASE_URL}/sermons/${id}/approve`;
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: this.getAuthHeaders(),
     });
 
-    const urlsToTry = [
-      { url: `${BASE_URL}/sermons/${id}/reject`, method: "POST" },
-      { url: `${BASE_URL}/sermons/${id}/reject`, method: "PUT" },
-      { url: `${BASE_URL}/sermons/${id}/reject`, method: "PATCH" },
-      { url: `${BASE_URL}/admin/sermons/${id}/reject`, method: "POST" },
-      { url: `${BASE_URL}/sermons/reject/${id}`, method: "POST" },
-    ];
+    const json = await response.json().catch(() => null);
+    console.log(`PUT ${url} Response:`, json);
 
-    let lastError: string | null = null;
-    for (const item of urlsToTry) {
-      try {
-        const response = await fetch(item.url, {
-          method: item.method,
-          headers: this.getAuthHeaders(),
-          body: bodyData,
-        });
-        const json = await response.json().catch(() => null);
-        console.log(`${item.method} ${item.url} Response:`, json);
-
-        if (response.ok && json?.status !== false) {
-          return;
-        }
-        if (json?.message) {
-          lastError = json.message;
-        }
-      } catch (e: any) {
-        console.warn(`Error calling reject endpoint ${item.url}:`, e);
-        lastError = e.message;
-      }
+    if (!response.ok || json?.status === false) {
+      const errorMsg = json?.message || json?.error || `فشل قبول الخطبة من السيرفر (HTTP ${response.status})`;
+      throw new Error(errorMsg);
     }
+
+    return json;
+  }
+
+  // ── 6.4 rejectSermon (PUT /api/sermons/{id}/reject) ────────────────
+  async rejectSermon(id: string | number, reason?: string): Promise<any> {
+    const notesValue = reason || 'يرجى مراجعة وتعديل الخطبة';
+    const url = `${BASE_URL}/sermons/${id}/reject`;
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({
+        reason: notesValue,
+        notes: notesValue,
+      }),
+    });
+
+    const json = await response.json().catch(() => null);
+    console.log(`PUT ${url} Response:`, json);
+
+    if (!response.ok || json?.status === false) {
+      const errorMsg = json?.message || json?.error || `فشل رفض الخطبة من السيرفر (HTTP ${response.status})`;
+      throw new Error(errorMsg);
+    }
+
+    return json;
   }
 
 

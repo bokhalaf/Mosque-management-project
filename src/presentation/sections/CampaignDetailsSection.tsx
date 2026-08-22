@@ -175,18 +175,18 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
 
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+              className="p-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl transition-all shadow-sm flex items-center justify-center"
+              title="تعديل الحملة"
             >
               <Edit3 className="w-4 h-4" />
-              <span>تعديل الحملة</span>
             </button>
 
             <button
               onClick={() => setIsDeleting(true)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold transition-all"
+              className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl transition-all shadow-sm flex items-center justify-center"
+              title="حذف الحملة"
             >
               <Trash2 className="w-4 h-4" />
-              <span>حذف</span>
             </button>
           </div>
         }

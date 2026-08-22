@@ -1,10 +1,5 @@
-// ==============================
-// Maintenance Section — Wrapper (Clean)
-// يستخدم useMaintenance hook ويرتّب الـ components الفرعية
-// ==============================
-
-import React from 'react';
-import { Plus, Terminal, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Terminal, RefreshCw, FileDown } from 'lucide-react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useMaintenance } from '../../hooks/useMaintenance';
 import { MaintenanceStatCards } from './components/MaintenanceStatCards';
@@ -13,6 +8,7 @@ import { MaintenanceTable } from './components/MaintenanceTable';
 import { MaintenanceTimeline } from './components/MaintenanceTimeline';
 import { MaintenanceDebugBox } from './components/MaintenanceDebugBox';
 import { EditMaintenanceModal } from './components/EditMaintenanceModal';
+import { DownloadReportModal } from '../../../app/components/ui/DownloadReportModal';
 import { MaintenanceRequestItem } from '../../../domain/entities/Maintenance';
 
 interface MaintenanceTasksSectionProps {
@@ -53,6 +49,8 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
   } = useMaintenance();
 
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -86,7 +84,16 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
           { label: 'مهام الصيانة', active: true },
         ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground hover:bg-muted font-bold text-xs rounded-xl shadow-sm transition-all"
+              title="تنزيل تقرير الصيانة PDF"
+            >
+              <FileDown className="w-4 h-4 text-primary" />
+              <span>تقرير الصيانة PDF</span>
+            </button>
+
             <button
               onClick={() => setShowDebugBox(!showDebugBox)}
               className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all"
@@ -98,7 +105,7 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
 
             <button
               onClick={refresh}
-              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm"
               title="تحديث البيانات"
             >
               <RefreshCw className={`w-4 h-4 ${(loadingStats || loadingRequests) ? 'animate-spin' : ''}`} />
@@ -215,6 +222,14 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
           </div>
         </div>
       )}
+
+      {/* Download Report Modal with Date Range and Mosque filters */}
+      <DownloadReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        title="تصدير تقرير الصيانة PDF"
+        reportType="maintenance"
+      />
     </div>
   );
 }

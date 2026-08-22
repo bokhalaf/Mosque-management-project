@@ -9,6 +9,7 @@ import { VolunteerApplication } from '../../../../domain/entities/Volunteer';
 
 interface VolunteerApplicationCardProps {
   application: VolunteerApplication;
+  isSuperAdmin?: boolean;
   onApprove: (id: number | string) => void;
   onReject: (id: number | string) => void;
   onOpenAssignTask: (app: VolunteerApplication) => void;
@@ -18,6 +19,7 @@ interface VolunteerApplicationCardProps {
 
 export function VolunteerApplicationCard({
   application,
+  isSuperAdmin = false,
   onApprove,
   onReject,
   onOpenAssignTask,
@@ -103,35 +105,41 @@ export function VolunteerApplicationCard({
             </button>
           </div>
         ) : application.status === 'approved' ? (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => onOpenAssignTask(application)}
-                className="flex-1 flex items-center justify-center gap-1 px-2.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>إسناد مهمة</span>
-              </button>
-
-              <button
-                onClick={() => onOpenLogHours(application)}
-                className="flex-1 flex items-center justify-center gap-1 px-2.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>تسجيل ساعات</span>
-              </button>
+          isSuperAdmin ? (
+            <div className="w-full text-center text-xs font-bold text-emerald-600 py-2 bg-emerald-500/5 rounded-xl border border-emerald-500/15">
+              متطوع معتمد بالمسجد
             </div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => onOpenAssignTask(application)}
+                  className="flex-1 flex items-center justify-center gap-1 px-2.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>إسناد مهمة</span>
+                </button>
 
-            {onIssueCertificate && (
-              <button
-                onClick={() => onIssueCertificate(application)}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-[11px] font-bold transition-all"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span>إصدار شهادة تطوع</span>
-              </button>
-            )}
-          </div>
+                <button
+                  onClick={() => onOpenLogHours(application)}
+                  className="flex-1 flex items-center justify-center gap-1 px-2.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>تسجيل ساعات</span>
+                </button>
+              </div>
+
+              {onIssueCertificate && (
+                <button
+                  onClick={() => onIssueCertificate(application)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-[11px] font-bold transition-all"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>إصدار شهادة تطوع</span>
+                </button>
+              )}
+            </div>
+          )
         ) : (
           <div className="w-full text-center text-xs text-muted-foreground py-1">
             الطلب مرفوض

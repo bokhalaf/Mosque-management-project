@@ -4,7 +4,7 @@
 // ==============================
 
 import React, { useState } from 'react';
-import { Plus, Terminal, Clock, History, RefreshCw, BookOpen, AlertCircle, ChevronRight, ChevronLeft, Star, Check, X, ShieldCheck, Archive, User, Eye } from 'lucide-react';
+import { Plus, Terminal, Clock, History, RefreshCw, BookOpen, AlertCircle, ChevronRight, ChevronLeft, Star, Check, X, ShieldCheck, Archive, User, Eye, Send } from 'lucide-react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useSermons } from '../../hooks/useSermons';
 import { FridaySermonBanner } from './components/FridaySermonBanner';
@@ -196,9 +196,9 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs font-black rounded-full flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 animate-pulse" />
-                    الخطبة الأكثر اختياراً في النظام
+                  <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 text-xs font-black rounded-full flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 fill-primary text-primary" />
+                    الأكثر اختياراً
                   </span>
                   <span className="text-xs text-muted-foreground font-bold">
                     توصية عامة
@@ -352,45 +352,89 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
                 <p className="text-xs text-muted-foreground font-medium">جميع الطلبات تمت معالجتها واعتلاؤها بنجاح.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {pendingSermons.map((sermon) => (
-                  <div
-                    key={sermon.id}
-                    onClick={() => onViewDetails && onViewDetails(sermon.id)}
-                    className="bg-card border border-border hover:border-primary/50 hover:bg-muted/20 rounded-2xl p-6 shadow-sm space-y-4 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                        طلب قيد المراجعة
-                      </span>
-                      <span className="text-[10px] font-bold text-muted-foreground">{sermon.sermon_date}</span>
-                    </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {pendingSermons.map((sermon) => (
+                    <div
+                      key={sermon.id}
+                      onClick={() => onViewDetails && onViewDetails(sermon.id)}
+                      className="bg-card border border-border hover:border-primary/50 hover:bg-muted/20 rounded-2xl p-6 shadow-sm space-y-4 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                          طلب قيد المراجعة
+                        </span>
+                        <span className="text-[10px] font-bold text-muted-foreground">{sermon.sermon_date}</span>
+                      </div>
 
-                    <div>
-                      <h4 className="text-sm font-black text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-                        {sermon.title}
-                      </h4>
-                      <p className="text-xs font-bold text-primary">الخطيب: {sermon.speaker_name || sermon.preacher || 'غير محدد'}</p>
-                    </div>
+                      <div>
+                        <h4 className="text-sm font-black text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                          {sermon.title}
+                        </h4>
+                        <p className="text-xs font-bold text-primary">الخطيب: {sermon.speaker_name || sermon.preacher || 'غير محدد'}</p>
+                      </div>
 
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 bg-muted/50 p-3 rounded-xl border border-border">
-                      {sermon.content || 'لا يوجد نص توضيحي مدخل.'}
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 bg-muted/50 p-3 rounded-xl border border-border">
+                        {sermon.content || 'لا يوجد نص توضيحي مدخل.'}
+                      </p>
+
+                      {/* Open Details For Review & Decision */}
+                      <div className="pt-3 border-t border-border flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => onViewDetails && onViewDetails(sermon.id)}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-md shadow-primary/20"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>مراجعة نص الخطبة واتخاذ القرار (قبول / رفض)</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pending Sermons Pagination Bar (6 per page) */}
+                {pendingPagination.totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border border-border bg-card rounded-2xl shadow-sm">
+                    <p className="text-xs font-bold text-muted-foreground">
+                      عرض {(pendingPagination.currentPage - 1) * 6 + 1} - {Math.min(pendingPagination.currentPage * 6, pendingPagination.totalItems)} من أصل {pendingPagination.totalItems} خطبة قيد الاعتماد
                     </p>
 
-                    {/* Open Details For Review & Decision */}
-                    <div className="pt-3 border-t border-border flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onViewDetails && onViewDetails(sermon.id)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-md shadow-primary/20"
+                        onClick={() => setPendingPage(pendingPagination.currentPage - 1)}
+                        disabled={pendingPagination.currentPage <= 1}
+                        className="px-3.5 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        <Eye className="w-4 h-4" />
-                        <span>مراجعة نص الخطبة واتخاذ القرار (قبول / رفض)</span>
+                        السابق
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: pendingPagination.totalPages }, (_, i) => i + 1).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => setPendingPage(p)}
+                            className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                              pendingPagination.currentPage === p
+                                ? 'bg-primary text-primary-foreground font-black shadow-md shadow-primary/20'
+                                : 'bg-card border border-border text-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setPendingPage(pendingPagination.currentPage + 1)}
+                        disabled={pendingPagination.currentPage >= pendingPagination.totalPages}
+                        className="px-3.5 py-2 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        التالي
                       </button>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
-
             )}
           </div>
         )}
@@ -461,7 +505,7 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
                       upcomingSelection={upcomingSelection}
                       isSelecting={selectingSermonId === sermon.id}
                       onViewDetails={onViewDetails}
-                      onSelectForFriday={handleSelectForFriday}
+                      onSelectForFriday={!isSuperAdmin ? handleSelectForFriday : undefined}
                     />
                   ))}
                 </div>

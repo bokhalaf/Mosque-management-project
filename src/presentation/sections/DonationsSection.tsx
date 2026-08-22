@@ -1,10 +1,5 @@
-// ==============================
-// Donations — DonationsSection Component (Clean & Modular)
-// استخدام useDonations وترتيب المكونات الفرعية بمطابقة 100% مع الصيانة
-// ==============================
-
-import React from 'react';
-import { Plus, Download, RefreshCw, Terminal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Download, RefreshCw, Terminal, FileDown } from 'lucide-react';
 import { PageHeader } from '../../app/components/PageHeader';
 import { useDonations } from '../hooks/useDonations';
 import { DonationStatCards } from './donations/components/DonationStatCards';
@@ -12,6 +7,7 @@ import { DonationFilterBar } from './donations/components/DonationFilterBar';
 import { DonationTable } from './donations/components/DonationTable';
 import { DonationDebugBox } from './donations/components/DonationDebugBox';
 import { DonationDailySummaryPanel } from './donations/components/DonationDailySummaryPanel';
+import { DownloadReportModal } from '../../app/components/ui/DownloadReportModal';
 
 interface DonationsSectionProps {
   onAddDonation?: () => void;
@@ -44,6 +40,8 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
     clearDebugLogs,
   } = useDonations();
 
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
   const isSuperAdmin = React.useMemo(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -64,6 +62,8 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
     }
   }, []);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       {/* Page Header */}
@@ -76,6 +76,15 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground hover:bg-muted font-bold text-xs rounded-xl shadow-sm transition-all"
+              title="تنزيل تقرير التبرعات PDF"
+            >
+              <FileDown className="w-4 h-4 text-primary" />
+              <span>تقرير التبرعات PDF</span>
+            </button>
+
             <button
               onClick={() => setShowDebugTerminal(!showDebugTerminal)}
               className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-sm"
@@ -102,11 +111,6 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
                 <Plus className="w-4 h-4" /> <span>إضافة تبرع</span>
               </button>
             )}
-
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm">
-              <Download className="w-4 h-4 text-muted-foreground" />
-              <span>تصدير التقرير</span>
-            </button>
           </div>
         }
       />
@@ -168,6 +172,14 @@ export function DonationsSection({ onAddDonation, onViewDonationDetails }: Donat
 
         </div>
       </div>
+
+      {/* Download Report Modal with Date Range and Mosque filters */}
+      <DownloadReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        title="تصدير تقرير التبرعات PDF"
+        reportType="donations"
+      />
     </div>
   );
 }

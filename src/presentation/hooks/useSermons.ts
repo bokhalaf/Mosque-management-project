@@ -35,7 +35,7 @@ const DEFAULT_PENDING_PAGINATION: SermonPagination = {
   currentPage: 1,
   totalPages: 1,
   totalItems: 0,
-  itemsPerPage: 3,
+  itemsPerPage: 6,
 };
 
 export function useSermons() {
@@ -75,7 +75,7 @@ export function useSermons() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getSermonsUseCase.execute(1, 1, 6, 3);
+      const data = await getSermonsUseCase.execute(1, 1, 6, 6);
 
       addDebugLog(
         'GET /api/sermon-selections/my',
@@ -96,8 +96,8 @@ export function useSermons() {
         data.archivedRes
       );
       addDebugLog(
-        'GET /api/sermons/pending?page=1&per_page=3',
-        `${BASE_URL}/sermons/pending?page=1&per_page=3`,
+        'GET /api/sermons/pending?page=1&per_page=6',
+        `${BASE_URL}/sermons/pending?page=1&per_page=6`,
         200,
         data.pendingRes
       );
@@ -138,43 +138,55 @@ export function useSermons() {
 
   const [processingSermonId, setProcessingSermonId] = useState<string | number | null>(null);
 
-  // Handle Approve Pending Sermon (POST /api/sermons/{id}/approve)
+  // Handle Approve Pending Sermon (PUT /api/sermons/{id}/approve)
   const handleApprovePendingSermon = useCallback(async (id: string | number) => {
     setProcessingSermonId(id);
     try {
-      await sermonRepo.approveSermon(id);
+      const serverRes = await sermonRepo.approveSermon(id);
       addDebugLog(
-        `POST /api/sermons/${id}/approve`,
+        `PUT /api/sermons/${id}/approve`,
         `${BASE_URL}/sermons/${id}/approve`,
         200,
-        { status: 'approved', id }
+        serverRes
       );
-      showToast('تم إرسال طلب القبول للسيرفر بنجاح!', 'success');
+      showToast('تم اعتماد وقبول الخطبة من السيرفر بنجاح!', 'success');
       await loadData();
     } catch (e: any) {
       console.error('Error approving sermon:', e);
-      showToast(e.message || 'فشل قبول الخطبة', 'error');
+      addDebugLog(
+        `PUT /api/sermons/${id}/approve`,
+        `${BASE_URL}/sermons/${id}/approve`,
+        'ERROR',
+        { error: e.message }
+      );
+      showToast(e.message || 'فشل قبول الخطبة من السيرفر', 'error');
     } finally {
       setProcessingSermonId(null);
     }
   }, [loadData, addDebugLog, showToast]);
 
-  // Handle Reject Pending Sermon (POST /api/sermons/{id}/reject)
+  // Handle Reject Pending Sermon (PUT /api/sermons/{id}/reject)
   const handleRejectPendingSermon = useCallback(async (id: string | number, reason?: string) => {
     setProcessingSermonId(id);
     try {
-      await sermonRepo.rejectSermon(id, reason);
+      const serverRes = await sermonRepo.rejectSermon(id, reason);
       addDebugLog(
-        `POST /api/sermons/${id}/reject`,
+        `PUT /api/sermons/${id}/reject`,
         `${BASE_URL}/sermons/${id}/reject`,
         200,
-        { status: 'rejected', id, reason: reason || 'غير محدد' }
+        serverRes
       );
-      showToast('تم رفض الخطبة وإرسال السبب بنجاح', 'success');
+      showToast('تم تسجيل رفض الخطبة في السيرفر بنجاح', 'success');
       await loadData();
     } catch (e: any) {
       console.error('Error rejecting sermon:', e);
-      showToast(e.message || 'فشل رفض الخطبة', 'error');
+      addDebugLog(
+        `PUT /api/sermons/${id}/reject`,
+        `${BASE_URL}/sermons/${id}/reject`,
+        'ERROR',
+        { error: e.message }
+      );
+      showToast(e.message || 'فشل رفض الخطبة من السيرفر', 'error');
     } finally {
       setProcessingSermonId(null);
     }
@@ -221,14 +233,14 @@ export function useSermons() {
     }
   }, [searchQuery, selectedCategory, addDebugLog]);
 
-  // Handle pending page change directly (3 per page)
+  // Handle pending page change directly (6 per page)
   const handlePendingPageChange = useCallback(async (p: number) => {
     setPendingPage(p);
     try {
-      const res = await sermonRepo.getPendingSermons(p, 3);
+      const res = await sermonRepo.getPendingSermons(p, 6);
       addDebugLog(
-        `GET /api/sermons/pending?page=${p}&per_page=3`,
-        `${BASE_URL}/sermons/pending?page=${p}&per_page=3`,
+        `GET /api/sermons/pending?page=${p}&per_page=6`,
+        `${BASE_URL}/sermons/pending?page=${p}&per_page=6`,
         200,
         res
       );
@@ -254,10 +266,10 @@ export function useSermons() {
 
       // Refresh pending page list
       try {
-        const res = await sermonRepo.getPendingSermons(pendingPage, 3);
+        const res = await sermonRepo.getPendingSermons(pendingPage, 6);
         if (res.data.length === 0 && pendingPage > 1) {
           const prevPage = pendingPage - 1;
-          const prevRes = await sermonRepo.getPendingSermons(prevPage, 3);
+          const prevRes = await sermonRepo.getPendingSermons(prevPage, 6);
           setPendingPage(prevPage);
           setPendingSermons(prevRes.data);
           setPendingPagination(prevRes.pagination);
@@ -368,9 +380,15 @@ export function useSermons() {
   }, [addDebugLog, loadData, showToast]);
 
   const filteredSermons = archivedSermons.filter(s => {
-    if (selectedCategory !== 'all' && s.category !== selectedCategory) return false;
-    const speaker = s.speaker_name || s.preacher || '';
-    if (searchQuery && !s.title.includes(searchQuery) && !speaker.includes(searchQuery)) return false;
+    if (!s) return false;
+    if (selectedCategory !== 'all' && s.category && s.category !== selectedCategory) return false;
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const speaker = (s.speaker_name || s.preacher || '').toLowerCase();
+      const title = (s.title || '').toLowerCase();
+      const content = (s.content || '').toLowerCase();
+      if (!title.includes(q) && !speaker.includes(q) && !content.includes(q)) return false;
+    }
     return true;
   });
 

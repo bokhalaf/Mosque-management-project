@@ -262,6 +262,7 @@ export function OpportunityDetailsSection({
         ) : (
           <OpportunityVolunteersTab
             applications={applications}
+            isSuperAdmin={isSuperAdmin}
             onApprove={handleApproveApplication}
             onReject={handleRejectApplication}
             onOpenAssignTask={(app) => setSelectedAppForTask(app)}

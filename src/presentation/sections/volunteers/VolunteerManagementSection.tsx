@@ -465,6 +465,7 @@ export function VolunteerManagementSection() {
               <VolunteerApplicationCard
                 key={app.id}
                 application={app}
+                isSuperAdmin={isSuperAdmin}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onOpenAssignTask={(a) => setSelectedApplicationForTask(a)}
@@ -486,6 +487,7 @@ export function VolunteerManagementSection() {
               <VolunteerApplicationCard
                 key={app.id}
                 application={app}
+                isSuperAdmin={isSuperAdmin}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onOpenAssignTask={(a) => setSelectedApplicationForTask(a)}

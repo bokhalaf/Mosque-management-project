@@ -199,20 +199,6 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
         description="عرض تفاصيل الشكوى، السجل الزمني للتحديثات، وتعديل حالتها."
         onBack={onBack}
         breadcrumbs={[{ label: 'الشكاوى والاقتراحات' }, { label: 'تفاصيل الشكوى', active: true }]}
-        actions={
-          isMosqueManager && !isAssignedToAdmin ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowAssignModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
-                title="رفع الشكوى للسوبر أدمن"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>رفع الطلب للسوبر أدمن</span>
-              </button>
-            </div>
-          ) : undefined
-        }
       />
 
       <div className="px-4 md:px-8 py-4 grid grid-cols-1 xl:grid-cols-12 gap-8">
@@ -495,10 +481,10 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
                       <button
                         onClick={() => setShowAssignModal(true)}
                         disabled={updatingStatus}
-                        className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-2 p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
                       >
-                        <UserPlus className="w-4 h-4" />
-                        <span>رفع الشكوى للسوبر أدمن (إسناد)</span>
+                        <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                        <span>رفع الشكوى لمدير المنطقة</span>
                       </button>
                     </div>
                   )}
@@ -570,40 +556,40 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
           <div className="bg-card border border-border w-full max-w-lg rounded-2xl shadow-2xl p-6 text-right space-y-4 font-['Cairo']">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h3 className="text-base font-black text-foreground flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-purple-600" />
-                رفع وإسناد الشكوى إلى السوبر أدمن
+                <ArrowUpRight className="w-5 h-5 text-emerald-600" />
+                رفع الشكوى لمدير المنطقة
               </h3>
               <X className="w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => setShowAssignModal(false)} />
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300">
-                يقوم مدير المسجد (`mosque_manager`) عبر هذا الخيار برفع التذكرة مباشرة لإدارة المنطقة والمركز الرئيسي للمعالجة.
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                يقوم مدير المسجد عبر هذا الخيار برفع الشكوى مباشرة لمدير المنطقة للمعالجة والمتابعة.
               </div>
 
               <div>
                 <label className="text-xs font-bold text-foreground block mb-1.5">
-                  معرّف مدير النظام (Super Admin ID) <span className="text-red-500">*</span>
+                  معرّف مدير المنطقة (Super Admin ID) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   value={assignAdminId}
                   onChange={(e) => setAssignAdminId(Number(e.target.value))}
-                  placeholder="أدخل ID السوبر أدمن (مثال: 3)"
-                  className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-xs text-foreground"
+                  placeholder="أدخل ID مدير المنطقة (مثال: 3)"
+                  className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs text-foreground"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-foreground block mb-1.5">
-                  سبب الرفع أو ملاحظة موجهة للسوبر أدمن (اختياري)
+                  سبب الرفع أو ملاحظة موجهة لمدير المنطقة (اختياري)
                 </label>
                 <textarea
                   rows={3}
                   value={assignNote}
                   onChange={(e) => setAssignNote(e.target.value)}
                   placeholder="أدخل سبب تحويل الشكوى أو طلب المتابعة الخاصة..."
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground"
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -619,7 +605,7 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
               <button
                 onClick={confirmAssignToAdmin}
                 disabled={updatingStatus || !assignAdminId}
-                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50"
               >
                 {updatingStatus && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                 <span>إرسال ورفع الشكوى</span>

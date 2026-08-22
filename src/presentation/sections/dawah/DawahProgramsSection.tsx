@@ -48,6 +48,24 @@ export function DawahProgramsSection({ onNavigateToAdd }: DawahProgramsSectionPr
     setShowDebugTerminal,
   } = useDawahPrograms();
 
+  const isSuperAdmin = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const rawUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const userRole = localStorage.getItem('user_role') || rawUser.role || '';
+      const roles = rawUser.roles || [];
+      return (
+        userRole === 'super_admin' ||
+        userRole === 'admin' ||
+        roles.includes('super_admin') ||
+        roles.includes('admin') ||
+        Boolean(rawUser.is_super_admin)
+      );
+    } catch {
+      return false;
+    }
+  }, []);
+
   const { showToast } = useToast();
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [editingProgram, setEditingProgram] = useState<DawahProgram | null>(null);
@@ -98,13 +116,15 @@ export function DawahProgramsSection({ onNavigateToAdd }: DawahProgramsSectionPr
           { label: 'البرامج والأنشطة الدعوية', active: true },
         ]}
         actions={
-          <button
-            onClick={handleCreateNew}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs rounded-xl shadow-sm transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>إضافة برنامج دعوي جديد</span>
-          </button>
+          !isSuperAdmin ? (
+            <button
+              onClick={handleCreateNew}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs rounded-xl shadow-sm transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>إضافة برنامج دعوي جديد</span>
+            </button>
+          ) : undefined
         }
       />
 
@@ -179,13 +199,15 @@ export function DawahProgramsSection({ onNavigateToAdd }: DawahProgramsSectionPr
               لم يتم العثور على أي نشاط أو درس دعوي مطابق لمعايير البحث الحالية في السيرفر.
             </p>
           </div>
-          <button
-            onClick={handleCreateNew}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-sm hover:bg-primary/90 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>إنشاء أول برنامج دعوي</span>
-          </button>
+          {!isSuperAdmin && (
+            <button
+              onClick={handleCreateNew}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-sm hover:bg-primary/90 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>إنشاء أول برنامج دعوي</span>
+            </button>
+          )}
         </div>
       ) : (
         /* Programs Grid & Pagination */

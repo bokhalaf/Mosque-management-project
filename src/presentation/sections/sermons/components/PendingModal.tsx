@@ -48,7 +48,7 @@ export function PendingModal({
 
   const totalItems = pendingPagination.totalItems || pendingSermons.length;
   const currentPage = pendingPagination.currentPage || 1;
-  const itemsPerPage = pendingPagination.itemsPerPage || 3;
+  const itemsPerPage = pendingPagination.itemsPerPage || 6;
   const totalPages = Math.max(1, pendingPagination.totalPages || Math.ceil(totalItems / itemsPerPage));
 
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;

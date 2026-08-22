@@ -1,10 +1,5 @@
-// ==============================
-// Complaints Section — Wrapper (Clean)
-// يستخدم useComplaints hook ويرتّب الـ components الفرعية مع دعم مراقب السيرفر ولودينغ الكاردات
-// ==============================
-
-import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { RefreshCw, FileDown } from 'lucide-react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useComplaints } from '../../hooks/useComplaints';
 import { ComplaintStatCards } from './components/ComplaintStatCards';
@@ -12,6 +7,7 @@ import { ComplaintFilterBar } from './components/ComplaintFilterBar';
 import { ComplaintTable } from './components/ComplaintTable';
 import { ComplaintTimeline } from './components/ComplaintTimeline';
 import { ComplaintDebugBox } from './components/ComplaintDebugBox';
+import { DownloadReportModal } from '../../../app/components/ui/DownloadReportModal';
 
 interface ComplaintsSectionProps {
   onViewComplaintDetails?: (id: string) => void;
@@ -42,6 +38,8 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
     refresh,
   } = useComplaints();
 
+  const [showReportModal, setShowReportModal] = useState(false);
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader
@@ -52,14 +50,25 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
           { label: 'الشكاوى والاقتراحات', active: true },
         ]}
         actions={
-          <button
-            onClick={refresh}
-            className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-xl text-sm font-bold hover:bg-muted transition-all"
-            title="تحديث البيانات"
-          >
-            <RefreshCw className={`w-4 h-4 ${(loadingStats || loadingComplaints) ? 'animate-spin' : ''}`} />
-            <span>تحديث</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground hover:bg-muted font-bold text-xs rounded-xl shadow-sm transition-all"
+              title="تنزيل تقرير الشكاوى PDF"
+            >
+              <FileDown className="w-4 h-4 text-primary" />
+              <span>تقرير الشكاوى PDF</span>
+            </button>
+
+            <button
+              onClick={refresh}
+              className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm"
+              title="تحديث البيانات"
+            >
+              <RefreshCw className={`w-4 h-4 ${(loadingStats || loadingComplaints) ? 'animate-spin' : ''}`} />
+              <span>تحديث</span>
+            </button>
+          </div>
         }
       />
 
@@ -123,6 +132,14 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
 
         </div>
       </div>
+
+      {/* Download Report Modal with Date Range and Mosque filters */}
+      <DownloadReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        title="تصدير تقرير الشكاوى PDF"
+        reportType="complaints"
+      />
     </div>
   );
 }

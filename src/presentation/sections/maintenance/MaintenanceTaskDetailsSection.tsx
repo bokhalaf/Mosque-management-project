@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
-  CheckCircle2, Clock, AlertTriangle, Printer, Archive,
+  CheckCircle2, Clock, AlertTriangle, Archive,
   MapPin, User, Activity, MessageSquare, Send, Paperclip, Wrench,
   Calendar, FileText, RefreshCw, AlertCircle, Zap, Droplets, Hammer, Sparkles, ShieldCheck,
   Pencil, Trash2, X
@@ -189,15 +189,6 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
         breadcrumbs={[{ label: 'مهام الصيانة' }, { label: 'تفاصيل الطلب', active: true }]}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-xs font-bold transition-all shadow-sm"
-              title="طباعة تفاصيل الطلب"
-            >
-              <Printer className="w-4 h-4 text-muted-foreground" />
-              <span className="hidden sm:inline">طباعة</span>
-            </button>
-
             {!isSuperAdmin && onEdit && (
               <button
                 onClick={() => onEdit(task)}
@@ -301,9 +292,11 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
               {/* Admin / Initial Notes if present */}
               {task.notes && task.notes.trim() && (
                 <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs shrink-0 border border-amber-500/20 mt-1">م</div>
-                  <div className="flex-1 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20 space-y-1">
-                    <p className="text-xs font-bold text-amber-600">ملاحظات الطلب الأولية</p>
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-500/20 mt-1">
+                    {requestedByName ? requestedByName[0] : 'م'}
+                  </div>
+                  <div className="flex-1 bg-emerald-500/5 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-500/20 space-y-1">
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">ملاحظات الطلب الأولية</p>
                     <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{task.notes}</p>
                   </div>
                 </div>
@@ -327,7 +320,10 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
                 return logsList.map((log: any, idx: number) => {
                   const logStatusKey = log.new_status || log.status || log.old_status || 'pending';
                   const statusText = getStatusLabel(logStatusKey);
-                  const userName = log.user?.name || log.created_by || 'إدارة الصيانة';
+                  const rawUser = log.user?.name || log.created_by;
+                  const userName = (rawUser && rawUser !== 'إدارة الصيانة')
+                    ? rawUser
+                    : (requestedByName || (task.mosque as any)?.manager_name || (task as any).manager_name || 'مدير المسجد');
                   const logNote = log.note || log.notes || log.comment || log.description;
 
                   return (
@@ -363,18 +359,28 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
               })()}
             </div>
 
-            {/* Quick Add Note Input */}
-            <div className="flex gap-3 items-end pt-4 border-t border-border">
-              <div className="flex-1">
-                <textarea rows={2} value={newNote} onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="أضف استفساراً أو ملاحظة سريعة حول طلب الصيانة..."
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground" />
+            {/* Quick Add Note Input ONLY FOR SUPER ADMIN */}
+            {isSuperAdmin && (
+              <div className="flex gap-3 items-end pt-4 border-t border-border">
+                <div className="flex-1">
+                  <textarea
+                    rows={2}
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="أضف استفساراً أو ملاحظة سريعة حول طلب الصيانة..."
+                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <button
+                  onClick={submitNote}
+                  disabled={updatingStatus || !newNote.trim()}
+                  className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0 h-11 flex items-center justify-center disabled:opacity-50"
+                  title="إرسال الملاحظة"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={submitNote} disabled={updatingStatus}
-                className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0 h-11 flex items-center justify-center disabled:opacity-50">
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
+            )}
           </div>
         </div>
 

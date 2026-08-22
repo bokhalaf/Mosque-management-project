@@ -138,44 +138,58 @@ export function useSermonDetails(sermonId: string | number) {
     if (!sermon) return;
     setActionLoading(true);
     try {
-      await sermonRepo.approveSermon(sermon.id);
+      const serverRes = await sermonRepo.approveSermon(sermon.id);
       addDebugLog(
-        `POST /api/sermons/${sermon.id}/approve`,
+        `PUT /api/sermons/${sermon.id}/approve`,
         `${BASE_URL}/sermons/${sermon.id}/approve`,
         200,
-        { status: 'approved', id: sermon.id }
+        serverRes
       );
       setSermon(prev => prev ? { ...prev, status: 'approved' } : null);
-      showToast('تم قبول واعتماد الخطبة وإضافتها للأرشيف بنجاح!', 'success');
+      showToast('تم قبول واعتماد الخطبة من السيرفر بنجاح!', 'success');
+      await fetchDetails();
     } catch (err: any) {
       console.error('Error approving sermon:', err);
-      showToast(err.message || 'فشل قبول الخطبة', 'error');
+      addDebugLog(
+        `PUT /api/sermons/${sermon.id}/approve`,
+        `${BASE_URL}/sermons/${sermon.id}/approve`,
+        'ERROR',
+        { error: err.message }
+      );
+      showToast(err.message || 'فشل قبول الخطبة من السيرفر', 'error');
     } finally {
       setActionLoading(false);
     }
-  }, [sermon, addDebugLog, showToast]);
+  }, [sermon, addDebugLog, fetchDetails, showToast]);
 
   const handleRejectSermon = useCallback(async (reason?: string) => {
     if (!sermon) return;
     setActionLoading(true);
     const rejectionReason = reason || 'يرجى مراجعة الخطبة وتعديلها';
     try {
-      await sermonRepo.rejectSermon(sermon.id, rejectionReason);
+      const serverRes = await sermonRepo.rejectSermon(sermon.id, rejectionReason);
       addDebugLog(
-        `POST /api/sermons/${sermon.id}/reject`,
+        `PUT /api/sermons/${sermon.id}/reject`,
         `${BASE_URL}/sermons/${sermon.id}/reject`,
         200,
-        { status: 'rejected', id: sermon.id, notes: rejectionReason }
+        serverRes
       );
       setSermon(prev => prev ? { ...prev, status: 'rejected', notes: rejectionReason } : null);
-      showToast('تم رفض الخطبة وتسجيل سبب الرفض بنجاح', 'error');
+      showToast('تم تسجيل رفض الخطبة في السيرفر بنجاح', 'success');
+      await fetchDetails();
     } catch (err: any) {
       console.error('Error rejecting sermon:', err);
-      showToast(err.message || 'فشل رفض الخطبة', 'error');
+      addDebugLog(
+        `PUT /api/sermons/${sermon.id}/reject`,
+        `${BASE_URL}/sermons/${sermon.id}/reject`,
+        'ERROR',
+        { error: err.message }
+      );
+      showToast(err.message || 'فشل رفض الخطبة من السيرفر', 'error');
     } finally {
       setActionLoading(false);
     }
-  }, [sermon, addDebugLog, showToast]);
+  }, [sermon, addDebugLog, fetchDetails, showToast]);
 
 
   const copyContent = useCallback(() => {

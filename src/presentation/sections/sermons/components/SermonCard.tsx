@@ -7,7 +7,7 @@ interface SermonCardProps {
   upcomingSelection: SermonSelection | null;
   isSelecting?: boolean;
   onViewDetails?: (id: string | number) => void;
-  onSelectForFriday: (sermon: Sermon) => void;
+  onSelectForFriday?: (sermon: Sermon) => void;
 }
 
 export function SermonCard({
@@ -69,7 +69,7 @@ export function SermonCard({
           </button>
         )}
 
-        {!isSelectedFriday && (
+        {onSelectForFriday && !isSelectedFriday && (
           <button
             onClick={() => onSelectForFriday(sermon)}
             disabled={isSelecting}

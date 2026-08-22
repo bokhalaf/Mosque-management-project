@@ -263,27 +263,29 @@ export function SermonDetailsSection({
               <Printer className="w-4 h-4" />
             </button>
 
-            {/* DIRECT ACTION BUTTONS (للخطب المعتمدة أو المختارة للجمعة) */}
-            {isPending ? null : isScheduledForFriday ? (
-              <button
-                onClick={onCancelClick}
-                disabled={actionLoading}
-                className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
-                title="إلغاء اعتماد هذه الخطبة للجمعة القادمة"
-              >
-                {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                <span>إلغاء اعتماد الجمعة</span>
-              </button>
-            ) : (
-              <button
-                onClick={onAdoptClick}
-                disabled={actionLoading}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
-                title="اعتماد هذه الخطبة للجمعة القادمة"
-              >
-                {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                <span>اعتماد للجمعة القادمة</span>
-              </button>
+            {/* DIRECT ACTION BUTTONS (فقط لمدير المسجد للخطب المعتمدة أو المختارة للجمعة) */}
+            {!isSuperAdmin && !isPending && (
+              isScheduledForFriday ? (
+                <button
+                  onClick={onCancelClick}
+                  disabled={actionLoading}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                  title="إلغاء اعتماد هذه الخطبة للجمعة القادمة"
+                >
+                  {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                  <span>إلغاء اعتماد الجمعة</span>
+                </button>
+              ) : (
+                <button
+                  onClick={onAdoptClick}
+                  disabled={actionLoading}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
+                  title="اعتماد هذه الخطبة لصلاة الجمعة"
+                >
+                  {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <span>اعتماد لصلاة الجمعة</span>
+                </button>
+              )
             )}
           </div>
         }
@@ -478,6 +480,49 @@ export function SermonDetailsSection({
                     <span>رفض الخطبة مع تحديد السبب</span>
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Friday Adoption Card in Sidebar — ONLY FOR MOSQUE MANAGER */}
+            {!isSuperAdmin && !isPending && (
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    <span>اعتماد الخطبة لصلاة الجمعة</span>
+                  </h3>
+                  {isScheduledForFriday && (
+                    <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
+                      معتمدة للجمعة
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                  {isScheduledForFriday
+                    ? 'هذه الخطبة معتمدة حالياً كخطبة رسمية لصلاة الجمعة القادمة في المسجد.'
+                    : 'يمكنك اعتماد وتعيين هذه الخطبة كخطبة رسمية لصلاة الجمعة القادمة.'}
+                </p>
+
+                {isScheduledForFriday ? (
+                  <button
+                    onClick={onCancelClick}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white border border-red-500/30 rounded-xl font-bold text-xs transition-all shadow-sm disabled:opacity-50"
+                  >
+                    {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                    <span>إلغاء اعتماد الجمعة</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={onAdoptClick}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold text-xs transition-all shadow-md shadow-primary/20 active:scale-95 disabled:opacity-50"
+                  >
+                    {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    <span>اعتماد لصلاة الجمعة</span>
+                  </button>
+                )}
               </div>
             )}
 
