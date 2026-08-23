@@ -112,17 +112,6 @@ export function ComplaintsSection({ onViewComplaintDetails }: ComplaintsSectionP
               onViewDetails={onViewComplaintDetails}
               onResetFilters={resetFilters}
             />
-
-            {/* Server Debug Box Component (مراقب رد السيرفر) */}
-            {(debugData || statsDebugData) && (
-              <ComplaintDebugBox
-                debugData={debugData}
-                statsDebugData={statsDebugData}
-                copiedDebug={copiedDebug}
-                onCopy={copyDebugToClipboard}
-                onClose={closeDebugBox}
-              />
-            )}
           </div>
 
           {/* Side Column */}

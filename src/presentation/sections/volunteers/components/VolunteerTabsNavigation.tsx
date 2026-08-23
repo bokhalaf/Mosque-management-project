@@ -56,21 +56,8 @@ export function VolunteerTabsNavigation({
           )}
         </div>
 
-        {/* Action Controls (Debug & Refresh) */}
+        {/* Action Controls (Refresh) */}
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onToggleDebugTerminal}
-            className={`flex items-center gap-1.5 px-3 py-2.5 border rounded-2xl text-xs font-mono font-bold transition-all shadow-sm ${
-              showDebugTerminal
-                ? 'bg-emerald-600 text-white border-emerald-700'
-                : 'bg-slate-900 text-emerald-400 border-slate-700 hover:bg-slate-800'
-            }`}
-            title="فحص استجابة الـ API المباشرة"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-          </button>
-
           <button
             onClick={onRefresh}
             disabled={loading}

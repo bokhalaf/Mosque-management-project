@@ -296,14 +296,6 @@ export function VolunteerManagementSection() {
           {/* Stats Banner */}
           <VolunteerStatsBanner stats={stats} loading={loading} />
 
-          {/* Debug Terminal */}
-          <VolunteerDebugTerminal
-            show={showDebugTerminal}
-            onClose={() => setShowDebugTerminal(false)}
-            logs={debugLogs}
-            onClear={clearDebugLogs}
-          />
-
           {/* Tabs and Filter Bar */}
           <VolunteerTabsNavigation
             activeTab={activeTab}
@@ -312,8 +304,8 @@ export function VolunteerManagementSection() {
             onSearchChange={setSearchQuery}
             onRefresh={fetchAllVolunteerData}
             loading={loading}
-            showDebugTerminal={showDebugTerminal}
-            onToggleDebugTerminal={() => setShowDebugTerminal(!showDebugTerminal)}
+            showDebugTerminal={false}
+            onToggleDebugTerminal={() => {}}
             counts={{
               opportunities: pagination.total || opportunities.length,
               applications: pendingApplications.length,

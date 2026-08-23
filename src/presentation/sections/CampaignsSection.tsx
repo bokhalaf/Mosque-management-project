@@ -109,15 +109,6 @@ export function CampaignsSection({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-sm"
-              title="مراقب السيرفر"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugTerminal ? 'إخفاء رد السيرفر' : 'طباعة رد السيرفر'}</span>
-            </button>
-
-            <button
               onClick={refresh}
               className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm"
               title="تحديث البيانات"
@@ -144,15 +135,6 @@ export function CampaignsSection({
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-8">
-        {/* Live API Debug Box */}
-        {showDebugTerminal && (
-          <CampaignDebugBox
-            debugLogs={debugLogs}
-            onClear={clearDebugLogs}
-            onClose={() => setShowDebugTerminal(false)}
-          />
-        )}
-
         {/* KPI Cards (Matching Donations 1:1) */}
         <CampaignStatCards
           stats={campaignStats}

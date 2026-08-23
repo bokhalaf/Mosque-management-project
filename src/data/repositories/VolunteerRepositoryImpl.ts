@@ -81,26 +81,66 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
   }
 
   private mapApplication(item: any, opportunityId?: number | string): VolunteerApplication {
+    // Build volunteer name from all possible API response shapes:
+    // { volunteer_name }, { user.name }, { volunteer.name }, { applicant.name },
+    // { member.name }, { profile.name }, { first_name + last_name }
     const vName =
       item.volunteer_name ||
+      item.applicant_name ||
+      item.member_name ||
       item.user?.name ||
       item.user?.full_name ||
+      (item.user?.first_name ? `${item.user.first_name} ${item.user.last_name || ''}`.trim() : null) ||
       item.volunteer?.name ||
       item.volunteer?.full_name ||
+      (item.volunteer?.first_name ? `${item.volunteer.first_name} ${item.volunteer.last_name || ''}`.trim() : null) ||
+      item.applicant?.name ||
+      item.applicant?.full_name ||
+      (item.applicant?.first_name ? `${item.applicant.first_name} ${item.applicant.last_name || ''}`.trim() : null) ||
+      item.member?.name ||
+      item.profile?.name ||
       item.name ||
+      item.full_name ||
+      (item.first_name ? `${item.first_name} ${item.last_name || ''}`.trim() : null) ||
       "متطوع";
+
+    const vPhone =
+      item.phone ||
+      item.user?.phone ||
+      item.user?.phone_number ||
+      item.volunteer?.phone ||
+      item.applicant?.phone ||
+      item.member?.phone ||
+      "—";
+
+    const vEmail =
+      item.email ||
+      item.user?.email ||
+      item.volunteer?.email ||
+      item.applicant?.email ||
+      item.member?.email ||
+      "";
+
+    const vId =
+      item.volunteer_id ||
+      item.user_id ||
+      item.applicant_id ||
+      item.user?.id ||
+      item.volunteer?.id ||
+      item.applicant?.id ||
+      item.id;
 
     return {
       id: item.id,
       opportunity_id: item.opportunity_id || (opportunityId ? Number(opportunityId) : 0),
       opportunity_title: item.opportunity_title || item.opportunity?.title || item.opportunity_name || "",
-      volunteer_id: item.volunteer_id || item.user_id || item.user?.id || item.id,
+      volunteer_id: vId,
       volunteer_name: vName,
-      phone: item.phone || item.user?.phone || item.user?.phone_number || item.volunteer?.phone || "—",
-      email: item.email || item.user?.email || item.volunteer?.email || "",
+      phone: vPhone,
+      email: vEmail,
       status: item.status || "pending",
       applied_at: item.created_at || item.applied_at || new Date().toISOString(),
-      notes: item.notes || "",
+      notes: item.notes || item.message || "",
     };
   }
 
@@ -420,6 +460,10 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
       if (res.ok) {
         const json = await res.json();
         const items = this.extractItems(json);
+        // Debug: log first item to see actual API response structure
+        if (items.length > 0) {
+          console.log('[Applications API] Raw first item:', JSON.stringify(items[0], null, 2));
+        }
         return items.map((item: any) => this.mapApplication(item, opportunityId));
       }
     } catch (e) {

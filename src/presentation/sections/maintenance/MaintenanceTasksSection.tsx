@@ -95,15 +95,6 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
             </button>
 
             <button
-              onClick={() => setShowDebugBox(!showDebugBox)}
-              className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all"
-              title="عرض/إخفاء مربع رد السيرفر"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugBox ? 'إخفاء رد السيرفر' : 'طباعة رد السيرفر'}</span>
-            </button>
-
-            <button
               onClick={refresh}
               className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm"
               title="تحديث البيانات"
@@ -125,17 +116,6 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-8">
-
-        {/* Debug Box */}
-        {showDebugBox && (operationDebug || statsDebug) && (
-          <MaintenanceDebugBox
-            debugData={operationDebug}
-            statsDebugData={statsDebug}
-            copiedDebug={copiedDebug}
-            onCopy={copyDebugJson}
-            onClose={() => setShowDebugBox(false)}
-          />
-        )}
 
         {/* KPI Cards */}
         <MaintenanceStatCards

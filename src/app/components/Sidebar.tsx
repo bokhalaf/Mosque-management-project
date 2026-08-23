@@ -24,7 +24,7 @@ type NavSection = {
 const NAV: NavSection[] = [
   {
     id: "dashboard",
-    label: "لوحة القيادة",
+    label: "لوحة التحكم",
     icon: LayoutDashboard,
     href: "/",
     items: [],
@@ -110,6 +110,13 @@ const NAV: NavSection[] = [
     label: "مهام المسجد",
     icon: CalendarDays,
     href: "/tasks",
+    items: [],
+  },
+  {
+    id: "operations",
+    label: "سجل العمليات",
+    icon: Activity,
+    href: "/operations",
     items: [],
   },
 ];

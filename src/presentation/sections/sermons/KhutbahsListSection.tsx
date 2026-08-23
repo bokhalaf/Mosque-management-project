@@ -93,15 +93,6 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold transition-all shadow-sm"
-              title="معاينة سجل استجابة الـ API المباشرة"
-            >
-              <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-            </button>
-
             {!isSuperAdmin && (
               <>
                 <button

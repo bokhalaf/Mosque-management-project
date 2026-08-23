@@ -193,30 +193,6 @@ export function OpportunityDetailsSection({
       />
 
       <div className="px-4 md:px-8 max-w-7xl w-full mx-auto space-y-6">
-        {/* Debug Terminal Toggle */}
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-            className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-mono font-bold transition-all shadow-sm ${
-              showDebugTerminal
-                ? 'bg-emerald-600 text-white border-emerald-700'
-                : 'bg-slate-900 text-emerald-400 border-slate-700 hover:bg-slate-800'
-            }`}
-            title="فحص استجابة الـ API المباشرة"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-          </button>
-        </div>
-
-        {/* Debug Terminal */}
-        <VolunteerDebugTerminal
-          show={showDebugTerminal}
-          onClose={() => setShowDebugTerminal(false)}
-          logs={debugLogs}
-          onClear={clearDebugLogs}
-        />
-
         {/* Opportunity Header & KPI Stats */}
         <OpportunityHeader
           opportunity={opportunity}
