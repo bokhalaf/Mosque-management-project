@@ -30,6 +30,9 @@ export interface VolunteerApplication {
   status: ApplicationStatus;
   applied_at: string;
   notes?: string;
+  all_tasks_completed?: boolean;
+  tasks_count?: number;
+  completed_tasks_count?: number;
 }
 
 export interface VolunteerTask {

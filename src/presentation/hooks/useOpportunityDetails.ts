@@ -231,10 +231,12 @@ export function useOpportunityDetails(opportunityId: number | string) {
 
   const handleIssueCertificate = useCallback(async (volunteerId: number | string, volunteerName: string) => {
     try {
-      await issueCertUC.execute(volunteerId, opportunityId);
-      showToast(`تم إصدار شهادة التطوع للمتطوع ${volunteerName} بنجاح`, 'success');
+      const cert = await issueCertUC.execute(volunteerId, opportunityId);
+      showToast(`تم إصدار وتوليد شهادة التطوع للمتطوع ${volunteerName} بنجاح`, 'success');
+      return cert;
     } catch (err: any) {
-      showToast(err.message || 'فشل إصدار الشهادة بالسيرفر', 'error');
+      showToast(err.message || 'فشل إصدار الشهادة', 'error');
+      throw err;
     }
   }, [opportunityId, issueCertUC, showToast]);
 

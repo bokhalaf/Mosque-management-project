@@ -141,6 +141,15 @@ export class VolunteerRepositoryImpl implements IVolunteerRepository {
       status: item.status || "pending",
       applied_at: item.created_at || item.applied_at || new Date().toISOString(),
       notes: item.notes || item.message || "",
+      all_tasks_completed: Boolean(
+        item.all_tasks_completed === true ||
+        item.all_tasks_completed === 1 ||
+        item.all_tasks_completed === "true" ||
+        item.tasks_completed === true ||
+        item.is_completed === true
+      ),
+      tasks_count: Number(item.tasks_count || item.tasks?.length || 0),
+      completed_tasks_count: Number(item.completed_tasks_count || 0),
     };
   }
 

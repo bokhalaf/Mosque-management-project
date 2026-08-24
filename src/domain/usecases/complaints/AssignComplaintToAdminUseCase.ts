@@ -10,10 +10,12 @@ import { IComplaintRepository } from "../../repositories/IComplaintRepository";
 export class AssignComplaintToAdminUseCase {
   constructor(private repo: IComplaintRepository) {}
 
-  async execute(id: string | number, adminId: number, note?: string): Promise<ComplaintItem> {
+  async execute(id: string | number, adminId?: number | null | string, note?: string): Promise<ComplaintItem> {
     if (!this.repo.assignComplaintToAdmin) {
       throw new Error("دالة إسناد الشكوى إلى السوبر أدمن غير معرّفة في المستودع");
     }
-    return this.repo.assignComplaintToAdmin(id, adminId, note);
+    const finalAdminId = typeof adminId === 'number' ? adminId : undefined;
+    const finalNote = typeof adminId === 'string' ? adminId : note;
+    return this.repo.assignComplaintToAdmin(id, finalAdminId, finalNote);
   }
 }

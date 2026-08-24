@@ -22,8 +22,9 @@ import {
   LogHoursModal,
   EditOpportunityModal,
   VolunteerDebugTerminal,
+  CertificatePdfModal,
 } from './components';
-import { Terminal } from 'lucide-react';
+import { VolunteerCertificate } from '../../../domain/entities/Volunteer';
 
 interface OpportunityDetailsSectionProps {
   opportunityId: number | string;
@@ -81,6 +82,27 @@ export function OpportunityDetailsSection({
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showCloseModal, setShowCloseModal] = useState<boolean>(false);
   const [isClosing, setIsClosing] = useState<boolean>(false);
+
+  // Certificate PDF Preview Modal States
+  const [issuedCertificate, setIssuedCertificate] = useState<VolunteerCertificate | null>(null);
+  const [isIssuingCert, setIsIssuingCert] = useState<boolean>(false);
+  const [certModalOpen, setCertModalOpen] = useState<boolean>(false);
+  const [certError, setCertError] = useState<string | null>(null);
+
+  const handleIssueCertWrapper = async (volunteerId: number | string, volunteerName: string) => {
+    setCertModalOpen(true);
+    setIsIssuingCert(true);
+    setCertError(null);
+    setIssuedCertificate(null);
+    try {
+      const cert = await handleIssueCertificate(volunteerId, volunteerName);
+      if (cert) setIssuedCertificate(cert);
+    } catch (err: any) {
+      setCertError(err.message || 'فشل إصدار شهادة التطوع');
+    } finally {
+      setIsIssuingCert(false);
+    }
+  };
 
   const handleConfirmClose = async () => {
     setIsClosing(true);
@@ -243,7 +265,7 @@ export function OpportunityDetailsSection({
             onReject={handleRejectApplication}
             onOpenAssignTask={(app) => setSelectedAppForTask(app)}
             onOpenLogHours={(app) => setSelectedAppForHours(app)}
-            onIssueCertificate={handleIssueCertificate}
+            onIssueCertificate={handleIssueCertWrapper}
           />
         )}
       </div>
@@ -288,6 +310,15 @@ export function OpportunityDetailsSection({
           onLogHours={handleLogHours}
         />
       )}
+
+      {/* Certificate PDF Modal */}
+      <CertificatePdfModal
+        isOpen={certModalOpen}
+        onClose={() => setCertModalOpen(false)}
+        certificate={issuedCertificate}
+        loading={isIssuingCert}
+        error={certError}
+      />
     </div>
   );
 }

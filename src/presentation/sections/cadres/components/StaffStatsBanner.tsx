@@ -5,8 +5,8 @@
 // بطاقات إحصائيات الكوادر والحلقات التطوعية (مطابقة لتصميم صفحة الفرص)
 // ==============================
 
-import React from 'react';
-import { Users, GraduationCap, HeartHandshake, Clock } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Users, GraduationCap, HeartHandshake, Clock, Building2, BookOpen } from 'lucide-react';
 import { QuranPeopleStats } from '../../../../domain/entities/QuranPeople';
 
 interface StatCardProps {
@@ -54,6 +54,19 @@ export function StaffStatsBanner({
   stats,
   loading = false,
 }: StaffStatsBannerProps) {
+  const isRegionManager = useMemo(() => {
+    if (stats.role === 'region_manager') return true;
+    if (stats.role === 'mosque_manager') return false;
+    if (typeof window !== 'undefined') {
+      try {
+        const rawUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+        const role = String(rawUser.role || rawUser.user_type || '').toLowerCase();
+        return role === 'region_manager' || role === 'super_admin' || role === 'admin';
+      } catch {}
+    }
+    return Boolean(stats.total_managers !== undefined && stats.total_managers > 0);
+  }, [stats.role, stats.total_managers]);
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 font-['Cairo']">
@@ -64,6 +77,50 @@ export function StaffStatsBanner({
     );
   }
 
+  if (isRegionManager) {
+    // ── كروت مدير المنطقة (Region Manager) ──
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 font-['Cairo']">
+        {/* 1. مديرو المساجد */}
+        <StatCard
+          title="مديرو المساجد"
+          value={stats.total_managers ?? 0}
+          icon={Building2}
+          colorStyle="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+          subtitle="مديرو مساجد المنطقة"
+        />
+
+        {/* 2. المعلمون والمقرئون */}
+        <StatCard
+          title="المعلمون والمقرئون"
+          value={stats.total_teachers ?? 0}
+          icon={GraduationCap}
+          colorStyle="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+          subtitle="معلمو ومحفظو القرآن"
+        />
+
+        {/* 3. مديرو الحلقات */}
+        <StatCard
+          title="مديرو الحلقات"
+          value={stats.total_supervisors ?? 0}
+          icon={BookOpen}
+          colorStyle="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+          subtitle="المشرفون على الحلقات القرآنية"
+        />
+
+        {/* 4. الطلبات المنتظرة */}
+        <StatCard
+          title="الطلبات المنتظرة"
+          value={stats.pending_invitations ?? 0}
+          icon={Clock}
+          colorStyle="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+          subtitle="دعوات وطلبات الانضمام المعلقة"
+        />
+      </div>
+    );
+  }
+
+  // ── كروت مدير المسجد (Mosque Manager) ──
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 font-['Cairo']">
       {/* 1. إجمالي طلاب الحلقات */}
@@ -84,22 +141,22 @@ export function StaffStatsBanner({
         subtitle="معلمو ومحفظو القرآن"
       />
 
-      {/* 3. متطوعين (تبديل من مدير حلقات إلى متطوعين) */}
+      {/* 3. المتطوعون */}
       <StatCard
-        title="متطوعين"
-        value={stats.total_volunteers ?? stats.total_supervisors ?? 0}
+        title="المتطوعون"
+        value={stats.total_volunteers ?? 0}
         icon={HeartHandshake}
         colorStyle="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
         subtitle="المتطوعون المسجلون بالمسجد"
       />
 
-      {/* 4. دعوات التسجيل المعلقة */}
+      {/* 4. الطلبات المنتظرة */}
       <StatCard
-        title="دعوات التسجيل المعلقة"
+        title="الطلبات المنتظرة"
         value={stats.pending_invitations ?? 0}
         icon={Clock}
         colorStyle="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-        subtitle="في انتظار تفعيل الحسابات"
+        subtitle="دعوات وطلبات الانضمام المعلقة"
       />
     </div>
   );

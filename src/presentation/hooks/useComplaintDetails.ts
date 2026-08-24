@@ -108,10 +108,12 @@ export function useComplaintDetails(complaintId: string) {
     }
   }, [newNote, currentStatus, handleUpdateStatus]);
 
-  const handleAssignToAdmin = useCallback(async (adminId: number, note?: string) => {
+  const handleAssignToAdmin = useCallback(async (adminIdOrNote?: number | string, note?: string) => {
     setUpdatingStatus(true);
     try {
-      await assignAdminUseCase.execute(complaintId, adminId, note);
+      const adminId = typeof adminIdOrNote === 'number' ? adminIdOrNote : undefined;
+      const actualNote = typeof adminIdOrNote === 'string' ? adminIdOrNote : note;
+      await assignAdminUseCase.execute(complaintId, adminId, actualNote);
       showToast('تم إسناد ورفع الشكوى إلى السوبر أدمن بنجاح 🚀', 'success');
       await fetchDetails();
     } catch (err: any) {
@@ -120,7 +122,7 @@ export function useComplaintDetails(complaintId: string) {
     } finally {
       setUpdatingStatus(false);
     }
-  }, [complaintId, fetchDetails, showToast]);
+  }, [complaintId, fetchDetails, showToast, assignAdminUseCase]);
 
   return {
     complaint,

@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   CheckCircle2, Archive, FileText, Send, Paperclip, MessageSquare,
-  Calendar, AlertCircle, RefreshCw, Printer, Clock, AlertTriangle, ShieldCheck, X, UserPlus, ArrowUpRight
+  Calendar, AlertCircle, RefreshCw, Printer, Clock, AlertTriangle, ShieldCheck, X, UserPlus, ArrowUpRight, Building2
 } from 'lucide-react';
 import { useComplaintDetails, ComplaintStatusKey } from '../../hooks/useComplaintDetails';
 
@@ -115,7 +115,6 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
 
   // Assign to Super Admin Modal State (assignComplaintToAdmin)
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assignAdminId, setAssignAdminId] = useState<number>(3);
   const [assignNote, setAssignNote] = useState('');
 
   // Trigger Status Update Confirmation
@@ -132,8 +131,7 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
   };
 
   const confirmAssignToAdmin = async () => {
-    if (!assignAdminId) return;
-    await handleAssignToAdmin(assignAdminId, assignNote);
+    await handleAssignToAdmin(assignNote);
     setShowAssignModal(false);
     setAssignNote('');
   };
@@ -187,8 +185,16 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
     );
   }
 
-  const isAssignedToAdmin = Boolean(complaint.assigned_admin_id);
-  const canTakeAction = isMosqueManager || isAssignedToAdmin;
+  const isAssignedToAdmin = Boolean(
+    complaint.assigned_admin_id ||
+    (complaint as any).admin_id ||
+    (complaint as any).assigned_to_admin ||
+    (complaint as any).is_assigned_to_admin ||
+    (complaint as any).assigned_admin ||
+    complaint.status === 'escalated' ||
+    complaint.status === 'assigned_to_admin'
+  );
+  const canTakeAction = isMosqueManager ? !isAssignedToAdmin : isAssignedToAdmin;
   const senderName = complaint.is_anonymous ? 'فاعل خير (مجهول)' : (complaint.user?.name || complaint.email || 'مصلي / زائر');
   const complaintNumber = complaint.complaint_number || `CMP-${complaint.id}`;
 
@@ -214,6 +220,17 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   <span className={`px-3 py-1 rounded-lg font-bold border ${getStatusBadgeStyles(currentStatus)}`}>{getStatusLabel(currentStatus)}</span>
                   <span className={`px-3 py-1 rounded-lg font-bold border ${getPriorityStyles(complaint.priority)}`}>{getPriorityLabel(complaint.priority)}</span>
+                  {isAssignedToAdmin ? (
+                    <span className="px-3 py-1 rounded-lg font-bold border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>مسندة لمدير المنطقة</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-lg font-bold border bg-muted/80 text-muted-foreground border-border flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>قيد معالجة المسجد</span>
+                    </span>
+                  )}
                   <span className="text-muted-foreground flex items-center gap-1"><Calendar className="w-4 h-4" /> {formatDate(complaint.created_at)}</span>
                 </div>
               </div>
@@ -388,11 +405,24 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">إجراءات تغيير الحالة</p>
 
               {!canTakeAction ? (
-                /* When assigned_admin_id is null and user is Super Admin: Only handled by Mosque Manager */
-                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  <span>تعالج عند مدير المسجد فقط</span>
-                </div>
+                isMosqueManager && isAssignedToAdmin ? (
+                  /* When complaint is assigned to Super Admin and viewer is Mosque Manager */
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center text-xs font-bold text-emerald-800 dark:text-emerald-200 space-y-1.5 font-['Cairo']">
+                    <div className="flex items-center justify-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-black">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>الشكوى مسندة لمدير المنطقة (السوبر أدمن)</span>
+                    </div>
+                    <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
+                      تم رفع هذه الشكوى وهي قيد المتابعة والمعالجة من قبل إدارة المنطقة.
+                    </p>
+                  </div>
+                ) : (
+                  /* When assigned_admin_id is null and user is Super Admin: Only handled by Mosque Manager */
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <span>تعالج عند مدير المسجد فقط (لم تُرفع للمنطقة)</span>
+                  </div>
+                )
               ) : (
                 /* Active Status Update Pipeline when canTakeAction is true */
                 <>
@@ -563,21 +593,8 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                يقوم مدير المسجد عبر هذا الخيار برفع الشكوى مباشرة لمدير المنطقة للمعالجة والمتابعة.
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-foreground block mb-1.5">
-                  معرّف مدير المنطقة (Super Admin ID) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={assignAdminId}
-                  onChange={(e) => setAssignAdminId(Number(e.target.value))}
-                  placeholder="أدخل ID مدير المنطقة (مثال: 3)"
-                  className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs text-foreground"
-                />
+              <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                سيتم رفع الشكوى وإسنادها تلقائياً إلى مدير المنطقة (السوبر أدمن) للمتابعة والتدخل المباشر.
               </div>
 
               <div>
@@ -604,7 +621,7 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
               </button>
               <button
                 onClick={confirmAssignToAdmin}
-                disabled={updatingStatus || !assignAdminId}
+                disabled={updatingStatus}
                 className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50"
               >
                 {updatingStatus && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}

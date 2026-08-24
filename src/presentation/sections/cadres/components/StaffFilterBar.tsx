@@ -6,7 +6,7 @@
 // ==============================
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, SlidersHorizontal, X, ChevronDown, Check, RefreshCw, Terminal } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronDown, Check, RefreshCw } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ function FilterGroup({ title, options, value, onChange }: FilterGroupProps) {
                 : 'bg-muted/60 text-muted-foreground border-transparent hover:bg-muted hover:text-foreground'
             }`}
           >
-            {value === opt.id && <Check className="w-3 h-3" />}
+            {value === opt.id && <Check className="w-3 h-3 text-primary" />}
             {opt.label}
           </button>
         ))}
@@ -74,8 +74,8 @@ interface StaffFilterBarProps {
   onSearchChange: (query: string) => void;
   onRefresh: () => void;
   loading: boolean;
-  showDebugTerminal: boolean;
-  onToggleDebugTerminal: () => void;
+  showDebugTerminal?: boolean;
+  onToggleDebugTerminal?: () => void;
 }
 
 export function StaffFilterBar({
@@ -87,8 +87,6 @@ export function StaffFilterBar({
   onSearchChange,
   onRefresh,
   loading,
-  showDebugTerminal,
-  onToggleDebugTerminal,
 }: StaffFilterBarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -252,20 +250,6 @@ export function StaffFilterBar({
             </div>
           )}
         </div>
-
-        {/* API Debug Button */}
-        <button
-          onClick={onToggleDebugTerminal}
-          className={`flex items-center gap-1.5 px-3.5 py-2.5 border rounded-xl text-xs font-mono font-bold transition-all shadow-sm shrink-0 ${
-            showDebugTerminal
-              ? 'bg-emerald-600 text-white border-emerald-700'
-              : 'bg-slate-900 text-emerald-400 border-slate-700 hover:bg-slate-800'
-          }`}
-          title="فحص استجابة الـ API المباشرة"
-        >
-          <Terminal className="w-3.5 h-3.5" />
-          <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-        </button>
 
         {/* Refresh Button */}
         <button

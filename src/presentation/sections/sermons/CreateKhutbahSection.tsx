@@ -3,7 +3,7 @@ import React from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   BookOpen, Plus, Mic, Square, Play, Pause, Send, FileText, CheckCircle2,
-  AlertTriangle, RefreshCw, X, ScanText, Terminal, Copy
+  AlertTriangle, RefreshCw, X, ScanText
 } from 'lucide-react';
 import { useCreateKhutbah } from '../../hooks/useCreateKhutbah';
 
@@ -36,15 +36,13 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
     isScanningImage, ocrProgress, ocrStatusText, imageInputRef, handleImageOCR,
     submitting, error, setError,
     handleSubmit,
-    debugResponse, setDebugResponse,
-    copiedDebug, copyDebugJson,
   } = useCreateKhutbah(onBack);
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">
       <PageHeader
         title="إضافة خطبة مسجد جديدة"
-        description="تسجيل محاور ونص الخطبة الجديدة وإعدادها كخطبة معتمدة ليوم الجمعة مع معاينة رد السيرفر."
+        description="تسجيل محاور ونص الخطبة الجديدة وإعدادها كخطبة معتمدة ليوم الجمعة."
         onBack={onBack}
         breadcrumbs={[
           { label: 'إدارة المسجد' },
@@ -67,51 +65,6 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
 
         {/* Main Form */}
         <div className="xl:col-span-8 space-y-6">
-
-          {/* Debug Response Box */}
-          {debugResponse && (
-            <div className={`p-6 rounded-2xl border shadow-lg space-y-4 animate-in fade-in ${
-              debugResponse.isSuccess ? 'bg-slate-900 border-emerald-500/40 text-emerald-400' : 'bg-slate-900 border-red-500/40 text-red-400'
-            }`}>
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Terminal className={`w-5 h-5 ${debugResponse.isSuccess ? 'text-emerald-400' : 'text-red-400'}`} />
-                  <h4 className="text-sm font-black text-white dir-ltr">API Response Inspector (HTTP {debugResponse.httpStatus})</h4>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${debugResponse.isSuccess ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
-                    {debugResponse.isSuccess ? '200 OK / SUCCESS' : `ERROR ${debugResponse.httpStatus}`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={copyDebugJson} className="flex items-center gap-1 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-all">
-                    <Copy className="w-3.5 h-3.5" /><span>{copiedDebug ? 'تم النسخ!' : 'نسخ الـ JSON'}</span>
-                  </button>
-                  <X className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer" onClick={() => setDebugResponse(null)} />
-                </div>
-              </div>
-              <div className="space-y-2 text-xs font-mono">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-300">
-                  <span><strong>Endpoint:</strong> POST {debugResponse.endpointUrl}</span>
-                  <span><strong>Status Code:</strong> {debugResponse.httpStatus}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-1"><strong>Request Payload:</strong></span>
-                  <pre className="p-3 bg-slate-950 rounded-xl overflow-x-auto text-[11px] text-blue-300 dir-ltr border border-slate-800">{JSON.stringify(debugResponse.requestPayloadSent, null, 2)}</pre>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-1"><strong>Server Response:</strong></span>
-                  <pre className={`p-4 rounded-xl overflow-x-auto text-[11px] dir-ltr border font-mono ${debugResponse.isSuccess ? 'bg-slate-950 text-emerald-300 border-emerald-900/50' : 'bg-slate-950 text-red-300 border-red-900/50'}`}>
-                    {JSON.stringify(debugResponse.rawResponse, null, 2)}
-                  </pre>
-                </div>
-              </div>
-              {debugResponse.isSuccess && (
-                <div className="pt-2 flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> تم استقبال الاستجابة بنجاح وحفظ الخطبة!</span>
-                  <button onClick={onBack} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all">الذهاب إلى قائمة الخطب ➔</button>
-                </div>
-              )}
-            </div>
-          )}
 
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-2xl text-xs flex items-center justify-between shadow-sm">

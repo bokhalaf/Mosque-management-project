@@ -20,5 +20,5 @@ export interface IComplaintRepository {
   searchComplaints?(params?: GetAdminComplaintsParams): Promise<PaginatedComplaints>;
   getComplaintDetails(id: string | number): Promise<ComplaintItem>;
   updateComplaintStatus(id: string | number, status: string, note?: string): Promise<ComplaintItem>;
-  assignComplaintToAdmin?(id: string | number, adminId: number, note?: string): Promise<ComplaintItem>;
+  assignComplaintToAdmin?(id: string | number, adminId?: number | null, note?: string): Promise<ComplaintItem>;
 }

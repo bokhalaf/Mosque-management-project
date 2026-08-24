@@ -9,6 +9,7 @@ export * from './LogHoursModal';
 export * from './EditOpportunityModal';
 export * from './VolunteerDebugTerminal';
 export * from './VolunteersListTab';
+export * from './CertificatePdfModal';
 export * from './MosqueVolunteerLoader';
 export * from './create';
 export * from './details';

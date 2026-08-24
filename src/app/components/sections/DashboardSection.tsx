@@ -14,7 +14,7 @@ import {
   BookOpen, ArrowUpRight, AlertTriangle, CheckCircle2,
   Clock, Calendar, Users, ChevronLeft, Plus, Eye,
   CalendarCheck, Activity, UserPlus, Sparkles, ShieldCheck,
-  Building2, Coins, ArrowRightLeft, TrendingUp, RefreshCw, Terminal
+  Building2, Coins, ArrowRightLeft, TrendingUp, RefreshCw
 } from 'lucide-react';
 import { useDashboardData, MosqueManagerDashboardData, RegionManagerDashboardData } from '../../../presentation/hooks/useDashboardData';
 import { MosqueVolunteerLoader } from '../../../presentation/sections/volunteers/components/MosqueVolunteerLoader';
@@ -890,15 +890,6 @@ export function DashboardSection() {
         actions={
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-sm font-mono"
-              title="مراقب السيرفر المباشر"
-            >
-              <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>{showDebugTerminal ? 'إخفاء رد السيرفر' : 'طباعة رد السيرفر'}</span>
-            </button>
-
-            <button
               onClick={refresh}
               disabled={loading}
               title="تحديث البيانات الحية"
@@ -913,50 +904,6 @@ export function DashboardSection() {
 
       {/* ── Main Dashboard Content ────────────────────────────────────── */}
       <div className="px-4 md:px-8 mt-6">
-        
-        {/* Live Debug Inspector */}
-        {showDebugTerminal && (
-          <div className="mb-6 bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-200 font-mono text-xs space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
-                <h3 className="font-bold text-white text-sm">مراقب الـ API المباشر للوحة التحكم (Dashboard API Inspector)</h3>
-              </div>
-              <button
-                onClick={clearDebugLogs}
-                className="text-[10px] text-slate-400 hover:text-white px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                مسح السجل
-              </button>
-            </div>
-
-            {debugLogs.length === 0 ? (
-              <p className="text-slate-500 italic">لا توجد طلبات معالجة حالياً. اضغط "تحديث البيانات" لإعادة الفحص.</p>
-            ) : (
-              <div className="space-y-3 max-h-72 overflow-y-auto ltr text-left">
-                {debugLogs.map((log, idx) => (
-                  <div key={idx} className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-bold text-emerald-400">[{log.time}] {log.action}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        log.status >= 200 && log.status < 300
-                          ? 'bg-emerald-950 border-emerald-800 text-emerald-300'
-                          : 'bg-rose-950 border-rose-800 text-rose-300'
-                      }`}>
-                        HTTP {log.status}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono">{log.url}</p>
-                    <pre className="text-[10px] bg-slate-950 p-2.5 rounded-lg text-slate-300 overflow-x-auto max-h-48 scrollbar-thin">
-                      {JSON.stringify(log.response, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {loading ? (
           <div className="py-16">
             <MosqueVolunteerLoader text="جاري تحديث واستدعاء مؤشرات لوحة التحكم..." />

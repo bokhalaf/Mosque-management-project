@@ -4,7 +4,7 @@
 // ==============================
 
 import React, { useState } from 'react';
-import { Plus, Terminal, Clock, History, RefreshCw, BookOpen, AlertCircle, ChevronRight, ChevronLeft, Star, Check, X, ShieldCheck, Archive, User, Eye, Send } from 'lucide-react';
+import { Plus, Clock, History, RefreshCw, BookOpen, AlertCircle, ChevronRight, ChevronLeft, Star, Check, X, ShieldCheck, Archive, User, Eye, Send } from 'lucide-react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useSermons } from '../../hooks/useSermons';
 import { FridaySermonBanner } from './components/FridaySermonBanner';
@@ -44,11 +44,6 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
     handleRejectPendingSermon,
     deletingSermonId,
     processingSermonId,
-    showDebugTerminal,
-    setShowDebugTerminal,
-    debugLogs,
-    addDebugLog,
-    clearDebugLogs,
   } = useSermons();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -141,46 +136,6 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
       />
 
       <div className="px-4 md:px-8 py-4 space-y-8">
-
-        {/* Debug Terminal */}
-        {showDebugTerminal && (
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-200 font-mono text-xs space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
-                <h3 className="font-bold text-white text-sm">مراقب الـ API المباشر لخدمة الخطب والاعتمادات (Sermons API Live Inspector)</h3>
-              </div>
-              <button
-                onClick={clearDebugLogs}
-                className="text-[10px] text-slate-400 hover:text-white px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg"
-              >
-                مسح السجل
-              </button>
-            </div>
-
-            {debugLogs.length === 0 ? (
-              <p className="text-slate-500 italic">لا توجد طلبات معالجة حالياً. قم بالنقر على زر الاعتماد أو التحديث لرؤية النتائج المباشرة.</p>
-            ) : (
-              <div className="space-y-3 max-h-60 overflow-y-auto ltr text-left">
-                {debugLogs.map((log, idx) => (
-                  <div key={idx} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-emerald-400">
-                      <span className="font-bold">[{log.time}] {log.action}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
-                        HTTP {log.status}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono">{log.url}</p>
-                    <pre className="text-[10px] bg-slate-950 p-2 rounded text-slate-300 overflow-x-auto">
-                      {JSON.stringify(log.response, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Large Most Selected Sermon Banner — ONLY FOR SUPER ADMIN */}
         {isSuperAdmin && mostSelectedSermon && (
           <div className="bg-gradient-to-l from-primary/15 via-card to-card border border-primary/30 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden space-y-6 animate-in fade-in">
@@ -573,7 +528,6 @@ export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: Khutbahs
         <HistoryModal
           selectionsHistory={selectionsHistory}
           onClose={() => setShowHistoryModal(false)}
-          onDebugLog={addDebugLog}
         />
       )}
     </div>

@@ -328,6 +328,38 @@ export class QuranPeopleRepositoryImpl implements IQuranPeopleRepository {
     }
   }
 
+  // ── 4.3 deleteInvitationApi (DELETE /api/invitations/{id}) ────────
+  async deleteInvitationApi(invitationId: string | number): Promise<{ success: boolean; message: string; rawResponse?: any }> {
+    const url = `${BASE_URL}/invitations/${invitationId}`;
+    try {
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: this.getAuthHeaders(),
+      });
+
+      const json = await response.json().catch(() => null);
+      if (response.ok && json && json.status !== false) {
+        return {
+          success: true,
+          message: json.message || "تم إلغاء وحذف الدعوة بنجاح.",
+          rawResponse: json,
+        };
+      } else {
+        const errorMsg = this.extractErrorMessage(json, "تعذر إلغاء الدعوة (لا يمكن إلغاء دعوة تم قبولها أو دعوة لم تقم بإنشائها)");
+        return {
+          success: false,
+          message: errorMsg,
+          rawResponse: json,
+        };
+      }
+    } catch (e: any) {
+      return {
+        success: false,
+        message: e.message || "حدث خطأ أثناء إلغاء الدعوة",
+      };
+    }
+  }
+
   // ── 5. updatePersonStatus ─────────────────────────────────────────────
   async updatePersonStatus(id: string | number, status: 'active' | 'pending_invitation' | 'inactive'): Promise<boolean> {
     const res = await this.changeUserStatus(id, status === 'pending_invitation' ? 'inactive' : status);

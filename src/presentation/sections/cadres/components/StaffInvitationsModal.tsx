@@ -6,7 +6,7 @@
 // ==============================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Mail, X, RefreshCw, Send, Clock, CheckCircle2, AlertCircle, GraduationCap, Shield, Users, Building2 } from 'lucide-react';
+import { Mail, X, RefreshCw, Send, Clock, CheckCircle2, AlertCircle, GraduationCap, Shield, Users, Building2, Trash2 } from 'lucide-react';
 import { QuranPeopleRepositoryImpl } from '../../../../data/repositories/QuranPeopleRepositoryImpl';
 import { useToast } from '../../../../app/components/ui/Toast';
 
@@ -20,6 +20,8 @@ export function StaffInvitationsModal({ isOpen, onClose }: StaffInvitationsModal
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [resendingId, setResendingId] = useState<string | number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | number | null>(null);
 
   const repository = React.useMemo(() => new QuranPeopleRepositoryImpl(), []);
   const { showToast } = useToast();
@@ -56,6 +58,24 @@ export function StaffInvitationsModal({ isOpen, onClose }: StaffInvitationsModal
       showToast(err.message || 'حدث خطأ أثناء إعادة إرسال الدعوة', 'error');
     } finally {
       setResendingId(null);
+    }
+  };
+
+  const handleDelete = async (invitationId: string | number) => {
+    setDeletingId(invitationId);
+    try {
+      const res = await repository.deleteInvitationApi(invitationId);
+      if (res.success) {
+        showToast(res.message || 'تم إلغاء وحذف الدعوة بنجاح ✅', 'success');
+        setConfirmDeleteId(null);
+        await loadInvitations();
+      } else {
+        showToast(res.message || 'تعذر إلغاء الدعوة', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'حدث خطأ أثناء إلغاء الدعوة', 'error');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -198,7 +218,7 @@ export function StaffInvitationsModal({ isOpen, onClose }: StaffInvitationsModal
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${statusInfo.color}`}>
                       <StatusIcon className="w-3.5 h-3.5" />
                       <span>{statusInfo.label}</span>
@@ -207,13 +227,49 @@ export function StaffInvitationsModal({ isOpen, onClose }: StaffInvitationsModal
                     {canResend && (
                       <button
                         onClick={() => handleResend(inv.id)}
-                        disabled={isResending}
+                        disabled={isResending || deletingId === inv.id}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
                         title="إعادة إرسال الدعوة وتمديد صلاحيتها (POST /api/invitations/{id}/resend)"
                       >
                         <Send className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
                         <span>{isResending ? 'جاري الإرسال...' : 'إعادة إرسال'}</span>
                       </button>
+                    )}
+
+                    {inv.status !== 'accepted' && (
+                      confirmDeleteId === inv.id ? (
+                        <div className="flex items-center gap-1 animate-in fade-in">
+                          <button
+                            onClick={() => handleDelete(inv.id)}
+                            disabled={deletingId === inv.id}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+                          >
+                            {deletingId === inv.id ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            <span>تأكيد الإلغاء</span>
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            disabled={deletingId === inv.id}
+                            className="px-2 py-1.5 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs font-bold transition-all"
+                          >
+                            تراجع
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(inv.id)}
+                          disabled={deletingId === inv.id || isResending}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+                          title="إلغاء وحذف الدعوة (DELETE /api/invitations/{id})"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          <span>إلغاء</span>
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

@@ -242,7 +242,7 @@ export function EditOpportunityModal({
             {submitting ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>جاري الحفظ بالسيرفر...</span>
+                <span>جاري حفظ التعديلات...</span>
               </>
             ) : (
               <>

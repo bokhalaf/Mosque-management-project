@@ -44,10 +44,6 @@ export function OpportunityHeader({
               {isOpen ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
               <span>{isOpen ? 'فرصة نشطة ومتاحة' : 'فرصة مغلقة'}</span>
             </span>
-
-            <span className="text-xs text-muted-foreground font-mono bg-muted/40 px-3 py-1 rounded-xl border border-border/60">
-              معرف الفرصة: #{opportunity.id}
-            </span>
           </div>
 
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">

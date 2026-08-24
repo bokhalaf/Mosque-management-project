@@ -4,7 +4,7 @@
 // ==============================
 
 import React from 'react';
-import { Eye, MessageSquare, AlertCircle, UserPlus, Archive } from 'lucide-react';
+import { Eye, MessageSquare, AlertCircle, ShieldCheck, Building2 } from 'lucide-react';
 import { ComplaintItem } from '../../../../domain/entities/Complaint';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -76,6 +76,18 @@ const formatDate = (dateStr?: string) => {
   }
 };
 
+export const checkIsAssignedToAdmin = (item: ComplaintItem): boolean => {
+  return Boolean(
+    item.assigned_admin_id ||
+    (item as any).admin_id ||
+    (item as any).is_assigned_to_admin ||
+    (item as any).assigned_to_admin ||
+    (item as any).assigned_admin ||
+    item.status === 'escalated' ||
+    item.status === 'assigned_to_admin'
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface ComplaintTableProps {
@@ -119,6 +131,7 @@ export function ComplaintTable({
               <th className="px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">المرسل</th>
               <th className="px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">الموضوع والتصنيف</th>
               <th className="px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">الأولوية</th>
+              <th className="px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">جهة المتابعة</th>
               <th className="px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">الحالة</th>
               <th className="px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">إجراءات</th>
             </tr>
@@ -149,6 +162,9 @@ export function ComplaintTable({
                     <div className="h-6 w-14 rounded-lg bg-muted animate-pulse" />
                   </td>
                   <td className="px-4 py-3.5">
+                    <div className="h-6 w-20 rounded-lg bg-muted animate-pulse" />
+                  </td>
+                  <td className="px-4 py-3.5">
                     <div className="h-6 w-16 rounded-lg bg-muted animate-pulse" />
                   </td>
                   <td className="px-4 py-3.5 text-center">
@@ -158,7 +174,7 @@ export function ComplaintTable({
               ))
             ) : error ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center">
+                <td colSpan={7} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
                     <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
                       <AlertCircle className="w-6 h-6" />
@@ -169,7 +185,7 @@ export function ComplaintTable({
               </tr>
             ) : complaints.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-16 text-center">
+                <td colSpan={7} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto">
                     <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground border border-border">
                       <MessageSquare className="w-6 h-6" />
@@ -194,6 +210,7 @@ export function ComplaintTable({
                   ? 'فاعل خير'
                   : (item.user?.name || item.email || 'مصلي / زائر');
                 const typeLabel = getComplaintTypeLabel(item.complaint_type);
+                const isAssigned = checkIsAssignedToAdmin(item);
 
                 return (
                   <tr key={item.id} className="hover:bg-muted/40 transition-colors group">
@@ -206,7 +223,7 @@ export function ComplaintTable({
                     {/* Sender */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[11px] border border-primary/20 shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold text-[11px] border border-emerald-500/20 shrink-0">
                           {senderName[0] || '؟'}
                         </div>
                         <div>
@@ -231,6 +248,21 @@ export function ComplaintTable({
                       </span>
                     </td>
 
+                    {/* Handling Entity */}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      {isAssigned ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>مسندة للمنطقة</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-muted/70 text-muted-foreground border border-border/80">
+                          <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>معالجة المسجد</span>
+                        </span>
+                      )}
+                    </td>
+
                     {/* Status */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${getStatusStyles(item.status)}`}>
@@ -243,7 +275,7 @@ export function ComplaintTable({
                       <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => onViewDetails && onViewDetails(String(item.id))}
-                          className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                          className="p-2 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-all"
                           title="عرض التفاصيل"
                         >
                           <Eye className="w-4 h-4" />

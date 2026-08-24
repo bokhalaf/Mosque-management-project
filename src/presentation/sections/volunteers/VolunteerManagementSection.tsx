@@ -10,11 +10,11 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   HeartHandshake, Plus, Users, Briefcase, Award, Clock,
-  RefreshCw, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft
+  RefreshCw, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Eye
 } from 'lucide-react';
 import { useVolunteers } from '../../hooks/useVolunteers';
 import { useToast } from '../../../app/components/ui/Toast';
-import { VolunteerApplication, VolunteerOpportunity } from '../../../domain/entities/Volunteer';
+import { VolunteerApplication, VolunteerOpportunity, VolunteerCertificate } from '../../../domain/entities/Volunteer';
 import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
 import {
   VolunteerStatsBanner,
@@ -29,6 +29,7 @@ import {
   VolunteerDebugTerminal,
   VolunteersListTab,
   MosqueVolunteerLoader,
+  CertificatePdfModal,
 } from './components';
 
 export function VolunteerManagementSection() {
@@ -104,6 +105,12 @@ export function VolunteerManagementSection() {
   const [selectedApplicationForTask, setSelectedApplicationForTask] = useState<VolunteerApplication | null>(null);
   const [selectedApplicationForHours, setSelectedApplicationForHours] = useState<VolunteerApplication | null>(null);
 
+  // Certificate PDF Preview Modal States
+  const [issuedCertificate, setIssuedCertificate] = useState<VolunteerCertificate | null>(null);
+  const [isIssuingCert, setIsIssuingCert] = useState<boolean>(false);
+  const [certModalOpen, setCertModalOpen] = useState<boolean>(false);
+  const [certError, setCertError] = useState<string | null>(null);
+
   // Filtered Lists by Search
   const filteredOpportunities = useMemo(() => {
     if (!searchQuery.trim()) return opportunities;
@@ -175,7 +182,7 @@ export function VolunteerManagementSection() {
     setIsClosing(true);
     try {
       await closeOpportunity(opportunityToClose.id);
-      showToast('تم إغلاق الفرصة التطوعية بالسيرفر بنجاح', 'success');
+      showToast('تم إغلاق الفرصة التطوعية بنجاح', 'success');
       setOpportunityToClose(null);
     } catch (err: any) {
       showToast(err.message || 'فشل إغلاق الفرصة', 'error');
@@ -187,7 +194,7 @@ export function VolunteerManagementSection() {
   const handleApprove = async (id: number | string) => {
     try {
       await approveApplication(id);
-      showToast('تم قبول واعتماد المتطوع بنجاح بالسيرفر', 'success');
+      showToast('تم قبول واعتماد المتطوع بنجاح', 'success');
     } catch (err: any) {
       showToast(err.message || 'فشل قبول الطلب', 'error');
     }
@@ -196,19 +203,27 @@ export function VolunteerManagementSection() {
   const handleReject = async (id: number | string) => {
     try {
       await rejectApplication(id);
-      showToast('تم رفض الطلب بالسيرفر', 'error');
+      showToast('تم رفض الطلب بنجاح', 'error');
     } catch (err: any) {
       showToast(err.message || 'فشل رفض الطلب', 'error');
     }
   };
 
   const handleIssueCertificate = async (app: VolunteerApplication) => {
+    setCertModalOpen(true);
+    setIsIssuingCert(true);
+    setCertError(null);
+    setIssuedCertificate(null);
     try {
-      await issueCertificate(app.volunteer_id, app.opportunity_id);
-      showToast(`تم إصدار شهادة التطوع للمتطوع ${app.volunteer_name} بنجاح`, 'success');
+      const cert = await issueCertificate(app.volunteer_id, app.opportunity_id);
+      setIssuedCertificate(cert);
+      showToast(`تم إصدار وتوليد شهادة التطوع للمتطوع ${app.volunteer_name} بنجاح`, 'success');
       setActiveTab('certificates');
     } catch (err: any) {
-      showToast(err.message || 'فشل إصدار الشهادة بالسيرفر', 'error');
+      setCertError(err.message || 'فشل إصدار شهادة التطوع');
+      showToast(err.message || 'فشل إصدار الشهادة', 'error');
+    } finally {
+      setIsIssuingCert(false);
     }
   };
 
@@ -565,6 +580,16 @@ export function VolunteerManagementSection() {
                   <span>إجمالي الساعات:</span>
                   <span className="font-bold text-primary">{cert.total_hours} ساعة</span>
                 </div>
+                <button
+                  onClick={() => {
+                    setIssuedCertificate(cert);
+                    setCertModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition-all shadow-sm"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>معاينة وتحميل الشهادة PDF</span>
+                </button>
               </div>
             ))}
           </div>
@@ -579,7 +604,7 @@ export function VolunteerManagementSection() {
           onClose={() => setShowCreateModal(false)}
           onCreateOpportunity={async (payload) => {
             const res = await createOpportunity(payload);
-            showToast('تم طرح وحفظ الفرصة التطوعية بالسيرفر بنجاح', 'success');
+            showToast('تم طرح وحفظ الفرصة التطوعية بنجاح', 'success');
             return res;
           }}
         />
@@ -591,7 +616,7 @@ export function VolunteerManagementSection() {
           onClose={() => setOpportunityToEdit(null)}
           onUpdateOpportunity={async (id, payload) => {
             const res = await updateOpportunity(id, payload);
-            showToast('تم تعديل بيانات الفرصة والمهام بالسيرفر بنجاح', 'success');
+            showToast('تم تعديل بيانات الفرصة والمهام بنجاح', 'success');
             return res;
           }}
         />
@@ -616,7 +641,7 @@ export function VolunteerManagementSection() {
           onClose={() => setSelectedApplicationForTask(null)}
           onAssignTask={async (payload) => {
             const res = await assignTask(payload);
-            showToast('تم إسناد المهمة للمتطوع بالسيرفر بنجاح', 'success');
+            showToast('تم إسناد المهمة للمتطوع بنجاح', 'success');
             return res;
           }}
         />
@@ -628,11 +653,20 @@ export function VolunteerManagementSection() {
           onClose={() => setSelectedApplicationForHours(null)}
           onLogHours={async (payload) => {
             const res = await logHours(payload);
-            showToast('تم تسجيل واعتماد الساعات بالسيرفر بنجاح', 'success');
+            showToast('تم تسجيل واعتماد الساعات بنجاح', 'success');
             return res;
           }}
         />
       )}
+
+      {/* Certificate PDF Modal */}
+      <CertificatePdfModal
+        isOpen={certModalOpen}
+        onClose={() => setCertModalOpen(false)}
+        certificate={issuedCertificate}
+        loading={isIssuingCert}
+        error={certError}
+      />
     </div>
   );
 }

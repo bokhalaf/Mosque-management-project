@@ -408,7 +408,7 @@ export function InviteStaffModal({
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>إرسال الدعوة بالسيرفر</span>
+                  <span>إرسال الدعوة</span>
                 </>
               )}
             </button>

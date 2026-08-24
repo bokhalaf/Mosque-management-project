@@ -171,11 +171,16 @@ export function CreateOpportunityModal({
               className="flex items-center gap-1.5 px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/90 transition-all shadow-sm"
             >
               {submitting ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>جاري الطرح...</span>
+                </>
               ) : (
-                <Plus className="w-3.5 h-3.5" />
+                <>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>طرح الفرصة التطوعية</span>
+                </>
               )}
-              <span>طرح الفرصة بالسيرفر</span>
             </button>
           </div>
         </form>

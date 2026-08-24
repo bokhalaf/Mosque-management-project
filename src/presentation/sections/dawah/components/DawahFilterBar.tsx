@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, RefreshCw, Terminal, Layers, Mic, GraduationCap, Trophy } from 'lucide-react';
+import { Search, RefreshCw, Layers, Mic, GraduationCap, Trophy } from 'lucide-react';
 
 interface DawahFilterBarProps {
   selectedType: string;
@@ -10,8 +10,8 @@ interface DawahFilterBarProps {
   onSearchChange: (query: string) => void;
   onRefresh: () => void;
   loading: boolean;
-  showDebugTerminal: boolean;
-  onToggleDebugTerminal: () => void;
+  showDebugTerminal?: boolean;
+  onToggleDebugTerminal?: () => void;
 }
 
 export function DawahFilterBar({
@@ -21,8 +21,6 @@ export function DawahFilterBar({
   onSearchChange,
   onRefresh,
   loading,
-  showDebugTerminal,
-  onToggleDebugTerminal,
 }: DawahFilterBarProps) {
   const typeTabs = [
     { key: 'all', label: 'كافة البرامج', icon: Layers },
@@ -46,21 +44,8 @@ export function DawahFilterBar({
           />
         </div>
 
-        {/* Action buttons (Terminal & Refresh) */}
+        {/* Action buttons (Refresh) */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={onToggleDebugTerminal}
-            className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-mono font-bold transition-all shadow-sm ${
-              showDebugTerminal
-                ? 'bg-emerald-600 text-white border-emerald-700'
-                : 'bg-slate-900 text-emerald-400 border-slate-700 hover:bg-slate-800'
-            }`}
-            title="فحص استجابة الـ API المباشرة"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-          </button>
-
           <button
             onClick={onRefresh}
             disabled={loading}

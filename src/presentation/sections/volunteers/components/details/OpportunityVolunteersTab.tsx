@@ -133,6 +133,40 @@ export function OpportunityVolunteersTab({
                       </div>
                     )}
                   </div>
+
+                  {/* Task completion indicator */}
+                  {isApproved && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        app.all_tasks_completed
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 font-bold">
+                        {app.all_tasks_completed ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>أكمل جميع المهام بنجاح</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                            <span>قيد إنجاز المهام</span>
+                          </>
+                        )}
+                      </span>
+                      {app.all_tasks_completed ? (
+                        <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-md shrink-0">
+                          جاهز للساعات
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-normal">
+                          لم تكتمل
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -161,32 +195,36 @@ export function OpportunityVolunteersTab({
                         متطوع معتمد بالفرصة
                       </div>
                     ) : (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-1.5">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => onOpenAssignTask(app)}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-xl text-xs font-bold transition-all"
                           >
-                            <Briefcase className="w-3.5 h-3.5" />
+                            <Briefcase className="w-3.5 h-3.5 text-primary" />
                             <span>إسناد مهمة</span>
                           </button>
 
-                          <button
-                            onClick={() => onOpenLogHours(app)}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>تسجيل ساعات</span>
-                          </button>
+                          {app.all_tasks_completed && (
+                            <button
+                              onClick={() => onOpenLogHours(app)}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm animate-in fade-in"
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>تسجيل الساعات</span>
+                            </button>
+                          )}
                         </div>
 
-                        <button
-                          onClick={() => onIssueCertificate(app.volunteer_id, app.volunteer_name)}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-[11px] font-bold transition-all"
-                        >
-                          <Award className="w-3.5 h-3.5" />
-                          <span>إصدار شهادة تطوع</span>
-                        </button>
+                        {app.all_tasks_completed && (
+                          <button
+                            onClick={() => onIssueCertificate(app.volunteer_id, app.volunteer_name)}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>إصدار شهادة تطوع</span>
+                          </button>
+                        )}
                       </div>
                     )
                   ) : null}

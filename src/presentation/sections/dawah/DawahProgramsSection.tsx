@@ -128,14 +128,6 @@ export function DawahProgramsSection({ onNavigateToAdd }: DawahProgramsSectionPr
         }
       />
 
-      {/* Debug Terminal */}
-      <DawahDebugTerminal
-        show={showDebugTerminal}
-        onClose={() => setShowDebugTerminal(false)}
-        logs={debugLogs}
-        onClear={clearDebugLogs}
-      />
-
       {/* Filter and Search Bar without Add Button */}
       <DawahFilterBar
         selectedType={selectedType}
@@ -144,8 +136,6 @@ export function DawahProgramsSection({ onNavigateToAdd }: DawahProgramsSectionPr
         onSearchChange={setSearchQuery}
         onRefresh={loadData}
         loading={loading}
-        showDebugTerminal={showDebugTerminal}
-        onToggleDebugTerminal={() => setShowDebugTerminal(!showDebugTerminal)}
       />
 
       {/* Error Alert */}

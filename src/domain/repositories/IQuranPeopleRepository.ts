@@ -11,6 +11,7 @@ export interface IQuranPeopleRepository {
   getInvitations(status?: string): Promise<{ data: any[]; rawResponse?: any }>;
   resendInvitation(id: string | number): Promise<void>;
   resendInvitationApi(invitationId: string | number): Promise<{ success: boolean; message: string; rawResponse?: any }>;
+  deleteInvitationApi(invitationId: string | number): Promise<{ success: boolean; message: string; rawResponse?: any }>;
   updatePersonStatus(id: string | number, status: 'active' | 'pending_invitation' | 'inactive'): Promise<boolean>;
   changeUserStatus(userId: string | number, status: 'active' | 'inactive'): Promise<{ success: boolean; message: string; rawResponse?: any }>;
   deletePerson(id: string | number): Promise<boolean>;

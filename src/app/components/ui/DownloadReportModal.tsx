@@ -43,6 +43,8 @@ export function DownloadReportModal({
   const [downloading, setDownloading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [reportResult, setReportResult] = useState<any>(null);
+
   const isSuperAdmin = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
     try {
@@ -128,8 +130,6 @@ export function DownloadReportModal({
       setDateTo(toStr);
     }
   };
-
-  const [reportResult, setReportResult] = useState<any>(null);
 
   const handleDownload = async () => {
     setError(null);

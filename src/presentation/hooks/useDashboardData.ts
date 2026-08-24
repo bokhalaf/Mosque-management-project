@@ -381,48 +381,66 @@ export function useDashboardData() {
           addDebugLog('استدعاء السياسة المالية وسعر الصرف (Settings)', `${BASE_URL}/settings`, 200, settingsRes);
         }
       } else {
-        // ── Mosque Manager: Fetch manager specific endpoints ──
+        // ── Mosque Manager: Fetch primary dashboard and sub-endpoints ──
         const [
-          maintRes,
-          donRes,
-          volRes,
+          managerDashRes,
+          managerStatsRes,
+          managerOpsRes,
           sermonsRes,
-          complaintsRes,
           campaignsRes,
         ] = await Promise.all([
-          fetch(`${BASE_URL}/maintenance/stats`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch(`${BASE_URL}/donations/stats`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch(`${BASE_URL}/volunteer/stats`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch(`${BASE_URL}/sermons`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch(`${BASE_URL}/maintenance/complaints`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch(`${BASE_URL}/campaigns`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${BASE_URL}/dashboard/mosque-manager`, { headers })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
+          fetch(`${BASE_URL}/dashboard/mosque-manager/statistics`, { headers })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
+          fetch(`${BASE_URL}/dashboard/mosque-manager/mosque-operations?per_page=5`, { headers })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
+          fetch(`${BASE_URL}/sermons`, { headers })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
+          fetch(`${BASE_URL}/campaigns`, { headers })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
         ]);
 
-        // Parse Maintenance Stats
-        const maintData = maintRes?.data || {};
-        const openMaint = Number(maintData.open_requests ?? 5);
-        const criticalMaint = Number(maintData.critical ?? 1);
-        const inProgMaint = Number(maintData.in_progress ?? 3);
+        const mDash = managerDashRes?.data || managerDashRes || {};
+        const kpi = mDash?.kpi_cards || {};
+        const statsData = managerStatsRes?.data || managerStatsRes || {};
 
-        // Parse Donations Stats
-        const donData = donRes?.data || {};
-        const monthlyDon = Number(donData.monthly_donations?.value ?? 45200);
-        const monthlyDonGrowth = Number(donData.monthly_donations?.growth_percent ?? 12.5);
-        const totalDon = Number(donData.total_donations?.value ?? 125400);
-        const activeCampCount = Number(donData.active_campaigns?.value ?? 4);
+        // Parse KPIs from /dashboard/mosque-manager & /statistics
+        const monthlyDon = Number(kpi.monthly_donations?.value ?? statsData.donations ?? 45000);
+        const monthlyDonGrowth = Number(parseFloat(kpi.monthly_donations?.percentage_change || '12.5'));
+        const openMaint = Number(kpi.open_maintenance_requests?.value ?? statsData.open_maintenance_requests ?? 4);
+        const pendingComplaints = Number(kpi.complaints?.value ?? statsData.complaints ?? 6);
+        const accreditedVolunteers = Number(kpi.accredited_volunteers?.value ?? statsData.accredited_volunteers ?? statsData.total_volunteers ?? 10);
 
-        // Parse Volunteer Stats
-        const volData = volRes?.data || {};
-        const oppsTotal = Number(volData.opportunities_total ?? 4);
-        const pendingApps = Number(volData.pending_applications ?? 3);
-        const volCount = Number(volData.volunteers_count ?? 18);
+        // Parse Recent Activities
+        const rawActivities: any[] = Array.isArray(mDash.recent_activities) && mDash.recent_activities.length > 0
+          ? mDash.recent_activities
+          : Array.isArray(managerOpsRes?.data?.data)
+          ? managerOpsRes.data.data
+          : Array.isArray(managerOpsRes?.data)
+          ? managerOpsRes.data
+          : [];
+
+        // Parse Today Tasks
+        const rawTodayTasks: any[] = Array.isArray(mDash.today_tasks)
+          ? mDash.today_tasks
+          : Array.isArray(mDash.today_tasks?.tasks)
+          ? mDash.today_tasks.tasks
+          : [];
+
+        // Parse Latest Tickets / Complaints
+        const rawTickets: any[] = Array.isArray(mDash.latest_tickets)
+          ? mDash.latest_tickets
+          : [];
 
         // Parse Sermons
         const rawSermons: any[] = Array.isArray(sermonsRes?.data) ? sermonsRes.data : Array.isArray(sermonsRes) ? sermonsRes : [];
         const scheduledSermon = rawSermons.find(s => s.is_scheduled_for_friday || s.status === 'scheduled') || rawSermons.find(s => s.status === 'approved') || rawSermons[0];
-
-        // Parse Complaints
-        const rawComplaints: any[] = Array.isArray(complaintsRes?.data) ? complaintsRes.data : Array.isArray(complaintsRes) ? complaintsRes : [];
 
         // Parse Campaigns
         const rawCampaigns: any[] = Array.isArray(campaignsRes?.data) ? campaignsRes.data : Array.isArray(campaignsRes) ? campaignsRes : [];
@@ -432,14 +450,15 @@ export function useDashboardData() {
           ...prev,
           monthlyDonations: monthlyDon,
           monthlyDonationsGrowth: monthlyDonGrowth,
-          totalDonations: totalDon,
-          activeCampaignsCount: activeCampCount,
+          totalDonations: Number(statsData.donations || monthlyDon * 3 || 125400),
+          activeCampaignsCount: rawCampaigns.length > 0 ? rawCampaigns.length : prev.activeCampaignsCount,
           openMaintenanceCount: openMaint,
-          criticalMaintenanceCount: criticalMaint,
-          inProgressMaintenanceCount: inProgMaint,
-          volunteersCount: volCount,
-          pendingApplicationsCount: pendingApps,
-          activeOpportunitiesCount: oppsTotal,
+          criticalMaintenanceCount: Number(kpi.open_maintenance_requests?.critical ?? 1),
+          inProgressMaintenanceCount: Number(kpi.open_maintenance_requests?.in_progress ?? 2),
+          pendingComplaintsCount: pendingComplaints,
+          volunteersCount: accreditedVolunteers,
+          pendingApplicationsCount: Number(statsData.pending_invitations ?? 3),
+          activeOpportunitiesCount: prev.activeOpportunitiesCount,
           fridaySermon: scheduledSermon ? {
             id: scheduledSermon.id,
             title: scheduledSermon.title || prev.fridaySermon?.title || 'خطبة الجمعة القادمة',
@@ -448,7 +467,7 @@ export function useDashboardData() {
             date: scheduledSermon.sermon_date || 'الجمعة القادمة',
             isScheduled: Boolean(scheduledSermon.is_scheduled_for_friday || scheduledSermon.status === 'approved'),
           } : prev.fridaySermon,
-          urgentComplaints: rawComplaints.length > 0 ? rawComplaints.slice(0, 4).map(c => ({
+          urgentComplaints: rawTickets.length > 0 ? rawTickets.slice(0, 4).map((c: any) => ({
             id: c.id,
             title: c.title || c.subject || 'بلاغ صيانة',
             dept: c.department || c.category || 'المرافق العامة',
@@ -468,11 +487,25 @@ export function useDashboardData() {
               timeLeft: c.remaining_days ? `${c.remaining_days} يوم` : 'نشطة',
             };
           }) : prev.activeCampaigns,
+          recentActivities: rawActivities.length > 0 ? rawActivities.slice(0, 5).map((a: any, idx: number) => ({
+            id: a.id || idx + 1,
+            user: a.user_name || a.user?.name || a.user || 'مدير المسجد',
+            action: a.action || a.title || a.description || 'نشاط مسجل',
+            time: a.created_at ? new Date(a.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : 'مؤخراً',
+            type: a.type || a.module || 'general',
+          })) : prev.recentActivities,
+          todayTasks: rawTodayTasks.length > 0 ? rawTodayTasks.map((t: any, idx: number) => ({
+            id: t.id || idx + 1,
+            title: t.title || t.name || 'مهمة متابعة',
+            category: t.category || 'عام',
+            time: t.time || '10:00 ص',
+            status: t.status || 'pending',
+            assignee: t.assignee || t.user_name,
+          })) : prev.todayTasks,
         }));
 
-        if (maintRes) addDebugLog('إحصائيات الصيانة للمسجد', `${BASE_URL}/maintenance/stats`, 200, maintRes);
-        if (donRes) addDebugLog('إحصائيات التبرعات للمسجد', `${BASE_URL}/donations/stats`, 200, donRes);
-        if (sermonsRes) addDebugLog('خطب المسجد', `${BASE_URL}/sermons`, 200, sermonsRes);
+        if (managerDashRes) addDebugLog('بيانات لوحة تحكم مدير المسجد (getMosqueManagerDashboard)', `${BASE_URL}/dashboard/mosque-manager`, 200, managerDashRes);
+        if (managerStatsRes) addDebugLog('إحصائيات المسجد لمدير المسجد (getMosqueManagerStatistics)', `${BASE_URL}/dashboard/mosque-manager/statistics`, 200, managerStatsRes);
       }
 
     } catch (err: any) {

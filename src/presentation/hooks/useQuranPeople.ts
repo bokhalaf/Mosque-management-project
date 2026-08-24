@@ -104,18 +104,13 @@ export function useQuranPeople() {
       const rawDashboardResponse = (repository as any).lastDashboardRawResponse;
 
       addDebugLog(
-        'GET /api/dashboard/mosque-manager/statistics (getMosqueManagerStatistics)',
+        'GET /api/dashboard/mosque-manager/statistics (getMosqueStatistics)',
         'https://mms-backend-rose.vercel.app/api/dashboard/mosque-manager/statistics',
         200,
         rawDashboardResponse || {
           status: true,
           message: "تم جلب إحصائيات المسجد بنجاح",
-          data: {
-            total_students: statsData.total_students ?? 120,
-            total_teachers: statsData.total_teachers ?? 15,
-            total_volunteers: statsData.total_volunteers ?? 8,
-            pending_invitations: statsData.pending_invitations ?? 3,
-          },
+          data: statsData,
           pagination: null
         }
       );
@@ -130,11 +125,16 @@ export function useQuranPeople() {
             message: "تم الجلب بنجاح من السيرفر",
             data: result.data,
           },
-          status_cards_values: {
+          status_cards_values: statsData.role === 'region_manager' ? {
+            "مديرو المساجد": statsData.total_managers ?? 0,
+            "المعلمون والمقرئون": statsData.total_teachers ?? 0,
+            "مديرو الحلقات": statsData.total_supervisors ?? 0,
+            "الطلبات المنتظرة": statsData.pending_invitations ?? 0,
+          } : {
             "إجمالي طلاب الحلقات": statsData.total_students ?? 0,
             "المعلمون والمقرئون": statsData.total_teachers ?? 0,
-            "متطوعين": statsData.total_volunteers ?? 0,
-            "دعوات التسجيل المعلقة": statsData.pending_invitations ?? 0,
+            "المتطوعون": statsData.total_volunteers ?? 0,
+            "الطلبات المنتظرة": statsData.pending_invitations ?? 0,
           },
           pagination_info: result.pagination,
         }
