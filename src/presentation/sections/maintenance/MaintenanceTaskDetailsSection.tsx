@@ -450,89 +450,107 @@ export function MaintenanceTaskDetailsSection({ taskId, onBack, onEdit, onDelete
               </div>
             )}
 
-            {/* Interactive Action Buttons for Admin Status Update — (admin.maintenance.process) */}
+            {/* Action Section for Admin Status Update — (admin.maintenance.process) */}
             <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">معالجة الطلب (إدارة النظام / Super Admin)</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {isSuperAdmin ? "معالجة الطلب (إدارة المنطقة / Super Admin)" : "متابعة حالة الطلب"}
+                </p>
               </div>
 
-              {/* Case 1: Pending (قيد الانتظار) */}
-              {currentStatus === 'pending' && (
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => openStatusModal('in_progress')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-amber-500" />
-                      <span>تحويل إلى (قيد التنفيذ)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => openStatusModal('cancelled')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Archive className="w-4 h-4 text-red-500" />
-                      <span>إلغاء طلب الصيانة</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Case 2: In Progress (قيد التنفيذ) */}
-              {currentStatus === 'in_progress' && (
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => openStatusModal('completed')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>تحديد الطلب كـ (مكتملة)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => openStatusModal('cancelled')}
-                    disabled={updatingStatus}
-                    className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Archive className="w-4 h-4 text-red-500" />
-                      <span>إلغاء طلب الصيانة</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Case 3: Terminal Status (مكتملة / ملغاة) */}
-              {(currentStatus === 'completed' || currentStatus === 'cancelled') && (
-                <div className={`p-4 rounded-xl border text-xs font-bold space-y-1.5 ${currentStatus === 'completed'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'
-                  }`}>
-                  <div className="flex items-center gap-2">
-                    {currentStatus === 'completed' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    ) : (
-                      <Archive className="w-4 h-4 text-red-500 shrink-0" />
-                    )}
-                    <span>
-                      {currentStatus === 'completed'
-                        ? 'تم إكمال أعمال الصيانة بنجاح (حالة نهائية).'
-                        : 'تم إلغاء هذا الطلب (حالة نهائية).'}
-                    </span>
+              {!isSuperAdmin ? (
+                /* Mosque Manager Info Card: Processing is restricted to Region Maintenance Admin */
+                <div className="p-4 bg-muted/60 border border-border rounded-xl space-y-2 text-xs font-bold text-muted-foreground">
+                  <div className="flex items-center gap-2 text-foreground font-black">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <span>قيد المتابعة من إدارة الصيانة بالمنطقة</span>
                   </div>
-                  <p className="text-[10px] opacity-80 leading-relaxed font-normal">
-                    يمكن الاطلاع على السجل والملاحظات من قائمة التحديثات.
+                  <p className="text-[11px] font-normal leading-relaxed text-muted-foreground">
+                    تحديث ومعالجة طلبات الصيانة وتعيين الفنيين يتم من قبل إدارة الصيانة بالمنطقة.
                   </p>
                 </div>
+              ) : (
+                /* Super Admin Action Controls */
+                <>
+                  {/* Case 1: Pending (قيد الانتظار) */}
+                  {currentStatus === 'pending' && (
+                    <div className="space-y-2.5">
+                      <button
+                        onClick={() => openStatusModal('in_progress')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-500" />
+                          <span>تحويل إلى (قيد التنفيذ)</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => openStatusModal('cancelled')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Archive className="w-4 h-4 text-red-500" />
+                          <span>إلغاء طلب الصيانة</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Case 2: In Progress (قيد التنفيذ) */}
+                  {currentStatus === 'in_progress' && (
+                    <div className="space-y-2.5">
+                      <button
+                        onClick={() => openStatusModal('completed')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <span>تحديد الطلب كـ (مكتملة)</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => openStatusModal('cancelled')}
+                        disabled={updatingStatus}
+                        className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Archive className="w-4 h-4 text-red-500" />
+                          <span>إلغاء طلب الصيانة</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Case 3: Terminal Status (مكتملة / ملغاة) */}
+                  {(currentStatus === 'completed' || currentStatus === 'cancelled') && (
+                    <div className={`p-4 rounded-xl border text-xs font-bold space-y-1.5 ${currentStatus === 'completed'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'
+                      }`}>
+                      <div className="flex items-center gap-2">
+                        {currentStatus === 'completed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <Archive className="w-4 h-4 text-red-500 shrink-0" />
+                        )}
+                        <span>
+                          {currentStatus === 'completed'
+                            ? 'تم إكمال أعمال الصيانة بنجاح (حالة نهائية).'
+                            : 'تم إلغاء هذا الطلب (حالة نهائية).'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] opacity-80 leading-relaxed font-normal">
+                        يمكن الاطلاع على السجل والملاحظات من قائمة التحديثات.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

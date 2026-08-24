@@ -46,22 +46,42 @@ export class DonationRepositoryImpl implements IDonationRepository {
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          const role = String(user.role || user.user_type || user.role_name || '').toLowerCase();
+          const role = String(user.role || user.user_type || user.role_name || (typeof user.role === 'object' ? user.role?.name : '') || '').toLowerCase();
+          const roles = (user.roles || []).map((r: any) => typeof r === 'string' ? r.toLowerCase() : String(r.name || '').toLowerCase());
           if (
             role === 'super_admin' ||
             role === 'superadmin' ||
             role === 'admin' ||
             role === 'administrator' ||
             role === 'region_manager' ||
+            role === 'regionmanager' ||
+            role.includes('region') ||
+            role.includes('super') ||
+            role.includes('مدير المنطقة') ||
             user.is_super_admin === true ||
-            user.role_id === 1
+            user.role_id === 1 ||
+            roles.includes('super_admin') ||
+            roles.includes('superadmin') ||
+            roles.includes('admin') ||
+            roles.includes('region_manager')
           ) {
             return true;
           }
         } catch (e) {}
       }
-      const roleStr = localStorage.getItem("user_role");
-      if (roleStr && (roleStr.toLowerCase() === 'super_admin' || roleStr.toLowerCase() === 'admin')) {
+      const roleStr = String(localStorage.getItem("user_role") || "").toLowerCase();
+      if (
+        roleStr === 'super_admin' ||
+        roleStr === 'superadmin' ||
+        roleStr === 'admin' ||
+        roleStr === 'region_manager' ||
+        roleStr.includes('super') ||
+        roleStr.includes('region')
+      ) {
+        return true;
+      }
+      const activeRoleView = String(localStorage.getItem("active_role_view") || "").toLowerCase();
+      if (activeRoleView === 'super_admin' || activeRoleView === 'region_manager' || activeRoleView === 'region') {
         return true;
       }
     }
@@ -125,8 +145,15 @@ export class DonationRepositoryImpl implements IDonationRepository {
       }
 
       if (!response.ok || !json || json.status === false) {
-        console.warn("Failed to fetch donations, returning fallback data.", json?.message || response.statusText);
-        return this.getPaginatedFallback(page, limit, search, type, status);
+        return {
+          data: [],
+          pagination: {
+            current_page: page,
+            last_page: 1,
+            per_page: limit,
+            total: 0
+          }
+        };
       }
       
       let items: any[] = [];
@@ -190,33 +217,16 @@ export class DonationRepositoryImpl implements IDonationRepository {
       };
     } catch (error) {
       console.error("Error fetching donations from API:", error);
-      return this.getPaginatedFallback(page, limit, search, type, status);
+      return {
+        data: [],
+        pagination: {
+          current_page: page,
+          last_page: 1,
+          per_page: limit,
+          total: 0
+        }
+      };
     }
-  }
-
-  private getPaginatedFallback(page: number, limit: number, search: string, type: string, status: string): PaginatedDonations {
-    let all = this.getFallbackDonations();
-    if (search) {
-      all = all.filter(d => d.donorName.includes(search) || d.reference.includes(search));
-    }
-    if (type && type !== 'all') {
-      all = all.filter(d => d.type === type);
-    }
-    if (status && status !== 'all') {
-      all = all.filter(d => d.status === status);
-    }
-    const total = all.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedItems = all.slice(startIndex, startIndex + limit);
-    return {
-      data: paginatedItems,
-      pagination: {
-        current_page: page,
-        last_page: Math.ceil(total / limit) || 1,
-        per_page: limit,
-        total: total
-      }
-    };
   }
 
   async getCampaigns(page: number = 1, limit: number = 4, search: string = "", status: string = "", priority: string = ""): Promise<PaginatedCampaigns> {
@@ -250,11 +260,12 @@ export class DonationRepositoryImpl implements IDonationRepository {
         params.append("priority", p);
       }
 
-      // ── Determine URL: Super Admin or Global listing uses /api/campaigns (listAllCampaigns) ──
+      // ── Determine URL: Super Admin uses /api/campaigns (listAllCampaigns), Manager uses /api/mosque/campaigns (listMyMosqueCampaigns) ──
       const allCampaignsUrl = `${BASE_URL}/campaigns?${params.toString()}`;
+      const myMosqueCampaignsUrl = `${BASE_URL}/mosque/campaigns?${params.toString()}`;
       const mosqueCampaignsUrl = `${BASE_URL}/mosques/${mosqueId}/campaigns?${params.toString()}`;
 
-      let url = isSuperAdmin ? allCampaignsUrl : mosqueCampaignsUrl;
+      let url = isSuperAdmin ? allCampaignsUrl : myMosqueCampaignsUrl;
 
       let response = await fetch(url, {
         method: "GET",
@@ -263,10 +274,10 @@ export class DonationRepositoryImpl implements IDonationRepository {
       let json = await response.json().catch(() => null);
       console.log(`API Campaigns Response (${url}):`, json);
 
-      // Fallback if mosque-specific route returns error or 403
+      // If manager request to /mosque/campaigns fails, fallback to /mosques/{mosqueId}/campaigns
       if ((!response.ok || !json || json.status === false) && !isSuperAdmin) {
-        console.log(`Retrying Campaigns via Global endpoint: ${allCampaignsUrl}`);
-        const altRes = await fetch(allCampaignsUrl, {
+        console.log(`Retrying Campaigns via mosque-scoped endpoint: ${mosqueCampaignsUrl}`);
+        const altRes = await fetch(mosqueCampaignsUrl, {
           method: "GET",
           headers: this.getAuthHeaders(),
         });
@@ -279,8 +290,8 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
       if (!response.ok || !json || json.status === false) {
         return {
-          data: this.getFallbackCampaigns(),
-          pagination: { current_page: 1, last_page: 1, per_page: limit, total: this.getFallbackCampaigns().length }
+          data: [],
+          pagination: { current_page: 1, last_page: 1, per_page: limit, total: 0 }
         };
       }
 
@@ -336,8 +347,8 @@ export class DonationRepositoryImpl implements IDonationRepository {
     } catch (error) {
       console.error("Error fetching campaigns:", error);
       return {
-        data: this.getFallbackCampaigns(),
-        pagination: { current_page: 1, last_page: 1, per_page: limit, total: this.getFallbackCampaigns().length }
+        data: [],
+        pagination: { current_page: 1, last_page: 1, per_page: limit, total: 0 }
       };
     }
   }
@@ -345,34 +356,65 @@ export class DonationRepositoryImpl implements IDonationRepository {
   async getStats(): Promise<FinancialStats> {
     const mosqueId = this.getMosqueId();
     try {
-      const response = await fetch(`${BASE_URL}/mosques/${mosqueId}/donations/stats`, {
+      // 1. Primary official endpoint: GET /donations/stats (getDonationStats)
+      let response = await fetch(`${BASE_URL}/donations/stats`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
-      
-      const json = await response.json();
+      let json = await response.json().catch(() => null);
+
+      // 2. Fallback to mosque-scoped stats if needed
+      if (!response.ok || !json || !json.status) {
+        const altRes = await fetch(`${BASE_URL}/mosques/${mosqueId}/donations/stats`, {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+        });
+        const altJson = await altRes.json().catch(() => null);
+        if (altRes.ok && altJson && altJson.status) {
+          response = altRes;
+          json = altJson;
+        }
+      }
+
       console.log("API Donations Stats Response:", json);
       
-      if (!response.ok || !json.status) {
-        console.warn("Failed to fetch donation stats, returning fallback data.", json.message);
-        return this.getFallbackStats();
+      if (!response.ok || !json || !json.status) {
+        return {
+          totalDonations: 0,
+          totalDonationsTrend: 0,
+          monthlyDonations: 0,
+          monthlyDonationsTrend: 0,
+          activeCampaigns: 0,
+          activeCampaignsTrend: 0,
+          newDonors: 0,
+          newDonorsTrend: 0,
+        };
       }
       
-      // Map API response to our Domain Entity
+      // Map pure API response to our Domain Entity
       const data = json.data || {};
       return {
-        totalDonations: parseAmount(data.total_donations),
-        totalDonationsTrend: data.total_donations?.growth_percent ?? 0,
-        monthlyDonations: parseAmount(data.monthly_donations),
-        monthlyDonationsTrend: data.monthly_donations?.growth_percent ?? 0,
-        activeCampaigns: parseAmount(data.active_campaigns),
-        activeCampaignsTrend: data.active_campaigns?.change ?? 0,
-        newDonors: parseAmount(data.new_donors),
-        newDonorsTrend: data.new_donors?.growth_percent ?? 0,
+        totalDonations: parseAmount(data.total_donations?.value ?? data.total_donations),
+        totalDonationsTrend: Number(data.total_donations?.growth_percent ?? data.total_donations_trend ?? 0),
+        monthlyDonations: parseAmount(data.monthly_donations?.value ?? data.monthly_donations),
+        monthlyDonationsTrend: Number(data.monthly_donations?.growth_percent ?? data.monthly_donations_trend ?? 0),
+        activeCampaigns: parseAmount(data.active_campaigns?.value ?? data.active_campaigns),
+        activeCampaignsTrend: Number(data.active_campaigns?.change ?? data.active_campaigns_trend ?? 0),
+        newDonors: parseAmount(data.new_donors?.value ?? data.new_donors),
+        newDonorsTrend: Number(data.new_donors?.growth_percent ?? data.new_donors_trend ?? 0),
       };
     } catch (error) {
       console.error("Error fetching donation stats:", error);
-      return this.getFallbackStats();
+      return {
+        totalDonations: 0,
+        totalDonationsTrend: 0,
+        monthlyDonations: 0,
+        monthlyDonationsTrend: 0,
+        activeCampaigns: 0,
+        activeCampaignsTrend: 0,
+        newDonors: 0,
+        newDonorsTrend: 0,
+      };
     }
   }
 
@@ -578,74 +620,79 @@ export class DonationRepositoryImpl implements IDonationRepository {
   }
 
   async getCampaignStats(): Promise<any> {
+    const isSuperAdmin = this.isSuperAdminUser();
     const mosqueId = this.getMosqueId();
+
     try {
-      const response = await fetch(`${BASE_URL}/mosques/${mosqueId}/campaigns/stats`, {
+      const endpoint = isSuperAdmin
+        ? `${BASE_URL}/admin/campaigns/stats`
+        : `${BASE_URL}/mosques/${mosqueId}/campaigns/stats`;
+
+      const response = await fetch(endpoint, {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
-      const json = await response.json();
-      console.log("API Campaigns Stats Response:", json);
-      if (!response.ok || !json.status) throw new Error("فشل جلب إحصائيات الحملات");
+      const json = await response.json().catch(() => null);
+      console.log(`API Campaigns Stats (${isSuperAdmin ? 'SuperAdmin /admin/campaigns/stats' : 'Mosque Manager'}) Response:`, json);
+      if (!response.ok || !json || !json.status) {
+        return { totalRaised: 0, activeCampaigns: 0, completedCampaigns: 0, successRate: 0 };
+      }
       const data = json.data || {};
       return {
         totalRaised: parseAmount(data.total_collected),
         activeCampaigns: parseAmount(data.active_count),
         completedCampaigns: parseAmount(data.completed_count),
-        successRate: parseAmount(data.growth_rate_percent)
+        successRate: parseAmount(data.growth_rate_percent ?? data.overall_progress_percent ?? 0),
+        totalCampaigns: parseAmount(data.total_campaigns),
+        overallProgress: parseAmount(data.overall_progress_percent),
       };
     } catch (error) {
       console.error("Error fetching campaign stats:", error);
-      return { totalRaised: 55000, activeCampaigns: 3, completedCampaigns: 2, successRate: 85 };
+      return { totalRaised: 0, activeCampaigns: 0, completedCampaigns: 0, successRate: 0 };
     }
   }
 
   async getCampaignById(id: string | number): Promise<Campaign> {
-    try {
-      const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-      const json = await response.json();
-      console.log(`GET /api/campaigns/${id} Response:`, json);
-      if (!response.ok || !json.status) throw new Error(json.message || "فشل جلب تفاصيل الحملة");
-      const item = json.data;
-      const target = parseAmount(item.target_amount || item.targetAmount || item.goalAmount);
-      const raised = parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount);
-      const percent = target > 0 ? Math.min(Math.round((raised / target) * 100), 100) : 0;
-      const days = item.remaining_days ?? item.days_remaining;
+    const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+    const json = await response.json().catch(() => null);
+    console.log(`GET /api/campaigns/${id} Response:`, json);
+    if (!response.ok || !json || !json.status) throw new Error(json?.message || "فشل جلب تفاصيل الحملة من السيرفر");
+    const item = json.data;
+    const target = parseAmount(item.target_amount || item.targetAmount || item.goalAmount);
+    const raised = parseAmount(item.collected_amount || item.raisedAmount || item.raised_amount);
+    const percent = target > 0 ? Math.min(Math.round((raised / target) * 100), 100) : 0;
+    const days = item.remaining_days ?? item.days_remaining;
 
-      return {
-        id: String(item.id || item._id),
-        mosque_id: item.mosque_id,
-        title: item.title || item.name,
-        description: item.description,
-        target_amount: target,
-        collected_amount: raised,
-        targetAmount: target,
-        raisedAmount: raised,
-        percent_complete: percent,
-        status: item.status || 'active',
-        priority: item.priority || 'medium',
-        start_date: item.start_date,
-        end_date: item.end_date,
-        days_remaining: days,
-        remaining_days: days,
-        cover_image: item.cover_image || item.image,
-        image: item.cover_image || item.image,
-        donors_count: parseAmount(item.donors_count || item.donorsCount),
-        donorsCount: parseAmount(item.donors_count || item.donorsCount),
-        timeLeft: (days !== null && days !== undefined) ? `${days} يوم` : (item.timeLeft || item.time_left || 'غير محدد'),
-        completedDate: item.completedDate || item.completed_date,
-        mosque: item.mosque || null,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        _rawResponse: json,
-      } as Campaign;
-    } catch (error) {
-      console.error(`Error fetching campaign #${id}:`, error);
-      return this.getFallbackCampaigns()[0];
-    }
+    return {
+      id: String(item.id || item._id),
+      mosque_id: item.mosque_id,
+      title: item.title || item.name,
+      description: item.description,
+      target_amount: target,
+      collected_amount: raised,
+      targetAmount: target,
+      raisedAmount: raised,
+      percent_complete: percent,
+      status: item.status || 'active',
+      priority: item.priority || 'medium',
+      start_date: item.start_date,
+      end_date: item.end_date,
+      days_remaining: days,
+      remaining_days: days,
+      cover_image: item.cover_image || item.image,
+      image: item.cover_image || item.image,
+      donors_count: parseAmount(item.donors_count || item.donorsCount),
+      donorsCount: parseAmount(item.donors_count || item.donorsCount),
+      timeLeft: (days !== null && days !== undefined) ? `${days} يوم` : (item.timeLeft || item.time_left || 'غير محدد'),
+      completedDate: item.completedDate || item.completed_date,
+      mosque: item.mosque || null,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      _rawResponse: json,
+    } as Campaign;
   }
 
   async updateCampaign(id: string | number, payload: any): Promise<Campaign> {
@@ -755,34 +802,5 @@ export class DonationRepositoryImpl implements IDonationRepository {
       throw new Error(validationErrors || json.message || "فشل إضافة الحملة");
     }
     return json;
-  }
-
-  // Fallback methods for resilience
-  private getFallbackDonations(): Donation[] {
-    return [
-      { id: '24', reference: 'REC-9218-2026', donorName: 'اويس عبود', amount: 500, type: 'تبرع نقدي', campaign: 'كسوة العيد للأيتام', status: 'مكتمل', date: '2026-08-15' },
-      { id: '1', reference: 'REC-9218-2026', donorName: 'أحمد محمد', amount: 500, type: 'صدقة', campaign: 'إفطار صائم', status: 'مكتمل', date: '2024-05-10' },
-      { id: '2', reference: 'REC-9218-2026', donorName: 'سارة علي', amount: 1000, type: 'زكاة', status: 'مكتمل', date: '2024-05-11' },
-      { id: '3', reference: 'REC-9218-2026', donorName: 'محمود حسن', amount: 200, type: 'تبرع عام', campaign: 'ترميم المسجد', status: 'قيد المعالجة', date: '2024-05-12' },
-      { id: '4', reference: 'REC-9218-2026', donorName: 'فاطمة إبراهيم', amount: 1500, type: 'صدقة', campaign: 'كفالة يتيم', status: 'مكتمل', date: '2024-05-13' },
-      { id: '5', reference: 'REC-9218-2026', donorName: 'ياسين كمال', amount: 300, type: 'كفارة', status: 'فشل', date: '2024-05-14' },
-    ];
-  }
-
-  private getFallbackStats(): FinancialStats {
-    return {
-      totalDonations: 125400,
-      monthlyDonations: 15200,
-      activeCampaigns: 4,
-      newDonors: 28,
-    };
-  }
-
-  private getFallbackCampaigns(): Campaign[] {
-    return [
-      { id: '1', title: 'ترميم مئذنة المسجد', description: 'حملة لترميم المئذنة', targetAmount: 50000, raisedAmount: 35000, status: 'active' },
-      { id: '2', title: 'إفطار صائم 2024', description: 'توفير وجبات', targetAmount: 20000, raisedAmount: 20000, status: 'completed' },
-      { id: '3', title: 'كفالة طلاب العلم', description: 'كفالة 10 طلاب', targetAmount: 15000, raisedAmount: 4500, status: 'urgent' },
-    ];
   }
 }

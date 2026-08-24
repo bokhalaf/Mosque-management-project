@@ -150,15 +150,6 @@ export function DonationDetailsSection({ donationId, onBack }: DonationDetailsSe
         actions={
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold transition-all shadow-sm"
-              title="معاينة سجل استجابة الـ API المباشرة"
-            >
-              <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>{showDebugTerminal ? 'إخفاء مراقب السيرفر' : 'مراقب السيرفر (API)'}</span>
-            </button>
-
-            <button
               onClick={handleDownloadReceipt}
               disabled={downloadingReceipt}
               className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-md shadow-primary/20 disabled:opacity-60"
@@ -176,61 +167,6 @@ export function DonationDetailsSection({ donationId, onBack }: DonationDetailsSe
       />
 
       <main className="px-4 md:px-8 space-y-6">
-
-        {/* Live Debug Inspector Box (مراقب السيرفر المحدث) */}
-        {showDebugTerminal && (
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-200 font-mono text-xs space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
-                <div>
-                  <h3 className="font-bold text-white text-sm">مراقب الـ API المباشر لتفاصيل التبرع (Donation API Inspector)</h3>
-                  <p className="text-[11px] text-slate-400 font-sans">معاينة تفاصيل الطلبات والردود من السيرفر بصيغة JSON المباشرة</p>
-                </div>
-              </div>
-              <button
-                onClick={clearDebugLogs}
-                className="text-[10px] text-slate-400 hover:text-white px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg hover:border-slate-700 transition-all"
-              >
-                مسح السجل
-              </button>
-            </div>
-
-            {debugLogs.length === 0 ? (
-              <p className="text-slate-500 italic">لا توجد طلبات مسجلة حالياً.</p>
-            ) : (
-              <div className="space-y-3 max-h-72 overflow-y-auto ltr text-left">
-                {debugLogs.map((log, idx) => (
-                  <div key={idx} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between text-[11px] text-emerald-400">
-                      <span className="font-bold flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        [{log.time}] {log.action}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => copyLog(log, idx)}
-                          className="flex items-center gap-1 text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-800 transition-all"
-                        >
-                          {copiedLogIndex === idx ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                          <span>{copiedLogIndex === idx ? 'تم النسخ' : 'نسخ JSON'}</span>
-                        </button>
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
-                          HTTP {log.status}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono break-all">{log.url}</p>
-                    <pre className="text-[10px] bg-slate-950 p-2.5 rounded text-slate-300 overflow-x-auto leading-relaxed border border-slate-900">
-                      {JSON.stringify(log.response, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           
           {/* Left Column: Donation Summary & Donor Data */}

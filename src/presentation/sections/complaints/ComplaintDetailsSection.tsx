@@ -106,6 +106,7 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
     handleUpdateStatus,
     handleAssignToAdmin,
     isMosqueManager,
+    isSuperAdmin,
     submitNote,
   } = useComplaintDetails(complaintId);
 
@@ -194,8 +195,19 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
     complaint.status === 'escalated' ||
     complaint.status === 'assigned_to_admin'
   );
-  const canTakeAction = isMosqueManager ? !isAssignedToAdmin : isAssignedToAdmin;
-  const senderName = complaint.is_anonymous ? 'فاعل خير (مجهول)' : (complaint.user?.name || complaint.email || 'مصلي / زائر');
+  // If assigned to admin: ONLY Super Admin can take action.
+  // If NOT assigned to admin: ONLY Mosque Manager can take action.
+  const canTakeAction = isAssignedToAdmin ? isSuperAdmin : isMosqueManager;
+  const isSenderUnknown = Boolean(
+    complaint.is_anonymous ||
+    !complaint.user?.name ||
+    complaint.user?.name === 'مجهول' ||
+    complaint.user?.name === 'فاعل خير' ||
+    complaint.user?.name === 'anonymous' ||
+    complaint.user?.name === 'guest' ||
+    complaint.user?.name === 'غير محدد'
+  );
+  const senderName = isSenderUnknown ? 'مجهول الهوية' : (complaint.user?.name || complaint.email || 'مجهول الهوية');
   const complaintNumber = complaint.complaint_number || `CMP-${complaint.id}`;
 
   return (
@@ -342,18 +354,21 @@ export function ComplaintDetailsSection({ complaintId, onBack }: ComplaintDetail
               )}
             </div>
 
-            {/* Quick Add Note Input */}
-            <div className="flex gap-3 items-end pt-4 border-t border-border">
-              <div className="flex-1">
-                <textarea rows={2} value={newNote} onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="أضف استفساراً أو ملاحظة سريعة للإدارة حول الشكوى..."
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground" />
+            {/* Quick Add Note Input — Only available for Region Manager (Super Admin) when complaint is assigned to them */}
+            {isSuperAdmin && canTakeAction && (
+              <div className="flex gap-3 items-end pt-4 border-t border-border">
+                <div className="flex-1">
+                  <textarea rows={2} value={newNote} onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="أضف استفساراً أو توجيهاً أو ملاحظة حول معالجة الشكوى..."
+                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs resize-none text-foreground placeholder:text-muted-foreground" />
+                </div>
+                <button onClick={submitNote} disabled={updatingStatus}
+                  className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0 h-11 flex items-center justify-center disabled:opacity-50"
+                  title="إرسال الملاحظة">
+                  <Send className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={submitNote} disabled={updatingStatus}
-                className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0 h-11 flex items-center justify-center disabled:opacity-50">
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
+            )}
           </div>
         </div>
 

@@ -86,48 +86,47 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   }
 
   async getNotifications(): Promise<AppNotification[]> {
-    let apiItems: AppNotification[] = [];
-    let fetchSuccess = false;
-
     try {
       const res = await fetch(`${BASE_URL}/common/notifications`, {
         headers: this.getAuthHeaders(),
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.status && Array.isArray(json.data)) {
-          fetchSuccess = true;
-          apiItems = json.data.map((item: any) => ({
+        const items = Array.isArray(json.data) ? json.data : (Array.isArray(json.data?.data) ? json.data.data : []);
+        if (json.status && Array.isArray(items)) {
+          const mapped = items.map((item: any) => ({
             id: item.id,
             title: item.title || item.data?.title || "إشعار جديد",
             message: item.message || item.data?.message || item.body || "",
             type: item.type || "system",
             read_at: item.read_at || null,
-            created_at: item.created_at || new Date().toLocaleTimeString('ar-SA'),
+            created_at: item.created_at ? new Date(item.created_at).toLocaleDateString('ar-SA') : new Date().toLocaleTimeString('ar-SA'),
             action_url: item.action_url || item.data?.action_url || "/notifications",
           }));
+          this.saveLocalNotifications(mapped);
+          return mapped;
         }
       }
     } catch (e) {
       console.warn("API getNotifications failed, using fallback:", e);
     }
 
-    const localList = this.getLocalNotifications();
-    const map = new Map<string | number, AppNotification>();
-    localList.forEach(n => map.set(n.id, n));
-    apiItems.forEach(n => map.set(n.id, n));
-
-    const merged = Array.from(map.values());
-    this.saveLocalNotifications(merged);
-    return merged;
+    return this.getLocalNotifications();
   }
 
   async markAsRead(id: number | string): Promise<boolean> {
     try {
-      await fetch(`${BASE_URL}/common/notifications/${id}/read`, {
+      const res = await fetch(`${BASE_URL}/common/notifications/${id}/read`, {
         method: "POST",
         headers: this.getAuthHeaders(),
       });
+      if (!res.ok) {
+        // Fallback endpoint if different backend routing
+        await fetch(`${BASE_URL}/notifications/${id}/read`, {
+          method: "POST",
+          headers: this.getAuthHeaders(),
+        }).catch(() => null);
+      }
     } catch (e) {
       console.warn("API markAsRead failed:", e);
     }
@@ -143,10 +142,17 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async markAllAsRead(): Promise<boolean> {
     try {
-      await fetch(`${BASE_URL}/common/notifications/read-all`, {
+      const res = await fetch(`${BASE_URL}/common/notifications/read-all`, {
         method: "POST",
         headers: this.getAuthHeaders(),
       });
+      if (!res.ok) {
+        // Fallback endpoint if different backend routing
+        await fetch(`${BASE_URL}/notifications/read-all`, {
+          method: "POST",
+          headers: this.getAuthHeaders(),
+        }).catch(() => null);
+      }
     } catch (e) {
       console.warn("API markAllAsRead failed:", e);
     }

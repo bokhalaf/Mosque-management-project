@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import {
   Building2, MapPin, Clock, User, CheckCircle2, Wrench,
-  AlertCircle, Trash2, Edit3, Terminal, RefreshCw, Star,
+  AlertCircle, Trash2, Edit3, RefreshCw, Star,
   Compass, ExternalLink, ShieldCheck, Calendar, StarHalf,
   ChevronRight, ArrowRight, Eye, ShieldAlert, Award
 } from 'lucide-react';
@@ -275,58 +275,11 @@ export function MosqueDetailsSection({
             >
               <Trash2 className="w-4 h-4" />
             </button>
-
-            {/* Live API Inspector Toggle — icon only */}
-            <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="p-2.5 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl transition-all shadow-sm"
-              title="مراقب استجابة السيرفر المباشر"
-            >
-              <Terminal className="w-4 h-4 text-emerald-400" />
-            </button>
           </div>
         }
       />
 
       <div className="px-4 md:px-8 space-y-6 max-w-7xl mx-auto w-full">
-        {/* Live Debug Terminal Box (مراقب استجابة السيرفر المباشر) */}
-        {showDebugTerminal && (
-          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3 font-mono text-xs shadow-xl animate-in fade-in">
-            <div className="flex items-center justify-between text-slate-300 border-b border-slate-800 pb-2">
-              <span className="font-bold flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                مراقب الـ API المباشر — استجابة السيرفر (GET /api/mosques/{mosqueId})
-              </span>
-              <button
-                onClick={() => setDebugLogs([])}
-                className="text-[10px] text-slate-400 hover:text-white underline"
-              >
-                مسح السجل
-              </button>
-            </div>
-            {debugLogs.length === 0 ? (
-              <p className="text-slate-500 text-xs py-2">جاري الاتصال بالسيرفر وتسجيل الطلبات...</p>
-            ) : (
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {debugLogs.map((log, i) => (
-                  <div key={i} className="p-2.5 bg-slate-950/90 rounded border border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between text-emerald-400">
-                      <span className="font-bold">[{log.time}] {log.action}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
-                        HTTP {log.status}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono">{log.url}</p>
-                    <pre className="text-[10px] bg-slate-950 p-2 rounded text-slate-300 overflow-x-auto">
-                      {JSON.stringify(log.response, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Hero Mosque Banner */}
         <div className="relative h-64 md:h-80 w-full rounded-3xl overflow-hidden border border-border shadow-md group">
           {mosque.image ? (

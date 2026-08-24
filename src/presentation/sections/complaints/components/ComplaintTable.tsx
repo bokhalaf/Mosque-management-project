@@ -206,9 +206,18 @@ export function ComplaintTable({
             ) : (
               complaints.map((item) => {
                 const complaintIdStr = item.complaint_number || `CMP-${item.id}`;
-                const senderName = item.is_anonymous
-                  ? 'فاعل خير'
-                  : (item.user?.name || item.email || 'مصلي / زائر');
+                const isUnknown = Boolean(
+                  item.is_anonymous ||
+                  !item.user?.name ||
+                  item.user?.name === 'مجهول' ||
+                  item.user?.name === 'فاعل خير' ||
+                  item.user?.name === 'anonymous' ||
+                  item.user?.name === 'guest' ||
+                  item.user?.name === 'غير محدد'
+                );
+                const senderName = isUnknown
+                  ? 'مجهول الهوية'
+                  : (item.user?.name || item.email || 'مجهول الهوية');
                 const typeLabel = getComplaintTypeLabel(item.complaint_type);
                 const isAssigned = checkIsAssignedToAdmin(item);
 
@@ -228,7 +237,7 @@ export function ComplaintTable({
                         </div>
                         <div>
                           <span className="block text-xs font-bold text-foreground">{senderName}</span>
-                          <span className="block text-[10px] text-muted-foreground">{item.is_anonymous ? 'مجهول' : (item.email || 'مصلي')}</span>
+                          <span className="block text-[10px] text-muted-foreground">{isUnknown ? 'مجهول الهوية' : (item.email || 'مصلي / زائر')}</span>
                         </div>
                       </div>
                     </td>

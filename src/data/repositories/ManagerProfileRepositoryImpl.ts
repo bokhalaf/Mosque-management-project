@@ -14,45 +14,30 @@ import { IManagerProfileRepository } from "../../domain/repositories/IManagerPro
 const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 
 const DEFAULT_PROFILE: ManagerProfile = {
-  first_name: "أحمد",
-  last_name: "العتيبي",
-  full_name: "أحمد العتيبي",
-  job_title: "مدير مسجد",
-  phone: "0559876544",
-  email: "manager@test.com",
-  employee_id: "MNG-2026-002",
+  first_name: "",
+  last_name: "",
+  full_name: "المستخدم",
+  job_title: "مدير النظام",
+  phone: "",
+  email: "",
+  employee_id: "EMP-2026",
   language: "العربية (الرئيسية)",
   mosque_id: 1,
-  mosque_name: "جامع الراجحي الكبير",
-  mosque_code: "MSQ-0001",
+  mosque_name: "",
+  mosque_code: "",
   imam_name: "غير محدد",
   khatib_name: "غير محدد",
-  city: "الرياض",
-  district: "حي الجزيرة",
-  address: "الرياض - حي الجزيرة",
+  city: "دمشق",
+  district: "",
+  address: "",
   mosque_status: "active",
-  username: "manager",
+  username: "user",
   created_at: "2026-07-26",
   account_status: "active",
   verification_level: "موثّق بالكامل",
   is_email_verified: true,
   two_factor_enabled: false,
-  activities: [
-    {
-      id: 1,
-      action: "تحديث الملف الشخصي",
-      details: "تمت مزامنة بيانات الحساب مع السيرفر بنجاح",
-      timestamp: "اليوم",
-      type: "update",
-    },
-    {
-      id: 2,
-      action: "تسجيل الدخول",
-      details: "تسجيل دخول ناجح للمنصة الإدارية",
-      timestamp: "اليوم",
-      type: "security",
-    }
-  ],
+  activities: [],
 };
 
 export class ManagerProfileRepositoryImpl implements IManagerProfileRepository {
@@ -81,43 +66,54 @@ export class ManagerProfileRepositoryImpl implements IManagerProfileRepository {
         return this.getLocalFallbackProfile();
       }
 
+      const authUserStr = typeof window !== "undefined" ? localStorage.getItem("auth_user") : null;
+      let authUser: any = {};
+      if (authUserStr) {
+        try { authUser = JSON.parse(authUserStr); } catch (e) {}
+      }
+
       const pInfo = json.data.personal_info || {};
       const mInfo = json.data.mosque_info || {};
       const secInfo = json.data.account_security || {};
 
       // Parse city & district
       const cityDistrictParts = (mInfo.city_district || "").split("-").map((s: string) => s.trim());
-      const city = cityDistrictParts[0] || "الرياض";
-      const district = cityDistrictParts[1] || "";
+      const city = cityDistrictParts[0] || (authUser.city || "دمشق");
+      const district = cityDistrictParts[1] || (authUser.district || "");
+
+      const authNameParts = (authUser.name || authUser.full_name || '').split(' ');
+      const fallbackFirstName = authUser.first_name || authNameParts[0] || 'المدير';
+      const fallbackLastName = authUser.last_name || authNameParts.slice(1).join(' ') || '';
+      const fallbackFullName = authUser.name || authUser.full_name || `${fallbackFirstName} ${fallbackLastName}`.trim() || 'مدير الحساب';
 
       const profile: ManagerProfile = {
-        first_name: pInfo.first_name || "أحمد",
-        last_name: pInfo.last_name || "العتيبي",
-        full_name: pInfo.full_name || `${pInfo.first_name || ''} ${pInfo.last_name || ''}`.trim() || "مدير المسجد",
-        job_title: pInfo.role_display || "مدير مسجد",
-        phone: pInfo.phone || "0559876544",
-        email: pInfo.email || "manager@test.com",
+        first_name: pInfo.first_name || fallbackFirstName,
+        last_name: pInfo.last_name || fallbackLastName,
+        full_name: pInfo.full_name || `${pInfo.first_name || fallbackFirstName} ${pInfo.last_name || fallbackLastName}`.trim() || fallbackFullName,
+        job_title: pInfo.role_display || authUser.role_name || (authUser.role === 'region_manager' ? 'مدير المنطقة' : 'مدير مسجد'),
+        phone: pInfo.phone || authUser.phone || '',
+        email: pInfo.email || authUser.email || '',
         pending_email: pInfo.pending_email || null,
-        employee_id: pInfo.employee_code || "MNG-2026-002",
-        language: pInfo.preferred_language || "العربية (الرئيسية)",
+        employee_id: pInfo.employee_code || authUser.employee_id || `EMP-${authUser.id || '2026'}`,
+        language: pInfo.preferred_language || 'العربية (الرئيسية)',
 
-        mosque_id: mInfo.id || 1,
-        mosque_name: mInfo.name || "جامع الراجحي الكبير",
-        mosque_image: mInfo.image || mInfo.image_url || "",
-        mosque_code: mInfo.code || "MSQ-0001",
-        imam_name: mInfo.imam_name || mInfo.imam || "غير محدد",
-        khatib_name: mInfo.khatib_name || mInfo.khatib || "غير محدد",
-        working_hours: Array.isArray(mInfo.working_hours) ? mInfo.working_hours.join(' - ') : (mInfo.working_hours || "طوال اليوم (مفتوح للصلوات الخمس)"),
+        mosque_id: mInfo.id || authUser.mosque_id || 1,
+        mosque_name: mInfo.name || authUser.mosque_name || 'إدارة المساجد',
+        mosque_image: mInfo.image || mInfo.image_url || '',
+        mosque_code: mInfo.code || authUser.mosque_code || '',
+        imam_name: mInfo.imam_name || mInfo.imam || 'غير محدد',
+        khatib_name: mInfo.khatib_name || mInfo.khatib || 'غير محدد',
+        working_hours: Array.isArray(mInfo.working_hours) ? mInfo.working_hours.join(' - ') : (mInfo.working_hours || 'طوال اليوم (مفتوح للصلوات الخمس)'),
         city: city,
         district: district,
         address: mInfo.city_district || `${city} ${district}`.trim(),
-        mosque_status: mInfo.status || "active",
+        mosque_status: mInfo.status || 'active',
 
-        username: pInfo.email ? pInfo.email.split("@")[0] : "manager",
-        created_at: secInfo.created_at || "2026-07-26",
-        account_status: secInfo.status || "active",
-        verification_level: secInfo.verification_level || "موثّق بالكامل",
-        is_email_verified: Boolean(secInfo.is_email_verified),
+        username: pInfo.email ? pInfo.email.split('@')[0] : (authUser.username || 'user'),
+        created_at: secInfo.created_at || authUser.created_at || '2026-07-26',
+        account_status: secInfo.status || 'active',
+        verification_level: secInfo.verification_level || 'موثّق بالكامل',
+        is_email_verified: Boolean(secInfo.is_email_verified ?? true),
         two_factor_enabled: Boolean(secInfo.has_fcm_token),
 
         activities: [
@@ -258,6 +254,25 @@ export class ManagerProfileRepositoryImpl implements IManagerProfileRepository {
       if (cached) {
         try {
           return JSON.parse(cached);
+        } catch (e) {}
+      }
+      const userStr = localStorage.getItem("auth_user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const nameParts = (user.name || user.full_name || '').split(' ');
+          return {
+            ...DEFAULT_PROFILE,
+            first_name: user.first_name || nameParts[0] || 'المدير',
+            last_name: user.last_name || nameParts.slice(1).join(' ') || '',
+            full_name: user.name || user.full_name || 'مدير الحساب',
+            email: user.email || '',
+            phone: user.phone || '',
+            job_title: user.role_name || (user.role === 'region_manager' ? 'مدير المنطقة' : 'مدير مسجد'),
+            employee_id: user.employee_id || `EMP-${user.id || '2026'}`,
+            mosque_name: user.mosque_name || '',
+            mosque_code: user.mosque_code || '',
+          };
         } catch (e) {}
       }
     }

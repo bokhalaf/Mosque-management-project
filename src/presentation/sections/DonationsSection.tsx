@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Download, RefreshCw, Terminal, FileDown } from 'lucide-react';
+import { Plus, RefreshCw, FileDown } from 'lucide-react';
 import { PageHeader } from '../../app/components/PageHeader';
 import { useDonations } from '../hooks/useDonations';
 import { DonationStatCards } from './donations/components/DonationStatCards';
 import { DonationFilterBar } from './donations/components/DonationFilterBar';
 import { DonationTable } from './donations/components/DonationTable';
-import { DonationDebugBox } from './donations/components/DonationDebugBox';
 import { DonationDailySummaryPanel } from './donations/components/DonationDailySummaryPanel';
 import { DownloadReportModal } from '../../app/components/ui/DownloadReportModal';
 

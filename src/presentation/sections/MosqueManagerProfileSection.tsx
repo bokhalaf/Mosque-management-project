@@ -32,7 +32,7 @@ export function MosqueManagerProfileSection() {
   const [profile, setProfile] = useState<ManagerProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Super Admin Detection
+  // Super Admin / Region Manager Detection
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
 
   useEffect(() => {
@@ -41,8 +41,30 @@ export function MosqueManagerProfileSection() {
         const userStr = localStorage.getItem('auth_user');
         if (userStr) {
           const user = JSON.parse(userStr);
-          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
-          if (roles.includes('super_admin') || Boolean(user.is_super_admin)) {
+          const role = String(user.role || user.user_type || user.role_name || (typeof user.role === 'object' ? user.role?.name : '') || '').toLowerCase();
+          const roles = (user.roles || []).map((r: any) => typeof r === 'string' ? r.toLowerCase() : String(r.name || '').toLowerCase());
+          const roleStr = String(localStorage.getItem("user_role") || "").toLowerCase();
+          const activeRoleView = String(localStorage.getItem("active_role_view") || "").toLowerCase();
+          if (
+            role === 'super_admin' ||
+            role === 'superadmin' ||
+            role === 'admin' ||
+            role === 'administrator' ||
+            role === 'region_manager' ||
+            role === 'regionmanager' ||
+            role.includes('region') ||
+            role.includes('super') ||
+            role.includes('مدير المنطقة') ||
+            user.is_super_admin === true ||
+            user.role_id === 1 ||
+            roles.includes('super_admin') ||
+            roles.includes('region_manager') ||
+            roles.includes('superadmin') ||
+            roleStr === 'super_admin' ||
+            roleStr === 'region_manager' ||
+            activeRoleView === 'super_admin' ||
+            activeRoleView === 'region_manager'
+          ) {
             setIsSuperAdmin(true);
           }
         }
@@ -326,15 +348,6 @@ export function MosqueManagerProfileSection() {
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-sm"
-              title="مراقب السيرفر"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugTerminal ? 'إخفاء رد السيرفر' : 'فحص رد الـ API'}</span>
-            </button>
-
-            <button
               onClick={loadProfile}
               className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm"
               title="تحديث البيانات"
@@ -356,15 +369,6 @@ export function MosqueManagerProfileSection() {
 
       <div className="px-4 md:px-8 py-4 space-y-6">
 
-        {/* ── Live API Debug Terminal (Server Monitor) ── */}
-        {showDebugTerminal && (
-          <ProfileDebugBox
-            debugLogs={debugLogs}
-            onClear={() => setDebugLogs([])}
-            onClose={() => setShowDebugTerminal(false)}
-          />
-        )}
-
         {/* ── HEADER HERO CARD: Identity & Status ── */}
         <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
           <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-5 text-center sm:text-right">
@@ -385,15 +389,21 @@ export function MosqueManagerProfileSection() {
                 </span>
               </div>
 
-              <p className="text-xs text-muted-foreground font-medium flex items-center justify-center sm:justify-start gap-2">
-                <Building2 className="w-3.5 h-3.5 text-primary" />
-                <span>{profile.mosque_name} ({profile.address})</span>
-              </p>
+              {!isSuperAdmin && profile.mosque_name && (
+                <p className="text-xs text-muted-foreground font-medium flex items-center justify-center sm:justify-start gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-primary" />
+                  <span>{profile.mosque_name} {profile.address ? `(${profile.address})` : ''}</span>
+                </p>
+              )}
 
               <div className="flex items-center justify-center sm:justify-start gap-4 text-[11px] text-muted-foreground font-mono pt-1">
                 <span>الرقم الوظيفي: <strong className="text-foreground">{profile.employee_id}</strong></span>
-                <span>•</span>
-                <span>رمز المسجد: <strong className="text-foreground">{profile.mosque_code}</strong></span>
+                {!isSuperAdmin && profile.mosque_code && (
+                  <>
+                    <span>•</span>
+                    <span>رمز المسجد: <strong className="text-foreground">{profile.mosque_code}</strong></span>
+                  </>
+                )}
               </div>
             </div>
           </div>

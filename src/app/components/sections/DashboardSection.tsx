@@ -40,7 +40,7 @@ function MosqueManagerView({
   return (
     <div className="space-y-8 font-['Cairo']">
       
-      {/* 1. KPIs العلوية (بالأخضر الزمردي) */}
+      {/* 1. KPIs العلوية (المسترجعة مباشرة من الـ API) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* تبرعات الشهر */}
@@ -52,8 +52,12 @@ function MosqueManagerView({
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
               <DollarSign className="w-6 h-6" />
             </div>
-            <span className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-              <ArrowUpRight className="w-3.5 h-3.5" />
+            <span className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-xl border ${
+              data.monthlyDonationsIsIncrease !== false
+                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+            }`}>
+              <ArrowUpRight className={`w-3.5 h-3.5 ${data.monthlyDonationsIsIncrease === false ? 'rotate-90' : ''}`} />
               {data.monthlyDonationsGrowth > 0 ? `+${data.monthlyDonationsGrowth}%` : `${data.monthlyDonationsGrowth}%`}
             </span>
           </div>
@@ -63,8 +67,8 @@ function MosqueManagerView({
               {Number(data.monthlyDonations || 0).toLocaleString('ar-SA')} <span className="text-xs font-bold text-muted-foreground">ل.س</span>
             </h3>
             <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1 font-medium">
-              <span>إجمالي الحملات النشطة:</span>
-              <strong className="text-emerald-600 font-bold">{data.activeCampaignsCount}</strong>
+              <span>إجمالي التبرعات المعتمدة:</span>
+              <strong className="text-emerald-600 font-bold">{Number(data.totalDonations || 0).toLocaleString('ar-SA')} ل.س</strong>
             </p>
           </div>
         </Link>
@@ -112,7 +116,7 @@ function MosqueManagerView({
             </div>
             {data.pendingComplaintsCount > 0 ? (
               <span className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                قيد المتابعة
+                قيد المتابعة ({data.pendingComplaintsCount})
               </span>
             ) : (
               <span className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
@@ -126,7 +130,7 @@ function MosqueManagerView({
               {data.pendingComplaintsCount} <span className="text-xs font-bold text-muted-foreground">بلاغات</span>
             </h3>
             <p className="text-[11px] text-muted-foreground mt-2 font-medium">
-              تحتاج للاستجابة والإغلاق
+              {data.pendingComplaintsCount > 0 ? 'تحتاج للاستجابة والإغلاق' : 'كافة البلاغات تمت معالجتها'}
             </p>
           </div>
         </Link>
@@ -142,7 +146,7 @@ function MosqueManagerView({
             </div>
             {data.pendingApplicationsCount > 0 && (
               <span className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-emerald-600 text-white shadow-sm">
-                {data.pendingApplicationsCount} طلب جديد
+                {data.pendingApplicationsCount} دعوات معلقة
               </span>
             )}
           </div>
@@ -152,15 +156,58 @@ function MosqueManagerView({
               {data.volunteersCount} <span className="text-xs font-bold text-muted-foreground">متطوع</span>
             </h3>
             <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1 font-medium">
-              <span>الفرص التطوعية المتاحة:</span>
-              <strong className="text-emerald-600 font-bold">{data.activeOpportunitiesCount}</strong>
+              <span>طلاب الحلقات:</span>
+              <strong className="text-emerald-600 font-bold">{data.totalStudents || 0} طالب</strong>
             </p>
           </div>
         </Link>
 
       </div>
 
-      {/* 2. بطاقة خطبة الجمعة القادمة */}
+      {/* 2. شريط الإحصائيات الإضافية للمسجد (القرآن والكوادر) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/30 border border-border/60 rounded-3xl">
+        <div className="flex items-center gap-3 p-2">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground">طلاب الحلقات</p>
+            <p className="text-base font-black text-foreground">{data.totalStudents || 0} طالب</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-2">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground">المعلمون والمقرئون</p>
+            <p className="text-base font-black text-foreground">{data.totalTeachers || 0} معلماً</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-2">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground">الدعوات المعلقة</p>
+            <p className="text-base font-black text-foreground">{data.pendingInvitations || 0} دعوة</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-2">
+          <div className="w-10 h-10 rounded-xl bg-emerald-600/10 text-emerald-700 flex items-center justify-center font-black">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground">الحملات النشطة</p>
+            <p className="text-base font-black text-foreground">{data.activeCampaignsCount || 0} حملة</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. بطاقة خطبة الجمعة القادمة */}
       {data.fridaySermon && (
         <div className="bg-gradient-to-br from-emerald-500/15 via-card to-primary/10 border-2 border-emerald-500/30 rounded-3xl p-6 md:p-8 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -205,7 +252,7 @@ function MosqueManagerView({
         </div>
       )}
 
-      {/* 3. مهام المسجد والتقويم + سجل النشاطات (اللوغ) */}
+      {/* 4. مهام المسجد والتقويم + سجل النشاطات (اللوغ) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* مهام المسجد والجدول اليومي - 7 Cols */}
@@ -242,42 +289,50 @@ function MosqueManagerView({
 
             {/* Today Tasks List */}
             <div className="space-y-3">
-              {(data.todayTasks || []).map((t) => (
-                <div
-                  key={t.id}
-                  className="p-4 rounded-2xl bg-muted/30 hover:bg-muted/60 border border-border/60 transition-all flex items-start justify-between gap-3 group"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                          {t.time}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground font-medium">{t.category}</span>
-                      </div>
-                      <h4 className="text-sm font-bold text-foreground group-hover:text-emerald-600 transition-colors">
-                        {t.title}
-                      </h4>
-                      {t.assignee && (
-                        <p className="text-[11px] text-muted-foreground">
-                          المسند إليه: <span className="font-bold text-foreground">{t.assignee}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold shrink-0 border ${
-                    t.status === 'in_progress'
-                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                      : 'bg-muted text-muted-foreground border-border'
-                  }`}>
-                    {t.status === 'in_progress' ? 'جارية الآن' : 'مجدولة'}
-                  </span>
+              {(!data.todayTasks || data.todayTasks.length === 0) ? (
+                <div className="py-8 text-center text-muted-foreground text-xs space-y-2 border border-dashed border-border rounded-2xl">
+                  <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500/40" />
+                  <p className="font-bold text-foreground">لا توجد مهام مسجلة لهذا اليوم</p>
+                  <p>جميع المهام اليومية للمسجد مكتملة أو لم تُسند مهام جديدة بعد.</p>
                 </div>
-              ))}
+              ) : (
+                data.todayTasks.map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-4 rounded-2xl bg-muted/30 hover:bg-muted/60 border border-border/60 transition-all flex items-start justify-between gap-3 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                            {t.time}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-medium">{t.category}</span>
+                        </div>
+                        <h4 className="text-sm font-bold text-foreground group-hover:text-emerald-600 transition-colors">
+                          {t.title}
+                        </h4>
+                        {t.assignee && (
+                          <p className="text-[11px] text-muted-foreground">
+                            المسند إليه: <span className="font-bold text-foreground">{t.assignee}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold shrink-0 border ${
+                      t.status === 'in_progress'
+                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                        : 'bg-muted text-muted-foreground border-border'
+                    }`}>
+                      {t.status === 'in_progress' ? 'جارية الآن' : 'مجدولة'}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
 
             <Link
@@ -304,41 +359,49 @@ function MosqueManagerView({
 
           <div className="bg-card border border-border/80 rounded-3xl p-6 shadow-xs space-y-4">
             <div className="space-y-4">
-              {(data.recentActivities || []).map((item) => {
-                const isDonation = item.type === 'donation';
-                const isMaintenance = item.type === 'maintenance';
-                const isQuran = item.type === 'quran';
+              {(!data.recentActivities || data.recentActivities.length === 0) ? (
+                <div className="py-8 text-center text-muted-foreground text-xs space-y-2 border border-dashed border-border rounded-2xl">
+                  <Activity className="w-8 h-8 mx-auto text-muted-foreground/30" />
+                  <p className="font-bold text-foreground">لا توجد نشاطات مسجلة حديثاً</p>
+                  <p>سيتم تسجيل حركات وعمليات المسجد الحية هنا فور حدوثها.</p>
+                </div>
+              ) : (
+                data.recentActivities.map((item) => {
+                  const isDonation = item.type === 'donation';
+                  const isMaintenance = item.type === 'maintenance';
+                  const isQuran = item.type === 'quran';
 
-                return (
-                  <div key={item.id} className="flex items-start gap-3 group">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
-                      isDonation
-                        ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                        : isMaintenance
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : isQuran
-                        ? 'bg-emerald-600/10 text-emerald-700 border border-emerald-600/20'
-                        : 'bg-muted text-muted-foreground border border-border'
-                    }`}>
-                      {isDonation ? <DollarSign className="w-4 h-4" /> :
-                       isMaintenance ? <Wrench className="w-4 h-4" /> :
-                       isQuran ? <BookOpen className="w-4 h-4" /> :
-                       <UserPlus className="w-4 h-4" />}
-                    </div>
+                  return (
+                    <div key={item.id} className="flex items-start gap-3 group">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
+                        isDonation
+                          ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                          : isMaintenance
+                          ? 'bg-primary/10 text-primary border border-primary/20'
+                          : isQuran
+                          ? 'bg-emerald-600/10 text-emerald-700 border border-emerald-600/20'
+                          : 'bg-muted text-muted-foreground border border-border'
+                      }`}>
+                        {isDonation ? <DollarSign className="w-4 h-4" /> :
+                         isMaintenance ? <Wrench className="w-4 h-4" /> :
+                         isQuran ? <BookOpen className="w-4 h-4" /> :
+                         <UserPlus className="w-4 h-4" />}
+                      </div>
 
-                    <div className="flex flex-col flex-grow">
-                      <p className="text-xs font-bold text-foreground leading-relaxed">
-                        <span className="text-emerald-700 dark:text-emerald-400">{item.user}</span>{' '}
-                        <span className="font-normal text-muted-foreground">{item.action}</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/80 mt-0.5 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-emerald-600/70" />
-                        <span>{item.time}</span>
-                      </p>
+                      <div className="flex flex-col flex-grow">
+                        <p className="text-xs font-bold text-foreground leading-relaxed">
+                          <span className="text-emerald-700 dark:text-emerald-400">{item.user}</span>{' '}
+                          <span className="font-normal text-muted-foreground">{item.action}</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/80 mt-0.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-emerald-600/70" />
+                          <span>{item.time}</span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             <div className="pt-2 border-t border-border/60">
@@ -355,7 +418,7 @@ function MosqueManagerView({
 
       </div>
 
-      {/* 4. الشكاوى والأعطال + الحملات التكافلية */}
+      {/* 5. الشكاوى والأعطال + الحملات التكافلية */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* مركز الاستجابة للأعطال والشكاوى - 7 Cols */}
@@ -372,7 +435,7 @@ function MosqueManagerView({
           </div>
 
           <div className="bg-card border border-border/80 rounded-3xl p-5 md:p-6 shadow-xs space-y-3.5">
-            {data.urgentComplaints.length === 0 ? (
+            {(!data.urgentComplaints || data.urgentComplaints.length === 0) ? (
               <div className="py-12 text-center text-muted-foreground text-xs space-y-2">
                 <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-500/50" />
                 <p className="font-bold text-foreground">المسجد في حالة ممتازة!</p>
@@ -430,26 +493,34 @@ function MosqueManagerView({
           </div>
 
           <div className="bg-card border border-border/80 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
-            {data.activeCampaigns.map((camp) => (
-              <div key={camp.id} className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <h4 className="text-foreground font-black line-clamp-1">{camp.title}</h4>
-                  <span className="text-emerald-600 font-black">{camp.percent}%</span>
-                </div>
-
-                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-600 rounded-full transition-all duration-700"
-                    style={{ width: `${camp.percent}%` }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground font-medium pt-1">
-                  <span>المحصل: <strong className="text-foreground">{camp.raisedAmount.toLocaleString('ar-SA')}</strong></span>
-                  <span>الهدف: {camp.targetAmount.toLocaleString('ar-SA')} ل.س</span>
-                </div>
+            {(!data.activeCampaigns || data.activeCampaigns.length === 0) ? (
+              <div className="py-8 text-center text-muted-foreground text-xs space-y-2 border border-dashed border-border rounded-2xl">
+                <DollarSign className="w-8 h-8 mx-auto text-muted-foreground/30" />
+                <p className="font-bold text-foreground">لا توجد حملات تكافلية نشطة حالياً</p>
+                <p>يمكنك إنشاء حملة تبرع جديدة لصيانة وتطوير المسجد.</p>
               </div>
-            ))}
+            ) : (
+              data.activeCampaigns.map((camp) => (
+                <div key={camp.id} className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <h4 className="text-foreground font-black line-clamp-1">{camp.title}</h4>
+                    <span className="text-emerald-600 font-black">{camp.percent}%</span>
+                  </div>
+
+                  <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 rounded-full transition-all duration-700"
+                      style={{ width: `${camp.percent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground font-medium pt-1">
+                    <span>المحصل: <strong className="text-foreground">{camp.raisedAmount.toLocaleString('ar-SA')}</strong></span>
+                    <span>الهدف: {camp.targetAmount.toLocaleString('ar-SA')} ل.س</span>
+                  </div>
+                </div>
+              ))
+            )}
 
             <Link
               href="/donations/add"
@@ -551,10 +622,6 @@ function RegionManagerView({
             <h3 className="text-2xl font-black text-foreground mt-1 tracking-tight">
               {data.totalMosques} <span className="text-xs font-bold text-muted-foreground">مسجداً وجامعاً</span>
             </h3>
-            <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1 font-medium">
-              <span>تحت الصيانة الشاملة:</span>
-              <strong className="text-emerald-600 font-bold">{data.maintenanceMosques} مساجد</strong>
-            </p>
           </div>
         </Link>
 
@@ -813,38 +880,6 @@ function RegionManagerView({
                 يُطبق هذا السعر تلقائياً على كافة التبرعات المحولة بالدولار في جميع مساجد المنطقة.
               </p>
             </div>
-
-            <div className="space-y-2">
-              <h5 className="text-xs font-black text-foreground">تقارير وإحصائيات إقليمية سريعة:</h5>
-              <div className="space-y-2 text-xs">
-                <Link
-                  href="/operations"
-                  className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-xl border border-emerald-500/20 flex items-center justify-between font-bold transition-all"
-                >
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4" />
-                    <span>سجل عمليات ونشاطات المساجد</span>
-                  </div>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </Link>
-
-                <Link
-                  href="/donations"
-                  className="p-3 bg-muted/40 hover:bg-muted/70 rounded-xl border border-border/60 flex items-center justify-between transition-all"
-                >
-                  <span className="font-bold text-foreground">كشف تبرعات مساجد المنطقة</span>
-                  <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
-                </Link>
-
-                <Link
-                  href="/sermons"
-                  className="p-3 bg-muted/40 hover:bg-muted/70 rounded-xl border border-border/60 flex items-center justify-between transition-all"
-                >
-                  <span className="font-bold text-foreground">أرشيف خطب الجمعة المعتمدة</span>
-                  <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -885,7 +920,7 @@ export function DashboardSection() {
         description={
           isSuperAdmin
             ? `لوحة المتابعة الإشرافية والرقابية لكافة مساجد المنطقة • ${currentDateFormatted}`
-            : `التقرير التشغيلي المباشر لـ ${mosqueName} • ${currentDateFormatted}`
+            : currentDateFormatted
         }
         actions={
           <div className="flex items-center gap-2.5 flex-wrap">

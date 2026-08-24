@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Terminal, RefreshCw, FileDown } from 'lucide-react';
+import { Plus, RefreshCw, FileDown } from 'lucide-react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useMaintenance } from '../../hooks/useMaintenance';
 import { MaintenanceStatCards } from './components/MaintenanceStatCards';
 import { MaintenanceFilterBar } from './components/MaintenanceFilterBar';
 import { MaintenanceTable } from './components/MaintenanceTable';
 import { MaintenanceTimeline } from './components/MaintenanceTimeline';
-import { MaintenanceDebugBox } from './components/MaintenanceDebugBox';
 import { EditMaintenanceModal } from './components/EditMaintenanceModal';
 import { DownloadReportModal } from '../../../app/components/ui/DownloadReportModal';
 import { MaintenanceRequestItem } from '../../../domain/entities/Maintenance';
@@ -40,12 +39,6 @@ export function MaintenanceTasksSection({ onViewTaskDetails, onCreateTask }: Mai
     deletingId,
     setDeletingId,
     isSubmittingAction,
-    operationDebug,
-    statsDebug,
-    showDebugBox,
-    setShowDebugBox,
-    copiedDebug,
-    copyDebugJson,
   } = useMaintenance();
 
   const [isAdmin, setIsAdmin] = React.useState(false);

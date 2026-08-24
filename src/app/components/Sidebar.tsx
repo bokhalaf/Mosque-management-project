@@ -59,7 +59,6 @@ const NAV: NavSection[] = [
     items: [
       { id: "create-opportunity", label: "إضافة فرصة", href: "/volunteers/opportunities/create" },
       { id: "all-opportunities", label: "الفرص التطوعية", href: "/volunteers/opportunities" },
-      { id: "tasks", label: "متابعة المهام", href: "/volunteers/tasks" },
     ],
   },
   {

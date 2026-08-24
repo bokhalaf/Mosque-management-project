@@ -28,7 +28,8 @@ export function useComplaintDetails(complaintId: string) {
   const [resolutionNote, setResolutionNote] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newNote, setNewNote] = useState('');
-  const [isMosqueManager, setIsMosqueManager] = useState(false);
+  const [isMosqueManager, setIsMosqueManager] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -36,17 +37,41 @@ export function useComplaintDetails(complaintId: string) {
         const userStr = localStorage.getItem('auth_user');
         if (userStr) {
           const user = JSON.parse(userStr);
-          const roles: string[] = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
-          if (roles.includes('mosque_manager') || roles.length === 0 || !roles.includes('super_admin')) {
-            // Mosque Manager role or default manager role
+          const role = String(user.role || user.user_type || user.role_name || (typeof user.role === 'object' ? user.role?.name : '') || '').toLowerCase();
+          const roles = (user.roles || []).map((r: any) => typeof r === 'string' ? r.toLowerCase() : String(r.name || '').toLowerCase());
+          const roleStr = String(localStorage.getItem("user_role") || "").toLowerCase();
+          const activeRoleView = String(localStorage.getItem("active_role_view") || "").toLowerCase();
+
+          const admin = (
+            role === 'super_admin' ||
+            role === 'superadmin' ||
+            role === 'admin' ||
+            role === 'administrator' ||
+            role === 'region_manager' ||
+            role === 'regionmanager' ||
+            role.includes('region') ||
+            role.includes('super') ||
+            role.includes('مدير المنطقة') ||
+            user.is_super_admin === true ||
+            user.role_id === 1 ||
+            roles.includes('super_admin') ||
+            roles.includes('region_manager') ||
+            roles.includes('superadmin') ||
+            roleStr === 'super_admin' ||
+            roleStr === 'region_manager' ||
+            activeRoleView === 'super_admin' ||
+            activeRoleView === 'region_manager'
+          );
+
+          if (admin) {
+            setIsSuperAdmin(true);
+            setIsMosqueManager(false);
+          } else {
+            setIsSuperAdmin(false);
             setIsMosqueManager(true);
           }
-        } else {
-          setIsMosqueManager(true);
         }
-      } catch (e) {
-        setIsMosqueManager(true);
-      }
+      } catch (e) {}
     }
   }, []);
 
@@ -135,6 +160,7 @@ export function useComplaintDetails(complaintId: string) {
     newNote,
     setNewNote,
     isMosqueManager,
+    isSuperAdmin,
     fetchDetails,
     handleUpdateStatus,
     handleAssignToAdmin,

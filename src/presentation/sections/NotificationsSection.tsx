@@ -5,18 +5,10 @@ import Link from 'next/link';
 import { PageHeader } from "../../app/components/PageHeader";
 import {
   Bell, CheckCircle2, Trash2, Clock, CheckCheck, RefreshCw,
-  Wrench, Heart, BookOpen, Users, Sparkles, AlertCircle, ArrowRight, Terminal
+  Wrench, Heart, BookOpen, Users, Sparkles, AlertCircle, ArrowRight
 } from 'lucide-react';
 import { useNotifications } from "../hooks/useNotifications";
 import { NotificationType } from "../../domain/entities/AppNotification";
-
-interface ApiDebugLog {
-  action: string;
-  url: string;
-  status: number | string;
-  response: any;
-  time: string;
-}
 
 export function NotificationsSection() {
   const {
@@ -31,29 +23,12 @@ export function NotificationsSection() {
   } = useNotifications();
 
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [showDebugTerminal, setShowDebugTerminal] = useState<boolean>(false);
 
   const filteredList = notifications.filter(item => {
     if (selectedFilter === 'unread') return !item.read_at;
     if (selectedFilter !== 'all') return item.type === selectedFilter;
     return true;
   });
-
-  const debugLogs: ApiDebugLog[] = [
-    {
-      action: "GET /api/common/notifications",
-      url: "https://mms-backend-rose.vercel.app/api/common/notifications",
-      status: 200,
-      response: {
-        status: true,
-        message: "تم جلب الإشعارات بنجاح.",
-        total: notifications.length,
-        unread: unreadCount,
-        data: notifications,
-      },
-      time: new Date().toLocaleTimeString('ar-SA'),
-    }
-  ];
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
@@ -82,14 +57,6 @@ export function NotificationsSection() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl text-xs font-mono font-bold transition-all"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-            </button>
-
-            <button
               onClick={fetchNotifications}
               className="p-2.5 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl transition-all"
               title="تحديث الإشعارات"
@@ -111,33 +78,6 @@ export function NotificationsSection() {
       />
 
       <div className="px-4 md:px-8 py-4 space-y-6">
-
-        {/* ── LIVE API DEBUG TERMINAL ── */}
-        {showDebugTerminal && (
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl text-slate-200 font-mono text-xs space-y-3 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold text-white text-xs">مراقب الـ API المباشر (Notifications API Inspector)</span>
-              </div>
-            </div>
-            <div className="space-y-2 max-h-56 overflow-y-auto ltr text-left">
-              {debugLogs.map((log, idx) => (
-                <div key={idx} className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
-                  <div className="flex items-center justify-between text-[11px] text-emerald-400 font-bold">
-                    <span>[{log.time}] {log.action}</span>
-                    <span>HTTP {log.status}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400">{log.url}</p>
-                  <pre className="text-[10px] bg-slate-950 p-2 rounded text-slate-300 overflow-x-auto">
-                    {JSON.stringify(log.response, null, 2)}
-                  </pre>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ── KPI Stats & Quick Filter ── */}
         <div className="bg-card border border-border rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2 overflow-x-auto">

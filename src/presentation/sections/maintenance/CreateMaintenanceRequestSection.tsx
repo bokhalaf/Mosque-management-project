@@ -6,8 +6,6 @@ import {
 } from 'lucide-react';
 import { useCreateMaintenanceRequest } from '../../hooks/useCreateMaintenanceRequest';
 
-import { MaintenanceDebugBox } from './components/MaintenanceDebugBox';
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
@@ -114,21 +112,11 @@ export function CreateMaintenanceRequestSection({ onBack }: CreateMaintenanceReq
         {/* Main Form Column */}
         <div className="xl:col-span-8 space-y-6">
 
-          {/* Debug Response Box */}
-          {debugResponse && (
-            <div className="space-y-3">
-              <MaintenanceDebugBox
-                debugData={debugResponse}
-                copiedDebug={copiedDebug}
-                onCopy={copyDebugJson}
-                onClose={() => setDebugResponse(null)}
-              />
-              {debugResponse.isSuccess && (
-                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-600">تم حفظ طلب الصيانة بنجاح في النظام!</span>
-                  <button onClick={onBack} className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md">الرجوع لقائمة الصيانة ➔</button>
-                </div>
-              )}
+          {/* Success Banner */}
+          {debugResponse?.isSuccess && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in">
+              <span className="text-xs font-bold text-emerald-600">تم حفظ وإرسال طلب الصيانة بنجاح في النظام!</span>
+              <button onClick={onBack} className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md hover:bg-emerald-700 transition-colors">الرجوع لقائمة الصيانة ➔</button>
             </div>
           )}
 

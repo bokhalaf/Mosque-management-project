@@ -34,10 +34,6 @@ export function DonationDailySummaryPanel({ dailySummary }: DonationDailySummary
       <div className="p-4 rounded-2xl bg-primary/5 border border-primary/15 space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-bold text-muted-foreground">إجمالي تبرعات اليوم</p>
-          <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-            <ArrowUpRight className="w-3 h-3" />
-            +5%
-          </span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl md:text-3xl font-black text-primary">

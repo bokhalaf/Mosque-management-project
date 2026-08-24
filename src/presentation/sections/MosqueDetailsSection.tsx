@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PageHeader } from "../../app/components/PageHeader";
 import {
   Building2, UserCheck, BookOpen, Clock, MapPin, Plus, Trash2,
-  RefreshCw, Terminal, CheckCircle2, AlertCircle, Save, Check,
+  RefreshCw, CheckCircle2, AlertCircle, Save, Check,
   Car, Heart, Coffee, ShieldCheck, Sparkles, Layers, Volume2, ArrowRight
 } from 'lucide-react';
 import { useMosque } from "../hooks/useMosque";
@@ -231,14 +231,6 @@ export function MosqueDetailsSection() {
             </Link>
 
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl text-xs font-mono font-bold transition-all"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-            </button>
-
-            <button
               onClick={fetchMosque}
               className="p-2.5 bg-card border border-border text-muted-foreground hover:text-foreground rounded-xl transition-all"
               title="تحديث البيانات"
@@ -250,33 +242,6 @@ export function MosqueDetailsSection() {
       />
 
       <div className="px-4 md:px-8 py-4 space-y-6">
-
-        {/* ── LIVE API DEBUG TERMINAL ── */}
-        {showDebugTerminal && (
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl text-slate-200 font-mono text-xs space-y-3 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold text-white text-xs">مراقب الـ API المباشر (Mosque & Facilities API Inspector)</span>
-              </div>
-            </div>
-            <div className="space-y-2 max-h-56 overflow-y-auto ltr text-left">
-              {debugLogs.map((log, idx) => (
-                <div key={idx} className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
-                  <div className="flex items-center justify-between text-[11px] text-emerald-400 font-bold">
-                    <span>[{log.time}] {log.action}</span>
-                    <span>HTTP {log.status}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400">{log.url}</p>
-                  <pre className="text-[10px] bg-slate-950 p-2 rounded text-slate-300 overflow-x-auto">
-                    {JSON.stringify(log.response, null, 2)}
-                  </pre>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ── SUMMARY BANNER: Imam, Khatib & Mosque Status Display ── */}
         <div className="bg-card border border-border rounded-2xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-xl">

@@ -11,7 +11,7 @@ import {
   Building2, Upload, X, MapPin, Clock, User, Star,
   CheckCircle2, Loader2, Sparkles, Navigation, Globe,
   ShieldCheck, AlertCircle, Info, ChevronRight, LocateFixed,
-  ExternalLink, Compass, Layers, Terminal, RefreshCw, Save
+  ExternalLink, Compass, Layers, RefreshCw, Save
 } from 'lucide-react';
 import { useMosques } from '../../hooks/useMosques';
 import { useMosque } from '../../hooks/useMosque';
@@ -383,15 +383,6 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold transition-all shadow-sm"
-              title="فحص استجابة الـ API"
-            >
-              <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-            </button>
-
-            <button
               onClick={() => handleSubmit()}
               disabled={isSubmitting}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/90 shadow-md transition-all active:scale-95 disabled:opacity-50"
@@ -420,100 +411,6 @@ export function EditMosqueSection({ mosqueId, onBack, onSaveSuccess }: EditMosqu
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
-        )}
-
-        {/* Debug Terminal */}
-        {showDebugTerminal && (
-          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3 font-mono text-xs shadow-xl animate-in fade-in">
-            <div className="flex items-center justify-between text-slate-300 border-b border-slate-800 pb-2">
-              <span className="font-bold flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                سجل اتصالات الـ API المباشرة (PUT /api/mosques/{mosqueId})
-              </span>
-              <button
-                onClick={clearDebugLogs}
-                className="text-[10px] text-slate-400 hover:text-white px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg transition-colors"
-                title="مسح السجل"
-              >
-                مسح
-              </button>
-            </div>
-            {debugLogs.length === 0 ? (
-              <p className="text-slate-500 text-xs py-2">لا توجد سجلات مسجلة بعد — اضغط «حفظ التعديلات» لرؤية استجابة الـ API.</p>
-            ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {debugLogs.map((log, i) => {
-                  const isError = Number(log.status) >= 400 || String(log.status).includes('❌');
-                  const validErrs: Record<string, string[]> | null =
-                    log.response?.errors ?? log.response?.validationErrors ?? null;
-                  const serverMsg: string | null =
-                    log.response?.message ?? null;
-                  return (
-                    <div
-                      key={i}
-                      className={`p-2.5 rounded-xl border space-y-2 ${
-                        isError
-                          ? 'bg-red-950/40 border-red-700/40'
-                          : 'bg-slate-950/80 border-slate-800'
-                      }`}
-                    >
-                      {/* Header row */}
-                      <div className="flex items-center justify-between">
-                        <span className={`font-bold text-[11px] ${isError ? 'text-red-400' : 'text-emerald-400'}`}>
-                          [{log.time}] {log.action}
-                        </span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
-                          isError
-                            ? 'bg-red-900/60 border-red-700 text-red-300'
-                            : 'bg-emerald-950 border-emerald-800 text-emerald-300'
-                        }`}>
-                          HTTP {log.status}
-                        </span>
-                      </div>
-
-                      {/* URL */}
-                      <p className="text-[10px] text-slate-400 font-mono break-all">{log.url}</p>
-
-                      {/* Validation errors — highlighted block */}
-                      {isError && validErrs && Object.keys(validErrs).length > 0 && (
-                        <div className="p-2 bg-red-950/60 border border-red-600/40 rounded-lg space-y-1">
-                          <p className="text-[10px] font-black text-red-400 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            أخطاء التحقق (Validation Errors):
-                          </p>
-                          <ul className="space-y-0.5">
-                            {Object.entries(validErrs).map(([field, msgs]) => (
-                              <li key={field} className="text-[10px] text-red-300">
-                                <span className="font-bold text-red-400 font-mono">{field}:</span>{' '}
-                                {Array.isArray(msgs) ? msgs.join('، ') : String(msgs)}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Server message (if error and no validation errors object) */}
-                      {isError && serverMsg && !validErrs && (
-                        <p className="text-[10px] text-red-300 font-semibold">
-                          رسالة السيرفر: {serverMsg}
-                        </p>
-                      )}
-
-                      {/* Full JSON response (collapsed by default for errors to save space) */}
-                      <details className="group">
-                        <summary className="text-[10px] text-slate-500 cursor-pointer hover:text-slate-300 select-none">
-                          {isError ? '← عرض الرد الكامل (JSON)' : '← الرد الكامل'}
-                        </summary>
-                        <pre className="text-[10px] bg-slate-950 p-2 rounded mt-1 text-slate-300 overflow-x-auto max-h-40">
-                          {JSON.stringify(log.response, null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  );
-                })}
-              </div>
             )}
           </div>
         )}

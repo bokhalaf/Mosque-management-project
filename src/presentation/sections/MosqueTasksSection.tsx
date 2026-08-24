@@ -104,19 +104,6 @@ export function MosqueTasksSection() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
-                showDebugTerminal
-                  ? 'bg-slate-900 text-emerald-400 border-slate-700 shadow-inner'
-                  : 'bg-card text-muted-foreground hover:text-foreground border-border hover:bg-muted'
-              }`}
-              title="مراقب شبكة مهام المسجد"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugTerminal ? 'إخفاء مراقب الشبكة' : 'مراقب الشبكة'}</span>
-            </button>
-
-            <button
               onClick={() => setIsCreateModalOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
             >
@@ -128,16 +115,6 @@ export function MosqueTasksSection() {
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-6">
-
-        {/* Debug Terminal */}
-        {showDebugTerminal && (
-          <MosqueTaskDebugTerminal
-            logs={debugLogs}
-            onClear={clearDebugLogs}
-            onClose={() => setShowDebugTerminal(false)}
-          />
-        )}
-
         {/* ── SECTION 1: Clean Day Selector & Stats Ring Grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column (Day Selector & Filters) */}

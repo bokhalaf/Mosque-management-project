@@ -11,7 +11,7 @@ import {
   Building2, Upload, X, MapPin, Clock, User, Star,
   CheckCircle2, Loader2, Sparkles, Navigation, Globe,
   ShieldCheck, AlertCircle, Info, ChevronRight, LocateFixed,
-  ExternalLink, Compass, Layers, Terminal
+  ExternalLink, Compass, Layers
 } from 'lucide-react';
 import { useMosques } from '../../hooks/useMosques';
 import { useToast } from '../../../app/components/ui/Toast';
@@ -307,16 +307,6 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-emerald-400 border border-slate-700 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold transition-all shadow-sm"
-              title="مراقب استجابة السيرفر المباشرة"
-            >
-              <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>{showDebugTerminal ? 'إخفاء الـ API' : 'فحص الـ API'}</span>
-            </button>
-
-            <button
-              type="button"
               onClick={onBack}
               className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs font-bold transition-colors"
             >
@@ -346,47 +336,6 @@ export function CreateMosqueSection({ onBack }: CreateMosqueSectionProps) {
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-6">
-
-        {/* Live Debug Inspector Box */}
-        {showDebugTerminal && (
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-200 font-mono text-xs space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
-                <h3 className="font-bold text-white text-sm">مراقب الـ API المباشر لإضافة المسجد (Create Mosque Server Inspector)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={clearDebugLogs}
-                className="text-[10px] text-slate-400 hover:text-white px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg"
-              >
-                مسح السجل
-              </button>
-            </div>
-
-            {debugLogs.length === 0 ? (
-              <p className="text-slate-500 italic">لا توجد طلبات مسجلة حالياً. اضغط "إشهار وحفظ المسجد" لمعاينة استجابة السيرفر هنا فوراً.</p>
-            ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto ltr text-left">
-                {debugLogs.map((log, idx) => (
-                  <div key={idx} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-emerald-400">
-                      <span className="font-bold">[{log.time}] {log.action}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
-                        HTTP {log.status}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono">{log.url}</p>
-                    <pre className="text-[10px] bg-slate-950 p-2 rounded text-slate-300 overflow-x-auto">
-                      {JSON.stringify(log.response, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Main Form Column (8 Cols) */}

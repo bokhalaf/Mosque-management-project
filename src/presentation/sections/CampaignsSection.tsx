@@ -4,7 +4,7 @@
 // ==============================
 
 import React, { useState } from 'react';
-import { Plus, Download, RefreshCw, Terminal, Search, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Plus, Download, RefreshCw, Search, ChevronRight, ChevronLeft } from 'lucide-react';
 import { PageHeader } from '../../app/components/PageHeader';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { CampaignStatCards } from './campaigns/components/CampaignStatCards';
@@ -12,7 +12,6 @@ import { CampaignFilterBar } from './campaigns/components/CampaignFilterBar';
 import { CampaignCard } from './campaigns/components/CampaignCard';
 import { EditCampaignModal } from './campaigns/components/EditCampaignModal';
 import { DeleteCampaignModal } from './campaigns/components/DeleteCampaignModal';
-import { CampaignDebugBox } from './campaigns/components/CampaignDebugBox';
 import { CampaignDetailsSection } from './CampaignDetailsSection';
 
 interface CampaignsSectionProps {
@@ -46,26 +45,41 @@ export function CampaignsSection({
     setEditingCampaign,
     deletingCampaign,
     setDeletingCampaign,
-    showDebugTerminal,
-    setShowDebugTerminal,
-    debugLogs,
-    clearDebugLogs,
   } = useCampaigns();
 
   const isSuperAdmin = React.useMemo(() => {
     if (typeof window === "undefined") return false;
     try {
       const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
-      const role = String(user.role || user.user_type || user.role_name || '').toLowerCase();
-      const roles = user.roles || [];
+      const role = String(user.role || user.user_type || user.role_name || (typeof user.role === 'object' ? user.role?.name : '') || '').toLowerCase();
+      const roles = (user.roles || []).map((r: any) => typeof r === 'string' ? r.toLowerCase() : String(r.name || '').toLowerCase());
+      const roleStr = String(localStorage.getItem("user_role") || "").toLowerCase();
+      const activeRoleView = String(localStorage.getItem("active_role_view") || "").toLowerCase();
       return (
         role === 'super_admin' ||
+        role === 'superadmin' ||
         role === 'admin' ||
         role === 'administrator' ||
+        role === 'region_manager' ||
+        role === 'regionmanager' ||
+        role.includes('region') ||
+        role.includes('super') ||
+        role.includes('مدير المنطقة') ||
         user.is_super_admin === true ||
+        user.role_id === 1 ||
         roles.includes('super_admin') ||
+        roles.includes('superadmin') ||
         roles.includes('admin') ||
-        localStorage.getItem("user_role") === "super_admin"
+        roles.includes('region_manager') ||
+        roleStr === 'super_admin' ||
+        roleStr === 'superadmin' ||
+        roleStr === 'admin' ||
+        roleStr === 'region_manager' ||
+        roleStr.includes('super') ||
+        roleStr.includes('region') ||
+        activeRoleView === 'super_admin' ||
+        activeRoleView === 'region_manager' ||
+        activeRoleView === 'region'
       );
     } catch (e) {
       return false;

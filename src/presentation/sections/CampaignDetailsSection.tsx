@@ -6,13 +6,12 @@
 import React from 'react';
 import { 
   Users, Clock, CheckCircle2, Target, Wallet, Calendar, Share2, 
-  AlertCircle, Edit3, Trash2, Terminal, RefreshCw, Building2, ChevronRight, Tag
+  AlertCircle, Edit3, Trash2, RefreshCw, Building2, ChevronRight, Tag
 } from "lucide-react";
 import { PageHeader } from "../../app/components/PageHeader";
 import { useCampaignDetails } from "../hooks/useCampaignDetails";
 import { EditCampaignModal } from "./campaigns/components/EditCampaignModal";
 import { DeleteCampaignModal } from "./campaigns/components/DeleteCampaignModal";
-import { CampaignDebugBox } from "./campaigns/components/CampaignDebugBox";
 import { useToast } from "../../app/components/ui/Toast";
 
 interface CampaignDetailsSectionProps {
@@ -33,11 +32,46 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
     setIsDeleting,
     handleUpdate,
     handleDelete,
-    showDebugTerminal,
-    setShowDebugTerminal,
-    debugLogs,
-    clearDebugLogs,
   } = useCampaignDetails(campaignId);
+
+  const isSuperAdmin = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
+      const role = String(user.role || user.user_type || user.role_name || (typeof user.role === 'object' ? user.role?.name : '') || '').toLowerCase();
+      const roles = (user.roles || []).map((r: any) => typeof r === 'string' ? r.toLowerCase() : String(r.name || '').toLowerCase());
+      const roleStr = String(localStorage.getItem("user_role") || "").toLowerCase();
+      const activeRoleView = String(localStorage.getItem("active_role_view") || "").toLowerCase();
+      return (
+        role === 'super_admin' ||
+        role === 'superadmin' ||
+        role === 'admin' ||
+        role === 'administrator' ||
+        role === 'region_manager' ||
+        role === 'regionmanager' ||
+        role.includes('region') ||
+        role.includes('super') ||
+        role.includes('مدير المنطقة') ||
+        user.is_super_admin === true ||
+        user.role_id === 1 ||
+        roles.includes('super_admin') ||
+        roles.includes('superadmin') ||
+        roles.includes('admin') ||
+        roles.includes('region_manager') ||
+        roleStr === 'super_admin' ||
+        roleStr === 'superadmin' ||
+        roleStr === 'admin' ||
+        roleStr === 'region_manager' ||
+        roleStr.includes('super') ||
+        roleStr.includes('region') ||
+        activeRoleView === 'super_admin' ||
+        activeRoleView === 'region_manager' ||
+        activeRoleView === 'region'
+      );
+    } catch (e) {
+      return false;
+    }
+  }, []);
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
@@ -148,15 +182,6 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setShowDebugTerminal(!showDebugTerminal)}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700 text-emerald-400 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-sm"
-              title="مراقب السيرفر"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>{showDebugTerminal ? 'إخفاء رد السيرفر' : 'طباعة رد السيرفر'}</span>
-            </button>
-
-            <button
               onClick={refresh}
               className="flex items-center gap-2 px-3.5 py-2 bg-card border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted transition-all shadow-sm"
               title="تحديث البيانات"
@@ -173,35 +198,30 @@ export function CampaignDetailsSection({ campaignId, onBack }: CampaignDetailsSe
               <span>مشاركة</span>
             </button>
 
-            <button
-              onClick={() => setIsEditing(true)}
-              className="p-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl transition-all shadow-sm flex items-center justify-center"
-              title="تعديل الحملة"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
+            {!isSuperAdmin && (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl transition-all shadow-sm flex items-center justify-center"
+                  title="تعديل الحملة"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
 
-            <button
-              onClick={() => setIsDeleting(true)}
-              className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl transition-all shadow-sm flex items-center justify-center"
-              title="حذف الحملة"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+                <button
+                  onClick={() => setIsDeleting(true)}
+                  className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl transition-all shadow-sm flex items-center justify-center"
+                  title="حذف الحملة"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
         }
       />
 
       <div className="px-4 md:px-8 pt-4 space-y-8">
-        {/* Live API Debug Terminal */}
-        {showDebugTerminal && (
-          <CampaignDebugBox
-            debugLogs={debugLogs}
-            onClear={clearDebugLogs}
-            onClose={() => setShowDebugTerminal(false)}
-          />
-        )}
-
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           

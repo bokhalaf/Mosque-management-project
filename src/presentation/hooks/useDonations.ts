@@ -82,8 +82,8 @@ export function useDonations() {
         200,
         donationsRes._rawResponse || donationsRes
       );
-      addDebugLog('GET /api/mosques/campaigns', `${baseUrl}/mosques/1/campaigns`, 200, c);
-      addDebugLog('GET /api/mosques/donations/stats', `${baseUrl}/mosques/1/donations/stats`, 200, s);
+      addDebugLog('GET /api/campaigns', `${baseUrl}/campaigns`, 200, c);
+      addDebugLog('GET /api/donations/stats', `${baseUrl}/donations/stats`, 200, s);
       addDebugLog('GET /api/mosques/donations/summary', `${baseUrl}/mosques/1/donations/summary`, 200, ds);
 
       setDonations(donationsRes.data);

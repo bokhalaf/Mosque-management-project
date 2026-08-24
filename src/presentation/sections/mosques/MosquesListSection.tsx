@@ -77,6 +77,23 @@ export function MosquesListSection({
   const [mosqueToDelete, setMosqueToDelete] = useState<MosqueDetail | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Local search query for Enter key trigger
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+
+  React.useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setSearchQuery(localSearchQuery.trim());
+    }
+  };
+
+  const handleSearchTrigger = () => {
+    setSearchQuery(localSearchQuery.trim());
+  };
+
   // Invite Mosque Manager Modal State
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteInitialMosqueId, setInviteInitialMosqueId] = useState<string | number | undefined>(undefined);
@@ -304,18 +321,31 @@ export function MosquesListSection({
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Search Box */}
             <div className="relative w-full md:w-80 lg:w-96">
-              <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <button
+                type="button"
+                onClick={handleSearchTrigger}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                title="اضغط Enter للبحث"
+              >
+                <Search className="w-4 h-4" />
+              </button>
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث في المساجد عبر السيرفر..."
-                className="w-full pl-4 pr-10 py-2 bg-muted/50 border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/60"
+                value={localSearchQuery}
+                onChange={(e) => setLocalSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="ابحث في المساجد واضغط Enter..."
+                className="w-full pl-8 pr-10 py-2 bg-muted/50 border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/60"
               />
-              {searchQuery && (
+              {localSearchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  type="button"
+                  onClick={() => {
+                    setLocalSearchQuery('');
+                    setSearchQuery('');
+                  }}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  title="مسح البحث"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
