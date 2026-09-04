@@ -2,13 +2,23 @@
 // Presentation Hook — useMosque
 // ==============================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MosqueDetail, UpdateMosquePayload, CreateSpacePayload } from "../../domain/entities/Mosque";
-import { MosqueRepositoryImpl } from "../../data/repositories/MosqueRepositoryImpl";
-
-const repository = new MosqueRepositoryImpl();
+import { getMosqueRepository } from "../../data/factories/repositoryFactory";
+import {
+  GetMosqueDetailsUseCase,
+  UpdateMosqueDetailsUseCase,
+  CreateSpaceUseCase,
+  DeleteSpaceUseCase,
+} from "../../domain/usecases/mosques";
 
 export function useMosque(mosqueId: number | string = 20) {
+  const repository = useMemo(() => getMosqueRepository(), []);
+  const getMosqueDetailsUC = useMemo(() => new GetMosqueDetailsUseCase(repository), [repository]);
+  const updateMosqueDetailsUC = useMemo(() => new UpdateMosqueDetailsUseCase(repository), [repository]);
+  const createSpaceUC = useMemo(() => new CreateSpaceUseCase(repository), [repository]);
+  const deleteSpaceUC = useMemo(() => new DeleteSpaceUseCase(repository), [repository]);
+
   const [mosque, setMosque] = useState<MosqueDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,14 +27,14 @@ export function useMosque(mosqueId: number | string = 20) {
     setLoading(true);
     setError(null);
     try {
-      const data = await repository.getMosqueDetails(mosqueId);
+      const data = await getMosqueDetailsUC.execute(mosqueId);
       setMosque(data);
     } catch (err: any) {
       setError(err.message || "فشل تحميل بيانات المسجد");
     } finally {
       setLoading(false);
     }
-  }, [mosqueId]);
+  }, [mosqueId, getMosqueDetailsUC]);
 
   useEffect(() => {
     fetchMosque();
@@ -32,27 +42,27 @@ export function useMosque(mosqueId: number | string = 20) {
 
   const updateMosque = useCallback(async (payload: UpdateMosquePayload) => {
     try {
-      const updated = await repository.updateMosqueDetails(mosqueId, payload);
+      const updated = await updateMosqueDetailsUC.execute(mosqueId, payload);
       setMosque(updated);
       return updated;
     } catch (err: any) {
       throw new Error(err.message || "فشل تحديث بيانات المسجد");
     }
-  }, [mosqueId]);
+  }, [mosqueId, updateMosqueDetailsUC]);
 
   const addSpace = useCallback(async (payload: CreateSpacePayload) => {
     try {
-      const newSpace = await repository.createSpace(mosqueId, payload);
+      const newSpace = await createSpaceUC.execute(mosqueId, payload);
       setMosque(prev => prev ? { ...prev, spaces: [newSpace, ...(prev.spaces || [])] } : prev);
       return newSpace;
     } catch (err: any) {
       throw new Error(err.message || "فشل إضافة القاعة/المرفق");
     }
-  }, [mosqueId]);
+  }, [mosqueId, createSpaceUC]);
 
   const deleteSpace = useCallback(async (spaceId: number | string) => {
     try {
-      await repository.deleteSpace(mosqueId, spaceId);
+      await deleteSpaceUC.execute(mosqueId, spaceId);
       setMosque(prev => prev ? {
         ...prev,
         spaces: (prev.spaces || []).filter(s => String(s.id) !== String(spaceId))
@@ -60,7 +70,7 @@ export function useMosque(mosqueId: number | string = 20) {
     } catch (err: any) {
       throw new Error(err.message || "فشل حذف المرفق");
     }
-  }, [mosqueId]);
+  }, [mosqueId, deleteSpaceUC]);
 
   return {
     mosque,

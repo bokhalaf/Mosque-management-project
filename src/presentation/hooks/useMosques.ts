@@ -3,13 +3,21 @@
 // الفلترة والبحث والباجنيشن عبر الـ API بالكامل مع دعم كافة حالات المساجد والمميزة
 // ==============================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { MosqueRepositoryImpl } from '../../data/repositories/MosqueRepositoryImpl';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { getMosqueRepository } from '../../data/factories/repositoryFactory';
 import { MosqueDetail, UpdateMosquePayload, GeoGovernorate } from '../../domain/entities/Mosque';
 import { CreateMosquePayload, MosqueFilterOptions } from '../../domain/repositories/IMosqueRepository';
+import {
+  GetMosquesUseCase,
+  GetFeaturedMosquesUseCase,
+  ToggleMosqueFeaturedUseCase,
+  UpdateMosqueStatusUseCase,
+  CreateMosqueUseCase,
+  UpdateMosqueUseCase,
+  DeleteMosqueUseCase,
+  GetGeoCatalogUseCase,
+} from '../../domain/usecases/mosques';
 import { useToast } from '../../app/components/ui/Toast';
-
-const mosqueRepo = new MosqueRepositoryImpl();
 
 export interface DebugLog {
   time: string;
@@ -21,6 +29,17 @@ export interface DebugLog {
 
 export function useMosques() {
   const { showToast } = useToast();
+
+  const repository = useMemo(() => getMosqueRepository(), []);
+  const getMosquesUC = useMemo(() => new GetMosquesUseCase(repository), [repository]);
+  const getFeaturedMosquesUC = useMemo(() => new GetFeaturedMosquesUseCase(repository), [repository]);
+  const toggleMosqueFeaturedUC = useMemo(() => new ToggleMosqueFeaturedUseCase(repository), [repository]);
+  const updateMosqueStatusUC = useMemo(() => new UpdateMosqueStatusUseCase(repository), [repository]);
+  const createMosqueUC = useMemo(() => new CreateMosqueUseCase(repository), [repository]);
+  const updateMosqueUC = useMemo(() => new UpdateMosqueUseCase(repository), [repository]);
+  const deleteMosqueUC = useMemo(() => new DeleteMosqueUseCase(repository), [repository]);
+  const getGeoCatalogUC = useMemo(() => new GetGeoCatalogUseCase(repository), [repository]);
+
   const [mosques, setMosques] = useState<MosqueDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +96,7 @@ export function useMosques() {
   const loadGeoCatalog = useCallback(async () => {
     setGeoLoading(true);
     try {
-      const data = await mosqueRepo.getGeoCatalog();
+      const data = await getGeoCatalogUC.execute();
       setGeoCatalog(data);
       addDebugLog('GET /api/geo', 'https://mms-backend-rose.vercel.app/api/geo', 200, { count: data.length });
     } catch (e) {
@@ -85,7 +104,7 @@ export function useMosques() {
     } finally {
       setGeoLoading(false);
     }
-  }, [addDebugLog]);
+  }, [addDebugLog, getGeoCatalogUC]);
 
   useEffect(() => {
     loadGeoCatalog();
@@ -111,10 +130,10 @@ export function useMosques() {
   const loadStats = useCallback(async () => {
     try {
       const [allRes, activeRes, maintRes, featRes] = await Promise.allSettled([
-        mosqueRepo.getMosques({ page: 1, limit: 1 }),
-        mosqueRepo.getMosques({ status: 'active', page: 1, limit: 1 }),
-        mosqueRepo.getMosques({ status: 'maintenance', page: 1, limit: 1 }),
-        mosqueRepo.getFeaturedMosques(),
+        getMosquesUC.execute({ page: 1, limit: 1 }),
+        getMosquesUC.execute({ status: 'active', page: 1, limit: 1 }),
+        getMosquesUC.execute({ status: 'maintenance', page: 1, limit: 1 }),
+        getFeaturedMosquesUC.execute(),
       ]);
 
       const total = allRes.status === 'fulfilled' ? (allRes.value.pagination?.totalItems ?? allRes.value.data.length) : 0;
@@ -131,7 +150,7 @@ export function useMosques() {
     } catch (e) {
       console.warn('Failed to load stats overview:', e);
     }
-  }, []);
+  }, [getMosquesUC, getFeaturedMosquesUC]);
 
   useEffect(() => {
     loadStats();
@@ -159,7 +178,7 @@ export function useMosques() {
         sort_order: sortOrder,
       };
 
-      const result = await mosqueRepo.getMosques(filterPayload);
+      const result = await getMosquesUC.execute(filterPayload);
       setMosques(result.data || []);
 
       if (result.pagination) {
@@ -185,7 +204,7 @@ export function useMosques() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, featuredFilter, cityFilter, sortBy, sortOrder, itemsPerPage, addDebugLog]);
+  }, [currentPage, searchQuery, statusFilter, featuredFilter, cityFilter, sortBy, sortOrder, itemsPerPage, addDebugLog, getMosquesUC]);
 
   // Trigger load when filters or pagination change
   useEffect(() => {
@@ -231,7 +250,7 @@ export function useMosques() {
   const handleToggleFeatured = useCallback(async (id: string | number) => {
     setActionLoadingId(id);
     try {
-      const isFeatured = await mosqueRepo.toggleMosqueFeatured(id);
+      const isFeatured = await toggleMosqueFeaturedUC.execute(id);
       addDebugLog(`POST /api/mosques/${id}/featured`, `https://mms-backend-rose.vercel.app/api/mosques/${id}/featured`, 200, { is_featured: isFeatured });
       showToast(isFeatured ? 'تم تمييز المسجد في القائمة الرئيسية' : 'تم إلغاء تمييز المسجد', 'success');
       await Promise.all([loadMosques(), loadStats()]);
@@ -241,13 +260,13 @@ export function useMosques() {
     } finally {
       setActionLoadingId(null);
     }
-  }, [loadMosques, loadStats, showToast, addDebugLog]);
+  }, [loadMosques, loadStats, showToast, addDebugLog, toggleMosqueFeaturedUC]);
 
   // Handle Update Status (active | maintenance | inactive | closed)
   const handleUpdateStatus = useCallback(async (id: string | number, newStatus: 'active' | 'inactive' | 'maintenance' | 'closed') => {
     setActionLoadingId(id);
     try {
-      await mosqueRepo.updateMosqueStatus(id, newStatus);
+      await updateMosqueStatusUC.execute(id, newStatus);
       addDebugLog(`PATCH /api/mosques/${id}/status`, `https://mms-backend-rose.vercel.app/api/mosques/${id}/status`, 200, { status: newStatus });
       showToast('تم تحديث حالة المسجد بنجاح', 'success');
       await Promise.all([loadMosques(), loadStats()]);
@@ -257,12 +276,12 @@ export function useMosques() {
     } finally {
       setActionLoadingId(null);
     }
-  }, [loadMosques, loadStats, showToast, addDebugLog]);
+  }, [loadMosques, loadStats, showToast, addDebugLog, updateMosqueStatusUC]);
 
   // Handle Create Mosque
   const handleCreateMosque = useCallback(async (payload: CreateMosquePayload) => {
     try {
-      const created = await mosqueRepo.createMosque(payload);
+      const created = await createMosqueUC.execute(payload);
       addDebugLog('POST /api/mosques ✅', 'https://mms-backend-rose.vercel.app/api/mosques', 200, created);
       showToast('تم إشهار وإضافة المسجد بنجاح!', 'success');
       await Promise.all([loadMosques(), loadStats()]);
@@ -274,12 +293,12 @@ export function useMosques() {
       showToast(err.message || 'فشل إضافة المسجد', 'error');
       throw err;
     }
-  }, [loadMosques, loadStats, showToast, addDebugLog]);
+  }, [loadMosques, loadStats, showToast, addDebugLog, createMosqueUC]);
 
   // Handle Update Mosque
   const handleUpdateMosque = useCallback(async (id: string | number, payload: UpdateMosquePayload) => {
     try {
-      const updated = await mosqueRepo.updateMosque(id, payload);
+      const updated = await updateMosqueUC.execute(id, payload);
       addDebugLog(`PUT /api/mosques/${id}`, `https://mms-backend-rose.vercel.app/api/mosques/${id}`, 200, updated);
       showToast('تم تعديل بيانات المسجد بنجاح', 'success');
       await Promise.all([loadMosques(), loadStats()]);
@@ -291,13 +310,13 @@ export function useMosques() {
       showToast(err.message || 'فشل تعديل بيانات المسجد', 'error');
       throw err;
     }
-  }, [loadMosques, loadStats, showToast, addDebugLog]);
+  }, [loadMosques, loadStats, showToast, addDebugLog, updateMosqueUC]);
 
   // Handle Delete Mosque
   const handleDeleteMosque = useCallback(async (id: string | number) => {
     setActionLoadingId(id);
     try {
-      await mosqueRepo.deleteMosque(id);
+      await deleteMosqueUC.execute(id);
       addDebugLog(`DELETE /api/mosques/${id}`, `https://mms-backend-rose.vercel.app/api/mosques/${id}`, 200, { status: true, message: `تم حذف المسجد #${id} بنجاح من قاعدة البيانات`, deleted_id: id });
       showToast('تم حذف المسجد من السيرفر بنجاح', 'success');
       await Promise.all([loadMosques(), loadStats()]);
@@ -308,7 +327,7 @@ export function useMosques() {
     } finally {
       setActionLoadingId(null);
     }
-  }, [loadMosques, loadStats, showToast, addDebugLog]);
+  }, [loadMosques, loadStats, showToast, addDebugLog, deleteMosqueUC]);
 
   return {
     mosques,

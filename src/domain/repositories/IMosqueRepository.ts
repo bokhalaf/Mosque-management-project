@@ -58,5 +58,11 @@ export interface IMosqueRepository {
   toggleMosqueFeatured(id: string | number): Promise<boolean>;
   updateMosqueRating(id: string | number, rating: number): Promise<void>;
   getGeoCatalog(): Promise<GeoGovernorate[]>;
+
+  // ── Helper Aliases for single mosque hook (see MosqueRepositoryImpl) ──
+  getMosqueDetails(id: string | number): Promise<MosqueDetail>;
+  updateMosqueDetails(id: string | number, payload: UpdateMosquePayload): Promise<MosqueDetail>;
+  createSpace(mosqueId: string | number, payload: any): Promise<any>;
+  deleteSpace(mosqueId: string | number, spaceId: string | number): Promise<void>;
 }
 
