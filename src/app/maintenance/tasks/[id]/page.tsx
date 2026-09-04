@@ -4,17 +4,16 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { MaintenanceTaskDetailsSection } from "../../../../presentation/sections/maintenance";
 import { EditMaintenanceModal } from "../../../../presentation/sections/maintenance/components/EditMaintenanceModal";
-import { MaintenanceRepositoryImpl } from "../../../../data/repositories/MaintenanceRepositoryImpl";
+import { useMaintenanceTaskActions } from "../../../../presentation/hooks/useMaintenanceTaskActions";
 import { MaintenanceRequestItem } from "../../../../domain/entities/Maintenance";
 import { useToast } from "../../../components/ui/Toast";
-
-const maintenanceRepo = new MaintenanceRepositoryImpl();
 
 export default function MaintenanceTaskDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const { showToast } = useToast();
+  const { updateMaintenanceRequest, deleteMaintenanceRequest } = useMaintenanceTaskActions();
 
   const [editingItem, setEditingItem] = useState<MaintenanceRequestItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,7 +28,7 @@ export default function MaintenanceTaskDetailsPage() {
   const handleSaveEdit = async (id: string | number, payload: any) => {
     setIsSubmitting(true);
     try {
-      await maintenanceRepo.updateMaintenanceRequest(id, payload);
+      await updateMaintenanceRequest(id, payload);
       setEditingItem(null);
       showToast("تم تعديل طلب الصيانة بنجاح ✏️", "success");
       // Refresh details data cleanly without full browser page reload
@@ -47,7 +46,7 @@ export default function MaintenanceTaskDetailsPage() {
     if (!deletingId) return;
     setIsDeleting(true);
     try {
-      await maintenanceRepo.deleteMaintenanceRequest(deletingId);
+      await deleteMaintenanceRequest(deletingId);
       setDeletingId(null);
       showToast("تم حذف طلب الصيانة بنجاح ✨", "success");
       router.push("/maintenance/tasks");

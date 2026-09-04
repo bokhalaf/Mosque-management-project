@@ -21,6 +21,7 @@ import { IMosqueRepository } from "../../domain/repositories/IMosqueRepository";
 import { IMosqueTaskRepository } from "../../domain/repositories/IMosqueTaskRepository";
 import { INotificationRepository } from "../../domain/repositories/INotificationRepository";
 import { IQuranPeopleRepository } from "../../domain/repositories/IQuranPeopleRepository";
+import { IReportRepository } from "../../domain/repositories/IReportRepository";
 import { ISermonRepository } from "../../domain/repositories/ISermonRepository";
 import { ISettingsRepository } from "../../domain/repositories/ISettingsRepository";
 import { ISpaceRepository } from "../../domain/repositories/ISpaceRepository";
@@ -37,6 +38,7 @@ import { MosqueRepositoryImpl } from "../repositories/MosqueRepositoryImpl";
 import { MosqueTaskRepositoryImpl } from "../repositories/MosqueTaskRepositoryImpl";
 import { NotificationRepositoryImpl } from "../repositories/NotificationRepositoryImpl";
 import { QuranPeopleRepositoryImpl } from "../repositories/QuranPeopleRepositoryImpl";
+import { ReportRepositoryImpl } from "../repositories/ReportRepositoryImpl";
 import { SermonRepositoryImpl } from "../repositories/SermonRepositoryImpl";
 import { SettingsRepositoryImpl } from "../repositories/SettingsRepositoryImpl";
 import { SpaceRepositoryImpl } from "../repositories/SpaceRepositoryImpl";
@@ -53,6 +55,7 @@ let mosqueRepository: IMosqueRepository | null = null;
 let mosqueTaskRepository: IMosqueTaskRepository | null = null;
 let notificationRepository: INotificationRepository | null = null;
 let quranPeopleRepository: IQuranPeopleRepository | null = null;
+let reportRepository: IReportRepository | null = null;
 let sermonRepository: ISermonRepository | null = null;
 let settingsRepository: ISettingsRepository | null = null;
 let spaceRepository: ISpaceRepository | null = null;
@@ -107,6 +110,11 @@ export function getNotificationRepository(): INotificationRepository {
 export function getQuranPeopleRepository(): IQuranPeopleRepository {
   if (!quranPeopleRepository) quranPeopleRepository = new QuranPeopleRepositoryImpl();
   return quranPeopleRepository;
+}
+
+export function getReportRepository(): IReportRepository {
+  if (!reportRepository) reportRepository = new ReportRepositoryImpl();
+  return reportRepository;
 }
 
 export function getSermonRepository(): ISermonRepository {

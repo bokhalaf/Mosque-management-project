@@ -5,7 +5,7 @@
 // نافذة تصدير التقارير الرسمية مع فلاتر التاريخ والمسجد
 // ==============================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FileDown,
   Calendar,
@@ -15,6 +15,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
+import { useDownloadReport } from '../../../presentation/hooks/useDownloadReport';
 
 export interface DownloadReportModalProps {
   isOpen: boolean;
@@ -38,72 +39,17 @@ export function DownloadReportModal({
   const [selectedMosqueId, setSelectedMosqueId] = useState<string>(
     defaultMosqueId ? String(defaultMosqueId) : 'all'
   );
-  const [mosques, setMosques] = useState<{ id: number; name: string; city?: string }[]>([]);
-  const [loadingMosques, setLoadingMosques] = useState<boolean>(false);
-  const [downloading, setDownloading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const [reportResult, setReportResult] = useState<any>(null);
-
-  const isSuperAdmin = React.useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const userStr = localStorage.getItem('auth_user') || '{}';
-      const rawUser = JSON.parse(userStr);
-      const userRole = localStorage.getItem('user_role') || rawUser.role || rawUser.user_type || '';
-      const roles = Array.isArray(rawUser.roles) ? rawUser.roles : [];
-      return (
-        userRole === 'super_admin' ||
-        userRole === 'admin' ||
-        userRole === 'administrator' ||
-        roles.includes('super_admin') ||
-        roles.includes('admin') ||
-        Boolean(rawUser.is_super_admin)
-      );
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Fetch mosques catalog for dropdown (Super Admin Only)
-  useEffect(() => {
-    if (!isOpen || !isSuperAdmin) return;
-
-    let isMounted = true;
-    const fetchMosques = async () => {
-      setLoadingMosques(true);
-      try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : '';
-        const res = await fetch('https://mms-backend-rose.vercel.app/api/mosques?per_page=100', {
-          headers: {
-            Accept: 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        const json = await res.json().catch(() => null);
-        if (isMounted && res.ok && json) {
-          const list = Array.isArray(json)
-            ? json
-            : Array.isArray(json.data)
-            ? json.data
-            : Array.isArray(json.data?.data)
-            ? json.data.data
-            : [];
-          setMosques(list.map((m: any) => ({ id: m.id, name: m.name, city: m.city })));
-        }
-      } catch (err) {
-        console.warn('Failed to load mosques list:', err);
-      } finally {
-        if (isMounted) setLoadingMosques(false);
-      }
-    };
-
-    fetchMosques();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen]);
+  const {
+    mosques,
+    loadingMosques,
+    downloading,
+    error,
+    reportResult,
+    setReportResult,
+    isSuperAdmin,
+    downloadReport,
+  } = useDownloadReport(isOpen);
 
   if (!isOpen) return null;
 
@@ -132,64 +78,20 @@ export function DownloadReportModal({
   };
 
   const handleDownload = async () => {
-    setError(null);
-    setDownloading(true);
-
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : '';
-      const params = new URLSearchParams();
-
-      if (dateFrom && dateFrom.trim()) {
-        params.append('date_from', dateFrom.trim());
-      }
-      if (dateTo && dateTo.trim()) {
-        params.append('date_to', dateTo.trim());
-      }
-      if (isSuperAdmin && selectedMosqueId && selectedMosqueId !== 'all') {
-        params.append('mosque_id', String(selectedMosqueId));
-      }
-
-      const queryString = params.toString() ? `?${params.toString()}` : '';
-      
-      // Determine endpoint based on user role (Super Admin vs Mosque Manager)
-      const url = isSuperAdmin
-        ? `https://mms-backend-rose.vercel.app/api/admin/reports/${reportType}/download${queryString}`
-        : `https://mms-backend-rose.vercel.app/api/dashboard/mosque-manager/reports/${reportType}${queryString}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+      const result = await downloadReport(reportType, {
+        dateFrom,
+        dateTo,
+        mosqueId: selectedMosqueId,
       });
-
-      const json = await response.json().catch(() => null);
-
-      if (response.ok) {
-        if (json?.data?.url) {
-          window.open(json.data.url, '_blank');
-          onClose();
-        } else if (json?.report_url) {
-          window.open(json.report_url, '_blank');
-          onClose();
-        } else if (typeof json?.data === 'string' && json.data.startsWith('http')) {
-          window.open(json.data, '_blank');
-          onClose();
-        } else if (json?.data || json?.items || Array.isArray(json)) {
-          // If JSON data/items are returned for Mosque Manager report, display the report preview
-          setReportResult(json.data || json.items || json);
-        } else {
-          throw new Error(json?.message || 'تم استلام رد غير متوقع من السيرفر');
-        }
-      } else {
-        throw new Error(json?.message || 'فشل في إنشاء واستخراج التقرير من السيرفر');
+      if (result.kind === 'url') {
+        window.open(result.url, '_blank');
+        onClose();
       }
-    } catch (err: any) {
-      console.error('Download report failed:', err);
-      setError(err.message || 'حدث خطأ غير متوقع أثناء استخراج التقرير.');
-    } finally {
-      setDownloading(false);
+      // result.kind === 'items': the hook already stored it in reportResult,
+      // which switches this component into preview mode below.
+    } catch {
+      // error state is already set by the hook; surfaced in the UI below.
     }
   };
 
