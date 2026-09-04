@@ -1,1 +1,1 @@
-export { QuranPeopleManagementSection } from "./cadres/QuranPeopleManagementSection";
+export { QuranPeopleManagementSection } from "./quran-people/QuranPeopleManagementSection";

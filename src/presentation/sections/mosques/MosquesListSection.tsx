@@ -14,7 +14,7 @@ import { PageHeader } from '../../../app/components/PageHeader';
 import { useMosques } from '../../hooks/useMosques';
 import { MosqueDetail } from '../../../domain/entities/Mosque';
 import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
-import { InviteStaffModal } from '../cadres/components/InviteStaffModal';
+import { InviteStaffModal } from '../quran-people/components/InviteStaffModal';
 import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';
 import { useToast } from '../../../app/components/ui/Toast';
 

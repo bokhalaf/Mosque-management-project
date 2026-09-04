@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { QuranPerson, SendInvitationPayload, QuranPeopleStats, PeopleRole } from '../../domain/entities/QuranPeople';
-import { QuranPeopleRepositoryImpl } from '../../data/repositories/QuranPeopleRepositoryImpl';
+import { getQuranPeopleRepository } from '../../data/factories/repositoryFactory';
 import {
   GetQuranPeopleUseCase,
   SendInvitationUseCase,
@@ -14,7 +14,7 @@ import {
   DeletePersonUseCase,
   GetQuranPeopleStatsUseCase,
   ResendInvitationUseCase,
-} from '../../domain/usecases/cadres';
+} from '../../domain/usecases/quran-people';
 
 export interface ApiDebugLog {
   action: string;
@@ -69,7 +69,7 @@ export function useQuranPeople() {
   const [showDebugTerminal, setShowDebugTerminal] = useState<boolean>(false);
   const [debugLogs, setDebugLogs] = useState<ApiDebugLog[]>([]);
 
-  const repository = useMemo(() => new QuranPeopleRepositoryImpl(), []);
+  const repository = useMemo(() => getQuranPeopleRepository(), []);
 
   const getPeopleUC = useMemo(() => new GetQuranPeopleUseCase(repository), [repository]);
   const sendInvitationUC = useMemo(() => new SendInvitationUseCase(repository), [repository]);
