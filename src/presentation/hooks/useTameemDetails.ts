@@ -3,12 +3,17 @@
 // جلب تفاصيل تعميم كاملة + تحديث + حذف + تعيين كمقروء + مراقب الـ API
 // ==============================
 
-import { useState, useEffect, useCallback } from 'react';
-import { TameemRepositoryImpl, BASE_URL } from '../../data/repositories/TameemRepositoryImpl';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { BASE_URL } from '../../data/repositories/TameemRepositoryImpl';
+import { getTameemRepository } from '../../data/factories/repositoryFactory';
+import {
+  GetTameemByIdUseCase,
+  UpdateTameemUseCase,
+  DeleteTameemUseCase,
+  MarkTameemAsReadUseCase,
+} from '../../domain/usecases/tameem';
 import { Tameem, UpdateTameemPayload } from '../../domain/entities/Tameem';
 import { useToast } from '../../app/components/ui/Toast';
-
-const tameemRepo = new TameemRepositoryImpl();
 
 export interface ApiDebugLog {
   action: string;
@@ -31,6 +36,12 @@ export function useTameemDetails(tameemId: string | number) {
   // Debug inspector state
   const [showDebugTerminal, setShowDebugTerminal] = useState(false);
   const [debugLogs, setDebugLogs] = useState<ApiDebugLog[]>([]);
+
+  const tameemRepo = useMemo(() => getTameemRepository(), []);
+  const getTameemByIdUC = useMemo(() => new GetTameemByIdUseCase(tameemRepo), [tameemRepo]);
+  const updateTameemUC = useMemo(() => new UpdateTameemUseCase(tameemRepo), [tameemRepo]);
+  const deleteTameemUC = useMemo(() => new DeleteTameemUseCase(tameemRepo), [tameemRepo]);
+  const markTameemAsReadUC = useMemo(() => new MarkTameemAsReadUseCase(tameemRepo), [tameemRepo]);
 
   const addDebugLog = useCallback((action: string, url: string, status: number | string, response: any) => {
     setDebugLogs(prev => [
@@ -68,7 +79,7 @@ export function useTameemDetails(tameemId: string | number) {
     setLoading(true);
     setError(null);
     try {
-      const data = await tameemRepo.getTameemById(tameemId);
+      const data = await getTameemByIdUC.execute(tameemId);
       setTameem(data);
       addDebugLog(
         `GET /api/tameems/${tameemId}`,
@@ -88,7 +99,7 @@ export function useTameemDetails(tameemId: string | number) {
     } finally {
       setLoading(false);
     }
-  }, [tameemId, addDebugLog]);
+  }, [tameemId, addDebugLog, getTameemByIdUC]);
 
   useEffect(() => {
     fetchDetails();
@@ -98,7 +109,7 @@ export function useTameemDetails(tameemId: string | number) {
   const handleUpdateTameem = useCallback(async (payload: UpdateTameemPayload) => {
     setActionLoading(true);
     try {
-      const updated = await tameemRepo.updateTameem(tameemId, payload);
+      const updated = await updateTameemUC.execute(tameemId, payload);
       setTameem(updated);
       addDebugLog(
         `PUT /api/tameems/${tameemId}`,
@@ -121,13 +132,13 @@ export function useTameemDetails(tameemId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [tameemId, showToast, addDebugLog]);
+  }, [tameemId, showToast, addDebugLog, updateTameemUC]);
 
   // Delete Tameem
   const handleDeleteTameem = useCallback(async () => {
     setActionLoading(true);
     try {
-      await tameemRepo.deleteTameem(tameemId);
+      await deleteTameemUC.execute(tameemId);
       addDebugLog(
         `DELETE /api/tameems/${tameemId}`,
         `${BASE_URL}/tameems/${tameemId}`,
@@ -148,20 +159,20 @@ export function useTameemDetails(tameemId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [tameemId, showToast, addDebugLog]);
+  }, [tameemId, showToast, addDebugLog, deleteTameemUC]);
 
   // Mark as Read
   const handleMarkAsRead = useCallback(async () => {
     setActionLoading(true);
     try {
-      await tameemRepo.markTameemAsRead(tameemId);
+      await markTameemAsReadUC.execute(tameemId);
       addDebugLog(
         `PATCH /api/tameems/${tameemId}/read`,
         `${BASE_URL}/tameems/${tameemId}/read`,
         200,
         { status: 'read', id: tameemId, message: 'تم تحديث حالة التعميم إلى مقروء' }
       );
-      
+
       // Optimistically update local tameem state
       setTameem(prev => {
         if (!prev) return null;
@@ -189,7 +200,7 @@ export function useTameemDetails(tameemId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [tameemId, fetchDetails, showToast, addDebugLog]);
+  }, [tameemId, fetchDetails, showToast, addDebugLog, markTameemAsReadUC]);
 
   // Determine if the current user is the sender / admin vs recipient
   const isSender = Boolean(

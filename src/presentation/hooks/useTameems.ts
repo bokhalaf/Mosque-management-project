@@ -3,17 +3,25 @@
 // إدارة قائمة التعاميم + إصدار تعميم عام (سوبر أدمن) + إصدار تعميم للمسجد (مدير مسجد)
 // ==============================
 
-import { useState, useEffect, useCallback } from 'react';
-import { TameemRepositoryImpl } from '../../data/repositories/TameemRepositoryImpl';
-import { 
-  Tameem, 
-  CreateTameemPayload, 
-  CreateTameemForMosquePayload, 
-  UpdateTameemPayload 
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getTameemRepository } from '../../data/factories/repositoryFactory';
+import {
+  GetTameemsUseCase,
+  GetMyTameemsUseCase,
+  GetSentTameemsUseCase,
+  CreateTameemUseCase,
+  CreateTameemForMosqueUseCase,
+  UpdateTameemUseCase,
+  DeleteTameemUseCase,
+  MarkTameemAsReadUseCase,
+} from '../../domain/usecases/tameem';
+import {
+  Tameem,
+  CreateTameemPayload,
+  CreateTameemForMosquePayload,
+  UpdateTameemPayload
 } from '../../domain/entities/Tameem';
 import { useToast } from '../../app/components/ui/Toast';
-
-const tameemRepo = new TameemRepositoryImpl();
 
 export interface DebugLog {
   time: string;
@@ -44,6 +52,16 @@ export function useTameems() {
   // Debug Terminal Box State
   const [showDebugTerminal, setShowDebugTerminal] = useState(false);
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
+
+  const tameemRepo = useMemo(() => getTameemRepository(), []);
+  const getTameemsUC = useMemo(() => new GetTameemsUseCase(tameemRepo), [tameemRepo]);
+  const getMyTameemsUC = useMemo(() => new GetMyTameemsUseCase(tameemRepo), [tameemRepo]);
+  const getSentTameemsUC = useMemo(() => new GetSentTameemsUseCase(tameemRepo), [tameemRepo]);
+  const createTameemUC = useMemo(() => new CreateTameemUseCase(tameemRepo), [tameemRepo]);
+  const createTameemForMosqueUC = useMemo(() => new CreateTameemForMosqueUseCase(tameemRepo), [tameemRepo]);
+  const updateTameemUC = useMemo(() => new UpdateTameemUseCase(tameemRepo), [tameemRepo]);
+  const deleteTameemUC = useMemo(() => new DeleteTameemUseCase(tameemRepo), [tameemRepo]);
+  const markTameemAsReadUC = useMemo(() => new MarkTameemAsReadUseCase(tameemRepo), [tameemRepo]);
 
   const addDebugLog = useCallback((action: string, url: string, status: number, response: any) => {
     const newLog: DebugLog = {
@@ -77,14 +95,14 @@ export function useTameems() {
             return '';
           });
 
-          const isSuper = normalizedRoles.some(r => 
-            r.includes('admin') || 
-            r.includes('super') || 
+          const isSuper = normalizedRoles.some(r =>
+            r.includes('admin') ||
+            r.includes('super') ||
             r.includes('region')
           ) || Boolean(user.is_super_admin);
 
-          const isManager = normalizedRoles.some(r => 
-            r.includes('mosque_manager') || 
+          const isManager = normalizedRoles.some(r =>
+            r.includes('mosque_manager') ||
             r === 'manager'
           );
 
@@ -107,13 +125,13 @@ export function useTameems() {
       let result;
       if (isSuperAdmin) {
         // Super Admin gets all circulars from GET /api/tameems (listTameems)
-        result = await tameemRepo.getTameems(1, 50);
+        result = await getTameemsUC.execute(1, 50);
         addDebugLog('GET /api/tameems', 'https://mms-backend-rose.vercel.app/api/tameems', 200, result);
       } else if (tabFilter === 'sent') {
-        result = await tameemRepo.getSentTameems(1, 50);
+        result = await getSentTameemsUC.execute(1, 50);
         addDebugLog('GET /api/tameems/sent', 'https://mms-backend-rose.vercel.app/api/tameems/sent', 200, result);
       } else {
-        result = await tameemRepo.getMyTameems(1, 50);
+        result = await getMyTameemsUC.execute(1, 50);
         addDebugLog('GET /api/tameems/my-tameems', 'https://mms-backend-rose.vercel.app/api/tameems/my-tameems', 200, result);
       }
       setTameems(result.data || []);
@@ -123,7 +141,7 @@ export function useTameems() {
     } finally {
       setLoading(false);
     }
-  }, [isSuperAdmin, tabFilter, addDebugLog]);
+  }, [isSuperAdmin, tabFilter, addDebugLog, getTameemsUC, getSentTameemsUC, getMyTameemsUC]);
 
   useEffect(() => {
     loadTameems();
@@ -133,9 +151,9 @@ export function useTameems() {
   const handleMarkAsRead = useCallback(async (id: string | number) => {
     setActionLoadingId(id);
     try {
-      await tameemRepo.markTameemAsRead(id);
+      await markTameemAsReadUC.execute(id);
       addDebugLog(`PATCH /api/tameems/${id}/read`, `https://mms-backend-rose.vercel.app/api/tameems/${id}/read`, 200, { status: 'read', id });
-      
+
       // Optimistically update local tameems state
       setTameems(prev => prev.map(t => {
         if (String(t.id) === String(id)) {
@@ -159,12 +177,12 @@ export function useTameems() {
     } finally {
       setActionLoadingId(null);
     }
-  }, [loadTameems, showToast, addDebugLog]);
+  }, [loadTameems, showToast, addDebugLog, markTameemAsReadUC]);
 
   // Handle Create General Tameem (Super Admin)
   const handleCreateTameem = useCallback(async (payload: CreateTameemPayload) => {
     try {
-      const created = await tameemRepo.createTameem(payload);
+      const created = await createTameemUC.execute(payload);
       addDebugLog('POST /api/tameems', 'https://mms-backend-rose.vercel.app/api/tameems', 200, created);
       showToast('تم إصدار التعميم ونشره بنجاح!', 'success');
       await loadTameems();
@@ -174,12 +192,12 @@ export function useTameems() {
       showToast(err.message || 'فشل إصدار التعميم', 'error');
       throw err;
     }
-  }, [loadTameems, showToast, addDebugLog]);
+  }, [loadTameems, showToast, addDebugLog, createTameemUC]);
 
   // Handle Create Mosque Tameem (Mosque Manager)
   const handleCreateTameemForMosque = useCallback(async (payload: CreateTameemForMosquePayload) => {
     try {
-      const created = await tameemRepo.createTameemForMosque(payload);
+      const created = await createTameemForMosqueUC.execute(payload);
       addDebugLog('POST /api/tameems/for-mosque', 'https://mms-backend-rose.vercel.app/api/tameems/for-mosque', 200, created);
       showToast('تم إرسال التعميم لمنسوبي المسجد بنجاح!', 'success');
       await loadTameems();
@@ -189,12 +207,12 @@ export function useTameems() {
       showToast(err.message || 'فشل إرسال التعميم للمسجد', 'error');
       throw err;
     }
-  }, [loadTameems, showToast, addDebugLog]);
+  }, [loadTameems, showToast, addDebugLog, createTameemForMosqueUC]);
 
   // Handle Edit Tameem (Super admin or sender)
   const handleUpdateTameem = useCallback(async (id: string | number, payload: UpdateTameemPayload) => {
     try {
-      const updated = await tameemRepo.updateTameem(id, payload);
+      const updated = await updateTameemUC.execute(id, payload);
       addDebugLog(`PUT /api/tameems/${id}`, `https://mms-backend-rose.vercel.app/api/tameems/${id}`, 200, updated);
       showToast('تم تعديل بيانات التعميم بنجاح', 'success');
       await loadTameems();
@@ -204,13 +222,13 @@ export function useTameems() {
       showToast(err.message || 'فشل تعديل التعميم', 'error');
       throw err;
     }
-  }, [loadTameems, showToast, addDebugLog]);
+  }, [loadTameems, showToast, addDebugLog, updateTameemUC]);
 
   // Handle Delete Tameem (Super admin or sender)
   const handleDeleteTameem = useCallback(async (id: string | number) => {
     setActionLoadingId(id);
     try {
-      await tameemRepo.deleteTameem(id);
+      await deleteTameemUC.execute(id);
       addDebugLog(`DELETE /api/tameems/${id}`, `https://mms-backend-rose.vercel.app/api/tameems/${id}`, 200, { deleted: id });
       showToast('تم حذف التعميم من السيرفر بنجاح', 'success');
       await loadTameems();
@@ -220,7 +238,7 @@ export function useTameems() {
     } finally {
       setActionLoadingId(null);
     }
-  }, [loadTameems, showToast, addDebugLog]);
+  }, [loadTameems, showToast, addDebugLog, deleteTameemUC]);
 
   const filteredTameems = tameems.filter(t => {
     if (searchQuery.trim()) {
