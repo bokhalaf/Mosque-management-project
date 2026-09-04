@@ -13,10 +13,12 @@
 
 import { IAuthRepository } from "../../domain/repositories/IAuthRepository";
 import { IComplaintRepository } from "../../domain/repositories/IComplaintRepository";
+import { IDashboardRepository } from "../../domain/repositories/IDashboardRepository";
 import { IDawahProgramRepository } from "../../domain/repositories/IDawahProgramRepository";
 import { IDonationRepository } from "../../domain/repositories/IDonationRepository";
 import { IMaintenanceRepository } from "../../domain/repositories/IMaintenanceRepository";
 import { IManagerProfileRepository } from "../../domain/repositories/IManagerProfileRepository";
+import { IMosqueOperationRepository } from "../../domain/repositories/IMosqueOperationRepository";
 import { IMosqueRepository } from "../../domain/repositories/IMosqueRepository";
 import { IMosqueTaskRepository } from "../../domain/repositories/IMosqueTaskRepository";
 import { INotificationRepository } from "../../domain/repositories/INotificationRepository";
@@ -30,10 +32,12 @@ import { IVolunteerRepository } from "../../domain/repositories/IVolunteerReposi
 
 import { AuthRepositoryImpl } from "../repositories/AuthRepositoryImpl";
 import { ComplaintRepositoryImpl } from "../repositories/ComplaintRepositoryImpl";
+import { DashboardRepositoryImpl } from "../repositories/DashboardRepositoryImpl";
 import { DawahProgramRepositoryImpl } from "../repositories/DawahProgramRepositoryImpl";
 import { DonationRepositoryImpl } from "../repositories/DonationRepositoryImpl";
 import { MaintenanceRepositoryImpl } from "../repositories/MaintenanceRepositoryImpl";
 import { ManagerProfileRepositoryImpl } from "../repositories/ManagerProfileRepositoryImpl";
+import { MosqueOperationRepositoryImpl } from "../repositories/MosqueOperationRepositoryImpl";
 import { MosqueRepositoryImpl } from "../repositories/MosqueRepositoryImpl";
 import { MosqueTaskRepositoryImpl } from "../repositories/MosqueTaskRepositoryImpl";
 import { NotificationRepositoryImpl } from "../repositories/NotificationRepositoryImpl";
@@ -47,10 +51,12 @@ import { VolunteerRepositoryImpl } from "../repositories/VolunteerRepositoryImpl
 
 let authRepository: IAuthRepository | null = null;
 let complaintRepository: IComplaintRepository | null = null;
+let dashboardRepository: IDashboardRepository | null = null;
 let dawahProgramRepository: IDawahProgramRepository | null = null;
 let donationRepository: IDonationRepository | null = null;
 let maintenanceRepository: IMaintenanceRepository | null = null;
 let managerProfileRepository: IManagerProfileRepository | null = null;
+let mosqueOperationRepository: IMosqueOperationRepository | null = null;
 let mosqueRepository: IMosqueRepository | null = null;
 let mosqueTaskRepository: IMosqueTaskRepository | null = null;
 let notificationRepository: INotificationRepository | null = null;
@@ -72,6 +78,11 @@ export function getComplaintRepository(): IComplaintRepository {
   return complaintRepository;
 }
 
+export function getDashboardRepository(): IDashboardRepository {
+  if (!dashboardRepository) dashboardRepository = new DashboardRepositoryImpl();
+  return dashboardRepository;
+}
+
 export function getDawahProgramRepository(): IDawahProgramRepository {
   if (!dawahProgramRepository) dawahProgramRepository = new DawahProgramRepositoryImpl();
   return dawahProgramRepository;
@@ -90,6 +101,11 @@ export function getMaintenanceRepository(): IMaintenanceRepository {
 export function getManagerProfileRepository(): IManagerProfileRepository {
   if (!managerProfileRepository) managerProfileRepository = new ManagerProfileRepositoryImpl();
   return managerProfileRepository;
+}
+
+export function getMosqueOperationRepository(): IMosqueOperationRepository {
+  if (!mosqueOperationRepository) mosqueOperationRepository = new MosqueOperationRepositoryImpl();
+  return mosqueOperationRepository;
 }
 
 export function getMosqueRepository(): IMosqueRepository {

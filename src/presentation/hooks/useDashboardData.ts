@@ -5,103 +5,30 @@
 // جلب وتحليل مؤشرات لوحة القيادة لمدير المسجد ومدير المنطقة (السوبر أدمن)
 // ==============================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { BASE_URL } from '../../data/http/apiClient';
+import { getAuthUser, isSuperAdminUser } from '../../data/auth/authStorage';
+import { getDashboardRepository } from '../../data/factories/repositoryFactory';
+import {
+  GetSuperAdminDashboardUseCase,
+  GetMosqueOperationsUseCase,
+  GetSettingsUseCase,
+  GetMosqueManagerDashboardUseCase,
+  GetMosqueManagerStatisticsUseCase,
+  GetUpcomingSermonSelectionUseCase,
+  GetMosqueTasksUseCase,
+  GetMosqueManagerOperationsUseCase,
+  GetMosqueCampaignsUseCase,
+  GetRecentComplaintsUseCase,
+} from '../../domain/usecases/dashboard';
+import {
+  MosqueManagerDashboardData,
+  RegionManagerDashboardData,
+} from '../../domain/entities/Dashboard';
 
-const BASE_URL = 'https://mms-backend-rose.vercel.app/api';
-
-export interface MosqueManagerDashboardData {
-  monthlyDonations: number;
-  monthlyDonationsGrowth: number;
-  monthlyDonationsIsIncrease: boolean;
-  formattedMonthlyDonations?: string;
-  totalDonations: number;
-  activeCampaignsCount: number;
-  openMaintenanceCount: number;
-  criticalMaintenanceCount: number;
-  inProgressMaintenanceCount: number;
-  pendingComplaintsCount: number;
-  volunteersCount: number;
-  pendingApplicationsCount: number;
-  activeOpportunitiesCount: number;
-  totalStudents: number;
-  totalTeachers: number;
-  totalVolunteers: number;
-  pendingInvitations: number;
-  fridaySermon: {
-    id: number | string;
-    title: string;
-    speakerName: string;
-    status: string;
-    date: string;
-    isScheduled: boolean;
-  } | null;
-  urgentComplaints: Array<{
-    id: number | string;
-    title: string;
-    dept: string;
-    priority: string;
-    status: string;
-    createdAt: string;
-  }>;
-  activeCampaigns: Array<{
-    id: number | string;
-    title: string;
-    targetAmount: number;
-    raisedAmount: number;
-    percent: number;
-    timeLeft?: string;
-  }>;
-  todayTasks: Array<{
-    id: number | string;
-    title: string;
-    category: string;
-    time: string;
-    status: 'pending' | 'completed' | 'in_progress';
-    assignee?: string;
-  }>;
-  recentActivities: Array<{
-    id: number | string;
-    user: string;
-    action: string;
-    time: string;
-    type: 'donation' | 'maintenance' | 'quran' | 'volunteer' | 'general';
-  }>;
-}
-
-export interface RegionManagerDashboardData {
-  totalMosques: number;
-  activeMosques: number;
-  maintenanceMosques: number;
-  pendingSermonsCount: number;
-  regionMonthlyDonations: number;
-  regionMonthlyDonationsCount: number;
-  regionTotalDonations: number;
-  activeRegionCampaignsCount: number;
-  regionUrgentComplaintsCount: number;
-  exchangeRate: number;
-  pendingSermonsList: Array<{
-    id: number | string;
-    title: string;
-    speakerName: string;
-    mosqueName?: string;
-    date: string;
-    contentBrief: string;
-  }>;
-  recentOperations: Array<{
-    id: number | string;
-    module: string;
-    action: string;
-    title: string;
-    description?: string;
-    mosque_name?: string;
-    user_name?: string;
-    created_at: string;
-    amount?: number;
-    currency?: string;
-    old_status?: string | null;
-    new_status?: string | null;
-  }>;
-}
+// Re-exported so existing consumers (e.g. DashboardSection.tsx) that import
+// these types directly from this hook module keep working unchanged.
+export type { MosqueManagerDashboardData, RegionManagerDashboardData };
 
 export interface DashboardDebugLog {
   time: string;
@@ -178,31 +105,25 @@ export function useDashboardData() {
     ],
   });
 
-  const getAuthHeaders = useCallback((): HeadersInit => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    return {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  }, []);
+  // ── Usecases (repository sourced via the shared factory singleton) ──
+  const dashboardRepository = useMemo(() => getDashboardRepository(), []);
+  const getSuperAdminDashboardUC = useMemo(() => new GetSuperAdminDashboardUseCase(dashboardRepository), [dashboardRepository]);
+  const getMosqueOperationsUC = useMemo(() => new GetMosqueOperationsUseCase(dashboardRepository), [dashboardRepository]);
+  const getSettingsUC = useMemo(() => new GetSettingsUseCase(dashboardRepository), [dashboardRepository]);
+  const getMosqueManagerDashboardUC = useMemo(() => new GetMosqueManagerDashboardUseCase(dashboardRepository), [dashboardRepository]);
+  const getMosqueManagerStatisticsUC = useMemo(() => new GetMosqueManagerStatisticsUseCase(dashboardRepository), [dashboardRepository]);
+  const getUpcomingSermonSelectionUC = useMemo(() => new GetUpcomingSermonSelectionUseCase(dashboardRepository), [dashboardRepository]);
+  const getMosqueTasksUC = useMemo(() => new GetMosqueTasksUseCase(dashboardRepository), [dashboardRepository]);
+  const getMosqueManagerOperationsUC = useMemo(() => new GetMosqueManagerOperationsUseCase(dashboardRepository), [dashboardRepository]);
+  const getMosqueCampaignsUC = useMemo(() => new GetMosqueCampaignsUseCase(dashboardRepository), [dashboardRepository]);
+  const getRecentComplaintsUC = useMemo(() => new GetRecentComplaintsUseCase(dashboardRepository), [dashboardRepository]);
 
   // Detect role and user info from storage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const rawUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
-        const role = String(rawUser.role || rawUser.user_type || rawUser.role_name || '').toLowerCase();
-        const roles = rawUser.roles || [];
-        const isSuper =
-          role === 'super_admin' ||
-          role === 'admin' ||
-          role === 'administrator' ||
-          role === 'region_manager' ||
-          rawUser.is_super_admin === true ||
-          roles.includes('super_admin') ||
-          roles.includes('admin') ||
-          localStorage.getItem('user_role') === 'super_admin';
+        const rawUser = getAuthUser() || {};
+        const isSuper = isSuperAdminUser();
 
         setIsSuperAdmin(isSuper);
         setActiveRoleView(isSuper ? 'super_admin' : 'manager');
@@ -220,24 +141,12 @@ export function useDashboardData() {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const headers = getAuthHeaders();
 
     // Re-check role dynamically at call time
     let isSuper = false;
     if (typeof window !== 'undefined') {
       try {
-        const rawUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
-        const role = String(rawUser.role || rawUser.user_type || rawUser.role_name || '').toLowerCase();
-        const roles = rawUser.roles || [];
-        isSuper =
-          role === 'super_admin' ||
-          role === 'admin' ||
-          role === 'administrator' ||
-          role === 'region_manager' ||
-          rawUser.is_super_admin === true ||
-          roles.includes('super_admin') ||
-          roles.includes('admin') ||
-          localStorage.getItem('user_role') === 'super_admin';
+        isSuper = isSuperAdminUser();
       } catch {}
     }
 
@@ -245,15 +154,9 @@ export function useDashboardData() {
       if (isSuper) {
         // ── Super Admin: ONLY fetch super-dashboard, mosque-operations, and settings ──
         const [superDashRes, operationsRes, settingsRes] = await Promise.all([
-          fetch(`${BASE_URL}/admin/super-dashboard`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/admin/mosque-operations?per_page=5`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/settings`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
+          getSuperAdminDashboardUC.execute(),
+          getMosqueOperationsUC.execute(5),
+          getSettingsUC.execute(),
         ]);
 
         // Parse Live Mosque Operations (Top 5 for dashboard)
@@ -379,27 +282,13 @@ export function useDashboardData() {
           campaignsRes,
           complaintsRes,
         ] = await Promise.all([
-          fetch(`${BASE_URL}/dashboard/mosque-manager`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/dashboard/mosque-manager/statistics`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/sermon-selections/upcoming`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/mosque/tasks?date=${todayStr}`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/dashboard/mosque-manager/mosque-operations?per_page=6`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/mosque/campaigns?status=active&per_page=4`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          fetch(`${BASE_URL}/complaints/recent`, { headers })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
+          getMosqueManagerDashboardUC.execute(),
+          getMosqueManagerStatisticsUC.execute(),
+          getUpcomingSermonSelectionUC.execute(),
+          getMosqueTasksUC.execute(todayStr),
+          getMosqueManagerOperationsUC.execute(6),
+          getMosqueCampaignsUC.execute(4),
+          getRecentComplaintsUC.execute(),
         ]);
 
         const mDash = managerDashRes?.data || managerDashRes || {};
@@ -551,7 +440,18 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, [getAuthHeaders]);
+  }, [
+    getSuperAdminDashboardUC,
+    getMosqueOperationsUC,
+    getSettingsUC,
+    getMosqueManagerDashboardUC,
+    getMosqueManagerStatisticsUC,
+    getUpcomingSermonSelectionUC,
+    getMosqueTasksUC,
+    getMosqueManagerOperationsUC,
+    getMosqueCampaignsUC,
+    getRecentComplaintsUC,
+  ]);
 
   useEffect(() => {
     loadDashboardData();
