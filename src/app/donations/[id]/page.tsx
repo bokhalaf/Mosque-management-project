@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use } from "react";
-import { DonationDetailsSection } from "../../../presentation/sections/DonationDetailsSection";
+import { DonationDetailsSection } from "../../../presentation/sections/donations/DonationDetailsSection";
 
 export default function DonationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();

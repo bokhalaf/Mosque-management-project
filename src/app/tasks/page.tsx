@@ -1,4 +1,4 @@
-import { MosqueTasksSection } from "../../presentation/sections/MosqueTasksSection";
+import { MosqueTasksSection } from "../../presentation/sections/tasks/MosqueTasksSection";
 
 export const metadata = {
   title: "مهام المسجد | بوابة الإدارة الذكية",

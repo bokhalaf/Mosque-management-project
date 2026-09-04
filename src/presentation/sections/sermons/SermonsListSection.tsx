@@ -1,6 +1,6 @@
 'use client';
 // ==============================
-// KhutbahsListSection — Wrapper (Clean & Design System Aligned)
+// SermonsListSection — Wrapper (Clean & Design System Aligned)
 // ==============================
 
 import React, { useState } from 'react';
@@ -13,12 +13,12 @@ import { SermonCard } from './components/SermonCard';
 import { PendingModal } from './components/PendingModal';
 import { HistoryModal } from './components/HistoryModal';
 
-interface KhutbahsListSectionProps {
+interface SermonsListSectionProps {
   onNavigateToAdd?: () => void;
   onViewDetails?: (id: string | number) => void;
 }
 
-export function KhutbahsListSection({ onNavigateToAdd, onViewDetails }: KhutbahsListSectionProps) {
+export function SermonsListSection({ onNavigateToAdd, onViewDetails }: SermonsListSectionProps) {
   const {
     pendingSermons,
     mostSelectedSermon,

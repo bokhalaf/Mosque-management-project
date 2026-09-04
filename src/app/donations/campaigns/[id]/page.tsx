@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { CampaignDetailsSection } from "../../../../presentation/sections/CampaignDetailsSection";
+import { CampaignDetailsSection } from "../../../../presentation/sections/campaigns/CampaignDetailsSection";
 
 export default function CampaignDetailsPage() {
   const params = useParams();

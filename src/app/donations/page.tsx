@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { DonationsSection } from "../../presentation/sections/DonationsSection";
+import { DonationsSection } from "../../presentation/sections/donations/DonationsSection";
 
 export default function DonationsPage() {
   const router = useRouter();

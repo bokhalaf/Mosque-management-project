@@ -1,4 +1,4 @@
-import { MosqueDetailsSection } from "../../../presentation/sections/MosqueDetailsSection";
+import { MosqueSelfEditSection } from "../../../presentation/sections/profile/MosqueSelfEditSection";
 
 export const metadata = {
   title: "تحديث بيانات المسجد والإمام والخطيب | نظام إدارة المسجد",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function MosqueEditPage() {
-  return <MosqueDetailsSection />;
+  return <MosqueSelfEditSection />;
 }

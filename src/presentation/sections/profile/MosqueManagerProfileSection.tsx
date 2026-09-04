@@ -5,24 +5,24 @@
 // ==============================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { PageHeader } from "../../app/components/PageHeader";
+import { PageHeader } from "../../../app/components/PageHeader";
 import {
   User, Building2, Lock, Activity, CheckCircle2,
   Edit, Key, Clock, RefreshCw, Terminal, Phone, Mail,
   ShieldCheck, ShieldAlert, Sparkles, MapPin, BadgeCheck,
   Check, X, AlertCircle, Loader2, Upload, Image, BookOpen, UserCheck, DollarSign
 } from 'lucide-react';
-import { MosqueRepositoryImpl } from "../../data/repositories/MosqueRepositoryImpl";
+import { MosqueRepositoryImpl } from "../../../data/repositories/MosqueRepositoryImpl";
 import {
   ManagerProfile,
   UpdateProfilePayload,
-} from "../../domain/entities/ManagerProfile";
-import { useToast } from "../../app/components/ui/Toast";
-import { ProfileDebugBox, ProfileApiDebugLog } from "./profile/components/ProfileDebugBox";
-import { MosqueSpacesSection } from "./profile/components/MosqueSpacesSection";
-import { MosqueVolunteerLoader } from "./volunteers/components/MosqueVolunteerLoader";
-import { SystemSettingsSection } from "./profile/components/SystemSettingsSection";
-import { useManagerProfile } from "../hooks/useManagerProfile";
+} from "../../../domain/entities/ManagerProfile";
+import { useToast } from "../../../app/components/ui/Toast";
+import { ProfileDebugBox, ProfileApiDebugLog } from "./components/ProfileDebugBox";
+import { MosqueSpacesSection } from "./components/MosqueSpacesSection";
+import { MosqueVolunteerLoader } from "../volunteers/components/MosqueVolunteerLoader";
+import { SystemSettingsSection } from "./components/SystemSettingsSection";
+import { useManagerProfile } from "../../hooks/useManagerProfile";
 
 const mosqueRepo = new MosqueRepositoryImpl();
 

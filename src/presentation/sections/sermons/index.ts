@@ -2,6 +2,6 @@
 // Sermons Section — index.ts
 // ==============================
 
-export { KhutbahsListSection } from './KhutbahsListSection';
+export { SermonsListSection } from './SermonsListSection';
 export { SermonDetailsSection } from './SermonDetailsSection';
-export { CreateKhutbahSection } from './CreateKhutbahSection';
+export { CreateSermonSection } from './CreateSermonSection';

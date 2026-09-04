@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PageHeader } from "../../app/components/PageHeader";
+import { PageHeader } from "../../../app/components/PageHeader";
 import {
   Building2, UserCheck, BookOpen, Clock, MapPin, Plus, Trash2,
   RefreshCw, CheckCircle2, AlertCircle, Save, Check,
   Car, Heart, Coffee, ShieldCheck, Sparkles, Layers, Volume2, ArrowRight
 } from 'lucide-react';
-import { useMosque } from "../hooks/useMosque";
-import { UpdateMosquePayload, CreateSpacePayload, MosqueFacility } from "../../domain/entities/Mosque";
+import { useMosque } from "../../hooks/useMosque";
+import { UpdateMosquePayload, CreateSpacePayload, MosqueFacility } from "../../../domain/entities/Mosque";
 
 interface ApiDebugLog {
   action: string;
@@ -19,7 +19,7 @@ interface ApiDebugLog {
   time: string;
 }
 
-export function MosqueDetailsSection() {
+export function MosqueSelfEditSection() {
   const [activeMosqueId, setActiveMosqueId] = useState<string | number>(1);
 
   useEffect(() => {

@@ -3,20 +3,17 @@
 // useSermonDetails: جلب تفاصيل خطبة + اعتماد / إلغاء اعتماد الجمعة + مراقب السيرفر المباشر
 // ==============================
 
-import { useState, useEffect, useCallback } from 'react';
-import { SermonRepositoryImpl, BASE_URL } from '../../data/repositories/SermonRepositoryImpl';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { BASE_URL } from '../../data/repositories/SermonRepositoryImpl';
+import { getSermonRepository } from '../../data/factories/repositoryFactory';
 import { Sermon, SermonSelection } from '../../domain/entities/Sermon';
 import { GetSermonByIdUseCase } from '../../domain/usecases/sermons/GetSermonByIdUseCase';
 import { GetUpcomingSermonSelectionUseCase } from '../../domain/usecases/sermons/GetUpcomingSermonSelectionUseCase';
 import { StoreSermonSelectionUseCase } from '../../domain/usecases/sermons/StoreSermonSelectionUseCase';
 import { DeleteSermonSelectionUseCase } from '../../domain/usecases/sermons/DeleteSermonSelectionUseCase';
+import { ApproveSermonUseCase } from '../../domain/usecases/sermons/ApproveSermonUseCase';
+import { RejectSermonUseCase } from '../../domain/usecases/sermons/RejectSermonUseCase';
 import { useToast } from '../../app/components/ui/Toast';
-
-const sermonRepo = new SermonRepositoryImpl();
-const getSermonByIdUseCase = new GetSermonByIdUseCase(sermonRepo);
-const getUpcomingUseCase = new GetUpcomingSermonSelectionUseCase(sermonRepo);
-const storeSelectionUseCase = new StoreSermonSelectionUseCase(sermonRepo);
-const deleteSelectionUseCase = new DeleteSermonSelectionUseCase(sermonRepo);
 
 export interface ApiDebugLog {
   action: string;
@@ -28,6 +25,15 @@ export interface ApiDebugLog {
 
 export function useSermonDetails(sermonId: string | number) {
   const { showToast } = useToast();
+
+  const sermonRepo = useMemo(() => getSermonRepository(), []);
+  const getSermonByIdUseCase = useMemo(() => new GetSermonByIdUseCase(sermonRepo), [sermonRepo]);
+  const getUpcomingUseCase = useMemo(() => new GetUpcomingSermonSelectionUseCase(sermonRepo), [sermonRepo]);
+  const storeSelectionUseCase = useMemo(() => new StoreSermonSelectionUseCase(sermonRepo), [sermonRepo]);
+  const deleteSelectionUseCase = useMemo(() => new DeleteSermonSelectionUseCase(sermonRepo), [sermonRepo]);
+  const approveSermonUseCase = useMemo(() => new ApproveSermonUseCase(sermonRepo), [sermonRepo]);
+  const rejectSermonUseCase = useMemo(() => new RejectSermonUseCase(sermonRepo), [sermonRepo]);
+
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [upcomingSelection, setUpcomingSelection] = useState<SermonSelection | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +81,7 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setLoading(false);
     }
-  }, [sermonId, addDebugLog]);
+  }, [sermonId, addDebugLog, getSermonByIdUseCase, getUpcomingUseCase]);
 
   useEffect(() => {
     fetchDetails();
@@ -110,7 +116,7 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [sermon, addDebugLog, showToast]);
+  }, [sermon, addDebugLog, showToast, storeSelectionUseCase]);
 
   const handleCancelFridaySelection = useCallback(async () => {
     setActionLoading(true);
@@ -132,13 +138,13 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [upcomingSelection, sermonId, addDebugLog, showToast]);
+  }, [upcomingSelection, sermonId, addDebugLog, showToast, deleteSelectionUseCase]);
 
   const handleApproveSermon = useCallback(async () => {
     if (!sermon) return;
     setActionLoading(true);
     try {
-      const serverRes = await sermonRepo.approveSermon(sermon.id);
+      const serverRes = await approveSermonUseCase.execute(sermon.id);
       addDebugLog(
         `PUT /api/sermons/${sermon.id}/approve`,
         `${BASE_URL}/sermons/${sermon.id}/approve`,
@@ -160,14 +166,14 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [sermon, addDebugLog, fetchDetails, showToast]);
+  }, [sermon, addDebugLog, fetchDetails, showToast, approveSermonUseCase]);
 
   const handleRejectSermon = useCallback(async (reason?: string) => {
     if (!sermon) return;
     setActionLoading(true);
     const rejectionReason = reason || 'يرجى مراجعة الخطبة وتعديلها';
     try {
-      const serverRes = await sermonRepo.rejectSermon(sermon.id, rejectionReason);
+      const serverRes = await rejectSermonUseCase.execute(sermon.id, rejectionReason);
       addDebugLog(
         `PUT /api/sermons/${sermon.id}/reject`,
         `${BASE_URL}/sermons/${sermon.id}/reject`,
@@ -189,7 +195,7 @@ export function useSermonDetails(sermonId: string | number) {
     } finally {
       setActionLoading(false);
     }
-  }, [sermon, addDebugLog, fetchDetails, showToast]);
+  }, [sermon, addDebugLog, fetchDetails, showToast, rejectSermonUseCase]);
 
 
   const copyContent = useCallback(() => {
@@ -221,4 +227,3 @@ export function useSermonDetails(sermonId: string | number) {
     clearDebugLogs,
   };
 }
-

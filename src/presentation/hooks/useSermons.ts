@@ -3,18 +3,20 @@
 // useSermons: يتولى جلب بيانات الخطب، البحث والتصفية بالتصنيف وكلمات البحث، والاعتمادات
 // ==============================
 
-import { useState, useEffect, useCallback } from 'react';
-import { SermonRepositoryImpl, BASE_URL } from '../../data/repositories/SermonRepositoryImpl';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { BASE_URL } from '../../data/repositories/SermonRepositoryImpl';
+import { getSermonRepository } from '../../data/factories/repositoryFactory';
 import { Sermon, SermonSelection, SermonPagination } from '../../domain/entities/Sermon';
 import { GetSermonsUseCase } from '../../domain/usecases/sermons/GetSermonsUseCase';
 import { SelectFridaySermonUseCase } from '../../domain/usecases/sermons/SelectFridaySermonUseCase';
 import { DeleteSermonUseCase } from '../../domain/usecases/sermons/DeleteSermonUseCase';
+import { ApproveSermonUseCase } from '../../domain/usecases/sermons/ApproveSermonUseCase';
+import { RejectSermonUseCase } from '../../domain/usecases/sermons/RejectSermonUseCase';
+import { SearchSermonsUseCase } from '../../domain/usecases/sermons/SearchSermonsUseCase';
+import { GetArchivedSermonsUseCase } from '../../domain/usecases/sermons/GetArchivedSermonsUseCase';
+import { GetPendingSermonsUseCase } from '../../domain/usecases/sermons/GetPendingSermonsUseCase';
+import { GetMostSelectedSermonsUseCase } from '../../domain/usecases/sermons/GetMostSelectedSermonsUseCase';
 import { useToast } from '../../app/components/ui/Toast';
-
-const sermonRepo = new SermonRepositoryImpl();
-const getSermonsUseCase = new GetSermonsUseCase(sermonRepo);
-const selectFridayUseCase = new SelectFridaySermonUseCase(sermonRepo);
-const deleteSermonUseCase = new DeleteSermonUseCase(sermonRepo);
 
 export interface ApiDebugLog {
   action: string;
@@ -40,6 +42,18 @@ const DEFAULT_PENDING_PAGINATION: SermonPagination = {
 
 export function useSermons() {
   const { showToast } = useToast();
+
+  const sermonRepo = useMemo(() => getSermonRepository(), []);
+  const getSermonsUseCase = useMemo(() => new GetSermonsUseCase(sermonRepo), [sermonRepo]);
+  const selectFridayUseCase = useMemo(() => new SelectFridaySermonUseCase(sermonRepo), [sermonRepo]);
+  const deleteSermonUseCase = useMemo(() => new DeleteSermonUseCase(sermonRepo), [sermonRepo]);
+  const approveSermonUseCase = useMemo(() => new ApproveSermonUseCase(sermonRepo), [sermonRepo]);
+  const rejectSermonUseCase = useMemo(() => new RejectSermonUseCase(sermonRepo), [sermonRepo]);
+  const searchSermonsUseCase = useMemo(() => new SearchSermonsUseCase(sermonRepo), [sermonRepo]);
+  const getArchivedSermonsUseCase = useMemo(() => new GetArchivedSermonsUseCase(sermonRepo), [sermonRepo]);
+  const getPendingSermonsUseCase = useMemo(() => new GetPendingSermonsUseCase(sermonRepo), [sermonRepo]);
+  const getMostSelectedSermonsUseCase = useMemo(() => new GetMostSelectedSermonsUseCase(sermonRepo), [sermonRepo]);
+
   const [archivedSermons, setArchivedSermons] = useState<Sermon[]>([]);
   const [pendingSermons, setPendingSermons] = useState<Sermon[]>([]);
   const [mostSelectedSermon, setMostSelectedSermon] = useState<Sermon | Sermon[] | null>(null);
@@ -113,7 +127,7 @@ export function useSermons() {
 
       // Load Most Selected Sermon (GET /api/sermons/most-selected)
       try {
-        const mostSel = await sermonRepo.getMostSelectedSermons();
+        const mostSel = await getMostSelectedSermonsUseCase.execute();
         if (mostSel) {
           setMostSelectedSermon(mostSel);
           addDebugLog(
@@ -130,7 +144,7 @@ export function useSermons() {
     } finally {
       setLoading(false);
     }
-  }, [addDebugLog]);
+  }, [addDebugLog, getSermonsUseCase, getMostSelectedSermonsUseCase]);
 
   useEffect(() => {
     loadData();
@@ -142,7 +156,7 @@ export function useSermons() {
   const handleApprovePendingSermon = useCallback(async (id: string | number) => {
     setProcessingSermonId(id);
     try {
-      const serverRes = await sermonRepo.approveSermon(id);
+      const serverRes = await approveSermonUseCase.execute(id);
       addDebugLog(
         `PUT /api/sermons/${id}/approve`,
         `${BASE_URL}/sermons/${id}/approve`,
@@ -163,13 +177,13 @@ export function useSermons() {
     } finally {
       setProcessingSermonId(null);
     }
-  }, [loadData, addDebugLog, showToast]);
+  }, [loadData, addDebugLog, showToast, approveSermonUseCase]);
 
   // Handle Reject Pending Sermon (PUT /api/sermons/{id}/reject)
   const handleRejectPendingSermon = useCallback(async (id: string | number, reason?: string) => {
     setProcessingSermonId(id);
     try {
-      const serverRes = await sermonRepo.rejectSermon(id, reason);
+      const serverRes = await rejectSermonUseCase.execute(id, reason);
       addDebugLog(
         `PUT /api/sermons/${id}/reject`,
         `${BASE_URL}/sermons/${id}/reject`,
@@ -190,7 +204,7 @@ export function useSermons() {
     } finally {
       setProcessingSermonId(null);
     }
-  }, [loadData, addDebugLog, showToast]);
+  }, [loadData, addDebugLog, showToast, rejectSermonUseCase]);
 
   // Handle archived page change directly
   const handleArchivedPageChange = useCallback(async (p: number) => {
@@ -202,7 +216,7 @@ export function useSermons() {
 
       let res: any;
       if (hasQuery || hasCategory) {
-        res = await sermonRepo.searchSermons(
+        res = await searchSermonsUseCase.execute(
           hasQuery ? searchQuery : undefined,
           p,
           6,
@@ -215,7 +229,7 @@ export function useSermons() {
           res
         );
       } else {
-        res = await sermonRepo.getArchivedSermons(p, 6);
+        res = await getArchivedSermonsUseCase.execute(p, 6);
         addDebugLog(
           `GET /api/sermons/archived?page=${p}&per_page=6`,
           `${BASE_URL}/sermons/archived?page=${p}&per_page=6`,
@@ -231,13 +245,13 @@ export function useSermons() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory, addDebugLog]);
+  }, [searchQuery, selectedCategory, addDebugLog, searchSermonsUseCase, getArchivedSermonsUseCase]);
 
   // Handle pending page change directly (6 per page)
   const handlePendingPageChange = useCallback(async (p: number) => {
     setPendingPage(p);
     try {
-      const res = await sermonRepo.getPendingSermons(p, 6);
+      const res = await getPendingSermonsUseCase.execute(p, 6);
       addDebugLog(
         `GET /api/sermons/pending?page=${p}&per_page=6`,
         `${BASE_URL}/sermons/pending?page=${p}&per_page=6`,
@@ -249,7 +263,7 @@ export function useSermons() {
     } catch (e) {
       console.warn('Failed loading pending page:', e);
     }
-  }, [addDebugLog]);
+  }, [addDebugLog, getPendingSermonsUseCase]);
 
   // Handle Delete/Cancel Pending Sermon (DELETE /api/sermons/{id})
   const handleDeletePendingSermon = useCallback(async (id: string | number) => {
@@ -266,10 +280,10 @@ export function useSermons() {
 
       // Refresh pending page list
       try {
-        const res = await sermonRepo.getPendingSermons(pendingPage, 6);
+        const res = await getPendingSermonsUseCase.execute(pendingPage, 6);
         if (res.data.length === 0 && pendingPage > 1) {
           const prevPage = pendingPage - 1;
-          const prevRes = await sermonRepo.getPendingSermons(prevPage, 6);
+          const prevRes = await getPendingSermonsUseCase.execute(prevPage, 6);
           setPendingPage(prevPage);
           setPendingSermons(prevRes.data);
           setPendingPagination(prevRes.pagination);
@@ -287,7 +301,7 @@ export function useSermons() {
     } finally {
       setDeletingSermonId(null);
     }
-  }, [pendingPage, addDebugLog, showToast]);
+  }, [pendingPage, addDebugLog, showToast, deleteSermonUseCase, getPendingSermonsUseCase]);
 
   // Search & Category Filter with API integration & debounce
   useEffect(() => {
@@ -302,7 +316,7 @@ export function useSermons() {
       setLoading(true);
       try {
         setArchivedPage(1);
-        const results = await sermonRepo.searchSermons(
+        const results = await searchSermonsUseCase.execute(
           hasQuery ? searchQuery : undefined,
           1,
           6,
@@ -330,7 +344,7 @@ export function useSermons() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategory, addDebugLog]);
+  }, [searchQuery, selectedCategory, addDebugLog, searchSermonsUseCase]);
 
   const handleSetCategory = useCallback((cat: string) => {
     setSelectedCategory(cat);
@@ -359,7 +373,7 @@ export function useSermons() {
     } finally {
       setSelectingSermonId(null);
     }
-  }, [addDebugLog, showToast]);
+  }, [addDebugLog, showToast, selectFridayUseCase]);
 
   const handleCancelFridaySelection = useCallback(async (selectionId: string | number) => {
     try {
@@ -377,7 +391,7 @@ export function useSermons() {
       console.error('Error canceling selection:', e);
       showToast(e.message || 'حدث خطأ أثناء إلغاء الاعتماد', 'error');
     }
-  }, [addDebugLog, loadData, showToast]);
+  }, [addDebugLog, loadData, showToast, selectFridayUseCase]);
 
   const filteredSermons = archivedSermons.filter(s => {
     if (!s) return false;

@@ -1,16 +1,21 @@
 // ==============================
 // Presentation — Hook
-// useCreateKhutbah: إدارة نموذج إضافة خطبة + OCR + إملاء صوتي + إرسال
+// useCreateSermon: إدارة نموذج إضافة خطبة + OCR + إملاء صوتي + إرسال
 // ==============================
 
-import { useState, useRef, useCallback } from 'react';
-import { SermonRepositoryImpl, SermonCreateApiResponse } from '../../data/repositories/SermonRepositoryImpl';
+import { useState, useRef, useCallback, useMemo } from 'react';
+import type { SermonRepositoryImpl, SermonCreateApiResponse } from '../../data/repositories/SermonRepositoryImpl';
+import { getSermonRepository } from '../../data/factories/repositoryFactory';
 import { createWorker } from 'tesseract.js';
 import { useToast } from '../../app/components/ui/Toast';
 
-const sermonRepo = new SermonRepositoryImpl();
-
-export interface CreateKhutbahDebugResponse {
+// NOTE: createSermonWithDebug() is a debug-only helper exposed by the concrete
+// SermonRepositoryImpl (it returns extra httpStatus/endpointUrl/rawResponse
+// metadata for the on-screen debug panel) and is intentionally NOT part of the
+// ISermonRepository interface, so no usecase wraps it. We still obtain the
+// singleton instance through the factory (no direct `new`), and only import
+// the concrete class as a type for this narrow cast.
+export interface CreateSermonDebugResponse {
   httpStatus: number;
   endpointUrl: string;
   requestPayloadSent: any;
@@ -18,8 +23,9 @@ export interface CreateKhutbahDebugResponse {
   isSuccess: boolean;
 }
 
-export function useCreateKhutbah(onSuccess: () => void) {
+export function useCreateSermon(onSuccess: () => void) {
   const { showToast } = useToast();
+  const sermonRepo = useMemo(() => getSermonRepository() as SermonRepositoryImpl, []);
   // Form fields
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
@@ -42,7 +48,7 @@ export function useCreateKhutbah(onSuccess: () => void) {
   const [error, setError] = useState<string | null>(null);
 
   // Debug response
-  const [debugResponse, setDebugResponse] = useState<CreateKhutbahDebugResponse | null>(null);
+  const [debugResponse, setDebugResponse] = useState<CreateSermonDebugResponse | null>(null);
   const [copiedDebug, setCopiedDebug] = useState(false);
 
   const recognitionRef = useRef<any>(null);
@@ -232,7 +238,7 @@ export function useCreateKhutbah(onSuccess: () => void) {
     } finally {
       setSubmitting(false);
     }
-  }, [title, preacher, content, category, publishForFriday, showToast, onSuccess]);
+  }, [title, preacher, content, category, publishForFriday, showToast, onSuccess, sermonRepo]);
 
   const copyDebugJson = useCallback(() => {
     if (debugResponse) {

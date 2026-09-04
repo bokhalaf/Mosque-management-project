@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { PageHeader } from "../../app/components/PageHeader";
+import { PageHeader } from "../../../app/components/PageHeader";
 import {
   Bell, CheckCircle2, Trash2, Clock, CheckCheck, RefreshCw,
   Wrench, Heart, BookOpen, Users, Sparkles, AlertCircle, ArrowRight
 } from 'lucide-react';
-import { useNotifications } from "../hooks/useNotifications";
-import { NotificationType } from "../../domain/entities/AppNotification";
+import { useNotifications } from "../../hooks/useNotifications";
+import { NotificationType } from "../../../domain/entities/AppNotification";
 
 export function NotificationsSection() {
   const {

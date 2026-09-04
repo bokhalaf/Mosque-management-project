@@ -1,13 +1,13 @@
 'use client';
 import React, { useState } from 'react';
-import { KhutbahsListSection, CreateKhutbahSection, SermonDetailsSection } from "../../presentation/sections/sermons";
+import { SermonsListSection, CreateSermonSection, SermonDetailsSection } from "../../presentation/sections/sermons";
 
 export default function SermonsPage() {
   const [view, setView] = useState<'list' | 'create' | 'details'>('list');
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
   if (view === 'create') {
-    return <CreateKhutbahSection onBack={() => setView('list')} />;
+    return <CreateSermonSection onBack={() => setView('list')} />;
   }
 
   if (view === 'details' && selectedId) {
@@ -21,8 +21,8 @@ export default function SermonsPage() {
   }
 
   return (
-    <KhutbahsListSection 
-      onNavigateToAdd={() => setView('create')} 
+    <SermonsListSection
+      onNavigateToAdd={() => setView('create')}
       onViewDetails={(id) => {
         setSelectedId(id);
         setView('details');

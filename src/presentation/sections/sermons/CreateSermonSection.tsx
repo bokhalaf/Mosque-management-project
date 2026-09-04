@@ -5,7 +5,7 @@ import {
   BookOpen, Plus, Mic, Square, Play, Pause, Send, FileText, CheckCircle2,
   AlertTriangle, RefreshCw, X, ScanText
 } from 'lucide-react';
-import { useCreateKhutbah } from '../../hooks/useCreateKhutbah';
+import { useCreateSermon } from '../../hooks/useCreateSermon';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -20,11 +20,11 @@ const CATEGORIES = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-interface CreateKhutbahSectionProps {
+interface CreateSermonSectionProps {
   onBack: () => void;
 }
 
-export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
+export function CreateSermonSection({ onBack }: CreateSermonSectionProps) {
   const {
     title, setTitle,
     preacher, setPreacher,
@@ -36,7 +36,7 @@ export function CreateKhutbahSection({ onBack }: CreateKhutbahSectionProps) {
     isScanningImage, ocrProgress, ocrStatusText, imageInputRef, handleImageOCR,
     submitting, error, setError,
     handleSubmit,
-  } = useCreateKhutbah(onBack);
+  } = useCreateSermon(onBack);
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent font-['Cairo'] pb-12">

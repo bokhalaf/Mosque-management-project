@@ -1,1 +1,1 @@
-export { KhutbahsListSection } from './sermons';
+export { SermonsListSection } from './sermons';

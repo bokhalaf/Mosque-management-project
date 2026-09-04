@@ -1,4 +1,4 @@
-import { NotificationsSection } from "../../presentation/sections/NotificationsSection";
+import { NotificationsSection } from "../../presentation/sections/notifications/NotificationsSection";
 
 export const metadata = {
   title: "مركز الإشعارات | نظام إدارة المسجد",

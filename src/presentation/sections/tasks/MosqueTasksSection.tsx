@@ -5,21 +5,21 @@
 // ==============================
 
 import React, { useState } from 'react';
-import { PageHeader } from "../../app/components/PageHeader";
-import { DeleteConfirmModal } from "../../app/components/ui/DeleteConfirmModal";
-import { useToast } from "../../app/components/ui/Toast";
+import { PageHeader } from "../../../app/components/PageHeader";
+import { DeleteConfirmModal } from "../../../app/components/ui/DeleteConfirmModal";
+import { useToast } from "../../../app/components/ui/Toast";
 import { Plus, Terminal, CheckSquare } from 'lucide-react';
 
-import { MosqueTask } from '../../domain/entities/MosqueTask';
-import { useMosqueTasks } from '../hooks/useMosqueTasks';
+import { MosqueTask } from '../../../domain/entities/MosqueTask';
+import { useMosqueTasks } from '../../hooks/useMosqueTasks';
 
-import { TaskDaySelector } from './tasks/components/TaskDaySelector';
-import { TaskStatsCard } from './tasks/components/TaskStatsCard';
-import { TaskQuickAddBar } from './tasks/components/TaskQuickAddBar';
-import { TaskItemCard } from './tasks/components/TaskItemCard';
-import { CreateMosqueTaskModal } from './tasks/components/CreateMosqueTaskModal';
-import { EditMosqueTaskModal } from './tasks/components/EditMosqueTaskModal';
-import { MosqueTaskDebugTerminal } from './tasks/components/MosqueTaskDebugTerminal';
+import { TaskDaySelector } from './components/TaskDaySelector';
+import { TaskStatsCard } from './components/TaskStatsCard';
+import { TaskQuickAddBar } from './components/TaskQuickAddBar';
+import { TaskItemCard } from './components/TaskItemCard';
+import { CreateMosqueTaskModal } from './components/CreateMosqueTaskModal';
+import { EditMosqueTaskModal } from './components/EditMosqueTaskModal';
+import { MosqueTaskDebugTerminal } from './components/MosqueTaskDebugTerminal';
 
 export function MosqueTasksSection() {
   const { showToast } = useToast();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CampaignsSection } from "../../../presentation/sections/CampaignsSection";
+import { CampaignsSection } from "../../../presentation/sections/campaigns/CampaignsSection";
 
 export default function CampaignsPage() {
   const router = useRouter();

@@ -1,4 +1,4 @@
-import { MosqueManagerProfileSection } from "../../presentation/sections/MosqueManagerProfileSection";
+import { MosqueManagerProfileSection } from "../../presentation/sections/profile/MosqueManagerProfileSection";
 
 export const metadata = {
   title: "الملف الشخصي لمدير المسجد | نظام إدارة المسجد",
