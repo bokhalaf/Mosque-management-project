@@ -1,7 +1,7 @@
 import { Donation, DonationDetails, PaginatedDonations, Campaign, PaginatedCampaigns, FinancialStats, AddCashDonationPayload, AddCampaignPayload, DailySummary } from "../../domain/entities/Donation";
 import { IDonationRepository } from "../../domain/repositories/IDonationRepository";
-
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders, getMultipartAuthHeaders } from "../http/apiClient";
+import { getMosqueId as getSharedMosqueId, isSuperAdminUser as getSharedIsSuperAdmin } from "../auth/authStorage";
 
 const parseAmount = (val: any): number => {
   if (typeof val === 'number') return val;
@@ -13,79 +13,17 @@ const parseAmount = (val: any): number => {
 };
 
 export class DonationRepositoryImpl implements IDonationRepository {
-  
+
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
   private getMosqueId(): number {
-    if (typeof window !== "undefined") {
-      const activeMosque = localStorage.getItem("active_mosque_id");
-      if (activeMosque && !isNaN(Number(activeMosque))) return Number(activeMosque);
-
-      const userStr = localStorage.getItem("auth_user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user.mosque_id) return Number(user.mosque_id);
-          if (user.mosque?.id) return Number(user.mosque.id);
-        } catch (e) {}
-      }
-    }
-    return 1;
+    return getSharedMosqueId();
   }
 
   private isSuperAdminUser(): boolean {
-    if (typeof window !== "undefined") {
-      const userStr = localStorage.getItem("auth_user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          const role = String(user.role || user.user_type || user.role_name || (typeof user.role === 'object' ? user.role?.name : '') || '').toLowerCase();
-          const roles = (user.roles || []).map((r: any) => typeof r === 'string' ? r.toLowerCase() : String(r.name || '').toLowerCase());
-          if (
-            role === 'super_admin' ||
-            role === 'superadmin' ||
-            role === 'admin' ||
-            role === 'administrator' ||
-            role === 'region_manager' ||
-            role === 'regionmanager' ||
-            role.includes('region') ||
-            role.includes('super') ||
-            role.includes('مدير المنطقة') ||
-            user.is_super_admin === true ||
-            user.role_id === 1 ||
-            roles.includes('super_admin') ||
-            roles.includes('superadmin') ||
-            roles.includes('admin') ||
-            roles.includes('region_manager')
-          ) {
-            return true;
-          }
-        } catch (e) {}
-      }
-      const roleStr = String(localStorage.getItem("user_role") || "").toLowerCase();
-      if (
-        roleStr === 'super_admin' ||
-        roleStr === 'superadmin' ||
-        roleStr === 'admin' ||
-        roleStr === 'region_manager' ||
-        roleStr.includes('super') ||
-        roleStr.includes('region')
-      ) {
-        return true;
-      }
-      const activeRoleView = String(localStorage.getItem("active_role_view") || "").toLowerCase();
-      if (activeRoleView === 'super_admin' || activeRoleView === 'region_manager' || activeRoleView === 'region') {
-        return true;
-      }
-    }
-    return false;
+    return getSharedIsSuperAdmin();
   }
 
   async getDonations(page: number = 1, limit: number = 10, search: string = "", type: string = "", status: string = ""): Promise<PaginatedDonations> {
@@ -458,14 +396,10 @@ export class DonationRepositoryImpl implements IDonationRepository {
       formData.append("receipt", payload.receipt_file, payload.receipt_file.name);
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
     const response = await fetch(`${BASE_URL}/donations/admin/cash`, {
       method: "POST",
-      headers: {
-        "Accept": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: getMultipartAuthHeaders(),
       body: formData,
     });
 
@@ -696,7 +630,6 @@ export class DonationRepositoryImpl implements IDonationRepository {
   }
 
   async updateCampaign(id: string | number, payload: any): Promise<Campaign> {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     const formData = new FormData();
     formData.append("_method", "PUT");
 
@@ -720,10 +653,7 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
     const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
       method: "POST", // Laravel multipart PUT via method spoofing
-      headers: {
-        "Accept": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: getMultipartAuthHeaders(),
       body: formData,
     });
 
@@ -741,13 +671,9 @@ export class DonationRepositoryImpl implements IDonationRepository {
   }
 
   async deleteCampaign(id: string | number): Promise<boolean> {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     const response = await fetch(`${BASE_URL}/campaigns/${id}`, {
       method: "DELETE",
-      headers: {
-        "Accept": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: getMultipartAuthHeaders(),
     });
 
     const json = await response.json().catch(() => null);
@@ -761,7 +687,6 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
   async addCampaign(payload: any): Promise<any> {
     const mosqueId = this.getMosqueId();
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
     // API requires multipart/form-data (not JSON) — and start_date is required
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -784,10 +709,7 @@ export class DonationRepositoryImpl implements IDonationRepository {
 
     const response = await fetch(`${BASE_URL}/campaigns`, {
       method: "POST",
-      headers: {
-        "Accept": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: getMultipartAuthHeaders(),
       body: formData,
     });
 
