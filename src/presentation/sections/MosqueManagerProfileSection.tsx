@@ -12,7 +12,6 @@ import {
   ShieldCheck, ShieldAlert, Sparkles, MapPin, BadgeCheck,
   Check, X, AlertCircle, Loader2, Upload, Image, BookOpen, UserCheck, DollarSign
 } from 'lucide-react';
-import { ManagerProfileRepositoryImpl } from "../../data/repositories/ManagerProfileRepositoryImpl";
 import { MosqueRepositoryImpl } from "../../data/repositories/MosqueRepositoryImpl";
 import {
   ManagerProfile,
@@ -23,12 +22,13 @@ import { ProfileDebugBox, ProfileApiDebugLog } from "./profile/components/Profil
 import { MosqueSpacesSection } from "./profile/components/MosqueSpacesSection";
 import { MosqueVolunteerLoader } from "./volunteers/components/MosqueVolunteerLoader";
 import { SystemSettingsSection } from "./profile/components/SystemSettingsSection";
+import { useManagerProfile } from "../hooks/useManagerProfile";
 
-const repo = new ManagerProfileRepositoryImpl();
 const mosqueRepo = new MosqueRepositoryImpl();
 
 export function MosqueManagerProfileSection() {
   const { showToast } = useToast();
+  const { getProfile, updateProfile, changePassword, confirmEmail } = useManagerProfile();
   const [profile, setProfile] = useState<ManagerProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -138,7 +138,7 @@ export function MosqueManagerProfileSection() {
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await repo.getProfile();
+      const data = await getProfile();
       setProfile(data);
       setEditForm({
         first_name: data.first_name || '',
@@ -176,7 +176,7 @@ export function MosqueManagerProfileSection() {
         last_name: editForm.last_name.trim(),
         phone: editForm.phone.trim(),
       };
-      const updated = await repo.updateProfile(payload);
+      const updated = await updateProfile(payload);
       addDebugLog('PUT /api/profile', 'https://mms-backend-rose.vercel.app/api/profile', 200, updated._rawResponse || updated);
       setProfile(updated);
       setShowEditModal(false);
@@ -277,7 +277,7 @@ export function MosqueManagerProfileSection() {
 
     setSubmittingPass(true);
     try {
-      await repo.changePassword("", passForm.password, passForm.password_confirmation);
+      await changePassword("", passForm.password, passForm.password_confirmation);
       addDebugLog('PUT /api/profile (Password Change)', 'https://mms-backend-rose.vercel.app/api/profile', 200, { status: true, message: "Password changed successfully" });
       setShowPasswordModal(false);
       setPassForm({ password: '', password_confirmation: '' });
@@ -300,7 +300,7 @@ export function MosqueManagerProfileSection() {
 
     setSubmittingOtp(true);
     try {
-      await repo.confirmEmail({ otp: otpCode });
+      await confirmEmail({ otp: otpCode });
       addDebugLog('POST /api/profile/confirm-email', 'https://mms-backend-rose.vercel.app/api/profile/confirm-email', 200, { status: true, message: "Email confirmed" });
       setShowOtpModal(false);
       setOtpCode('');

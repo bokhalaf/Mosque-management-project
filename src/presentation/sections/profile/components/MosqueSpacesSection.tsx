@@ -11,11 +11,9 @@ import {
   RefreshCw, CheckCircle2, X, Terminal, Sparkles
 } from 'lucide-react';
 import { MosqueSpace, CreateSpacePayload, UpdateSpacePayload } from '../../../../domain/entities/Space';
-import { SpaceRepositoryImpl } from '../../../../data/repositories/SpaceRepositoryImpl';
+import { useMosqueSpaces } from '../../../hooks/useMosqueSpaces';
 import { useToast } from '../../../../app/components/ui/Toast';
 import { DeleteConfirmModal } from '../../../../app/components/ui/DeleteConfirmModal';
-
-const spaceRepo = new SpaceRepositoryImpl();
 
 interface MosqueSpacesSectionProps {
   mosqueId: number | string;
@@ -29,6 +27,7 @@ export function MosqueSpacesSection({
   onAddDebugLog,
 }: MosqueSpacesSectionProps) {
   const { showToast } = useToast();
+  const { getMosqueSpaces, createSpace, updateSpace, deleteSpace } = useMosqueSpaces();
 
   const [spaces, setSpaces] = useState<MosqueSpace[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -52,7 +51,7 @@ export function MosqueSpacesSection({
     setLoading(true);
     setError(null);
     try {
-      const data = await spaceRepo.getMosqueSpaces(mosqueId);
+      const data = await getMosqueSpaces(mosqueId);
       setSpaces(data);
       if (onAddDebugLog) {
         onAddDebugLog(
@@ -108,7 +107,7 @@ export function MosqueSpacesSection({
     try {
       if (spaceToEdit) {
         // PUT /api/mosques/{mosque}/spaces/{space}
-        const updated = await spaceRepo.updateSpace(mosqueId, spaceToEdit.id, {
+        const updated = await updateSpace(mosqueId, spaceToEdit.id, {
           name: formName.trim(),
           capacity: capNum,
         });
@@ -125,7 +124,7 @@ export function MosqueSpacesSection({
         setSpaceToEdit(null);
       } else {
         // POST /api/mosques/{mosque}/spaces
-        const created = await spaceRepo.createSpace(mosqueId, {
+        const created = await createSpace(mosqueId, {
           name: formName.trim(),
           capacity: capNum,
         });
@@ -154,7 +153,7 @@ export function MosqueSpacesSection({
     if (!spaceToDelete) return;
     setIsDeleting(true);
     try {
-      await spaceRepo.deleteSpace(mosqueId, spaceToDelete.id);
+      await deleteSpace(mosqueId, spaceToDelete.id);
       setSpaces(prev => prev.filter(s => s.id !== spaceToDelete.id));
       if (onAddDebugLog) {
         onAddDebugLog(

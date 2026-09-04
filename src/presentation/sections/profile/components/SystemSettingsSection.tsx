@@ -10,10 +10,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   DollarSign, RefreshCw, AlertCircle, HelpCircle, Save, Sparkles
 } from 'lucide-react';
-import { SettingsRepositoryImpl } from '../../../../data/repositories/SettingsRepositoryImpl';
+import { useSystemSettings } from '../../../hooks/useSystemSettings';
 import { useToast } from '../../../../app/components/ui/Toast';
-
-const settingsRepo = new SettingsRepositoryImpl();
 
 interface SystemSettingsSectionProps {
   onAddDebugLog?: (action: string, url: string, status: number, response: any) => void;
@@ -21,6 +19,7 @@ interface SystemSettingsSectionProps {
 
 export function SystemSettingsSection({ onAddDebugLog }: SystemSettingsSectionProps) {
   const { showToast } = useToast();
+  const { getSettings, updateExchangeRate: updateExchangeRateUseCase } = useSystemSettings();
 
   const [rate, setRate] = useState<number | string>(14500);
   const [currentRateNumber, setCurrentRateNumber] = useState<number>(14500);
@@ -33,7 +32,7 @@ export function SystemSettingsSection({ onAddDebugLog }: SystemSettingsSectionPr
     setLoading(true);
     setError(null);
     try {
-      const data = await settingsRepo.getSettings();
+      const data = await getSettings();
       if (onAddDebugLog) {
         onAddDebugLog(
           'GET /api/settings',
@@ -75,7 +74,7 @@ export function SystemSettingsSection({ onAddDebugLog }: SystemSettingsSectionPr
 
     setSavingRate(true);
     try {
-      const res = await settingsRepo.updateExchangeRate(rateNum);
+      const res = await updateExchangeRateUseCase(rateNum);
       const updatedNum = Number(res.new_rate || rateNum);
       setCurrentRateNumber(updatedNum);
       setRate(updatedNum);
