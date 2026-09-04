@@ -5,25 +5,14 @@
 
 import { ISpaceRepository } from '../../domain/repositories/ISpaceRepository';
 import { MosqueSpace, CreateSpacePayload, UpdateSpacePayload } from '../../domain/entities/Space';
-
-const BASE_URL = 'https://mms-backend-rose.vercel.app/api';
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from '../http/apiClient';
 
 export class SpaceRepositoryImpl implements ISpaceRepository {
   private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
+    return {
+      ...(getSharedAuthHeaders() as Record<string, string>),
       'Accept-Language': 'ar',
     };
-
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-
-    return headers;
   }
 
   // ── 1. List Mosque Spaces (GET /api/mosques/{mosque}/spaces) ──

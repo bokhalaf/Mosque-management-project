@@ -5,25 +5,14 @@
 
 import { ISettingsRepository } from '../../domain/repositories/ISettingsRepository';
 import { SystemSetting, ExchangeRateResponse } from '../../domain/entities/Settings';
-
-const BASE_URL = 'https://mms-backend-rose.vercel.app/api';
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from '../http/apiClient';
 
 export class SettingsRepositoryImpl implements ISettingsRepository {
   private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
+    return {
+      ...(getSharedAuthHeaders() as Record<string, string>),
       'Accept-Language': 'ar',
     };
-
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-
-    return headers;
   }
 
   // ── 1. Get All Settings (GET /api/settings) ──

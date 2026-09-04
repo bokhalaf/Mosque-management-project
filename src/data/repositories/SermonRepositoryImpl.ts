@@ -10,8 +10,11 @@ import {
   PaginatedSermons
 } from "../../domain/entities/Sermon";
 import { ISermonRepository } from "../../domain/repositories/ISermonRepository";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders, getMultipartAuthHeaders } from "../http/apiClient";
 
-export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+// Re-exported for backward compatibility: some presentation hooks import
+// BASE_URL directly from this module.
+export { BASE_URL };
 
 const STORAGE_KEY_UPCOMING = "selected_friday_sermon_persistent";
 const STORAGE_KEY_HISTORY = "sermon_selections_history_persistent";
@@ -54,12 +57,7 @@ const processedSermonIds = new Set<string | number>();
 export class SermonRepositoryImpl implements ISermonRepository {
 
   private getAuthHeaders(isFormData: boolean = false): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return isFormData ? getMultipartAuthHeaders() : getSharedAuthHeaders();
   }
 
   // Helper to map API sermon format safely
@@ -332,7 +330,6 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
   async createSermonWithDebug(payload: CreateSermonPayload): Promise<SermonCreateApiResponse> {
     const todayStr = new Date().toISOString().split('T')[0];
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     const endpointUrl = `${BASE_URL}/sermons`;
 
     let response: Response;
@@ -360,10 +357,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
       response = await fetch(endpointUrl, {
         method: "POST",
-        headers: {
-          "Accept": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getMultipartAuthHeaders(),
         body: formData,
       });
     } else {
@@ -379,11 +373,7 @@ export class SermonRepositoryImpl implements ISermonRepository {
 
       response = await fetch(endpointUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getSharedAuthHeaders(),
         body: JSON.stringify(jsonBody),
       });
     }

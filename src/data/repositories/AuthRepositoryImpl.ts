@@ -5,7 +5,13 @@
 
 import { LoginRequest, LoginResponse } from "../../domain/entities/Auth";
 import { IAuthRepository } from "../../domain/repositories/IAuthRepository";
+import { getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
 
+// NOTE: This BASE_URL intentionally differs from apiClient.ts's BASE_URL
+// (no trailing "/api" segment) — the auth endpoints below are mounted at
+// "/auth/..." directly, not "/api/auth/...". Left as its own local
+// constant rather than importing the shared one to avoid changing the
+// actual request URLs.
 const BASE_URL = "https://mms-backend-rose.vercel.app";
 
 export class AuthRepositoryImpl implements IAuthRepository {
@@ -65,11 +71,7 @@ export class AuthRepositoryImpl implements IAuthRepository {
     if (token) {
       await fetch(`${BASE_URL}/auth/logout`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getSharedAuthHeaders(),
       }).catch(() => {
         // تجاهل أخطاء الشبكة عند الخروج
       });

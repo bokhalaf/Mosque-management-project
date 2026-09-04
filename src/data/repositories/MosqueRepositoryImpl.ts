@@ -4,8 +4,7 @@
 
 import { MosqueDetail, UpdateMosquePayload, GeoGovernorate } from "../../domain/entities/Mosque";
 import { IMosqueRepository, PaginatedMosques, CreateMosquePayload, MosqueFilterOptions } from "../../domain/repositories/IMosqueRepository";
-
-export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders, getMultipartAuthHeaders } from "../http/apiClient";
 
 // Fallback empty: we NEVER use fake city IDs — city_id must come from real /api/geo response
 const DEFAULT_GEO_CATALOG: GeoGovernorate[] = [];
@@ -89,12 +88,7 @@ const MOCK_MOSQUES: MosqueDetail[] = [
 
 export class MosqueRepositoryImpl implements IMosqueRepository {
   private getAuthHeaders(isFormData: boolean = false): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return isFormData ? getMultipartAuthHeaders() : getSharedAuthHeaders();
   }
 
   private formatMosque(item: any): MosqueDetail {

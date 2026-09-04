@@ -4,8 +4,7 @@
 
 import { ComplaintStats, ComplaintItem, PaginatedComplaints } from "../../domain/entities/Complaint";
 import { IComplaintRepository, GetAdminComplaintsParams } from "../../domain/repositories/IComplaintRepository";
-
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
 
 export interface ComplaintOperationDebugResponse {
   operationType: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -21,12 +20,7 @@ export interface ComplaintOperationDebugResponse {
 export class ComplaintRepositoryImpl implements IComplaintRepository {
 
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
   // ── 1. getComplaintPageStats ──────────────────────────────────────────

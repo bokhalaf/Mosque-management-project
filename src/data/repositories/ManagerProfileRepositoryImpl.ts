@@ -10,8 +10,7 @@ import {
   UserProfileData,
 } from "../../domain/entities/ManagerProfile";
 import { IManagerProfileRepository } from "../../domain/repositories/IManagerProfileRepository";
-
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
 
 const DEFAULT_PROFILE: ManagerProfile = {
   first_name: "",
@@ -42,12 +41,7 @@ const DEFAULT_PROFILE: ManagerProfile = {
 
 export class ManagerProfileRepositoryImpl implements IManagerProfileRepository {
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
   // ── 1. GET /api/profile ──────────────────────────────────────

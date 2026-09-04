@@ -9,8 +9,8 @@ import {
   CreateMaintenancePayload
 } from "../../domain/entities/Maintenance";
 import { IMaintenanceRepository, GetMaintenanceParams } from "../../domain/repositories/IMaintenanceRepository";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders, getMultipartAuthHeaders } from "../http/apiClient";
 
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 const STORAGE_KEY_MAINTENANCE = "mosque_maintenance_requests_persistent_cache";
 
 export interface MaintenanceRecentDebugResponse {
@@ -34,14 +34,12 @@ export interface MaintenanceOperationDebugResponse {
 export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
 
   private getAuthHeaders(isFormData: boolean = false): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return isFormData ? getMultipartAuthHeaders() : getSharedAuthHeaders();
   }
 
+  // NOTE: This intentionally differs from the shared getMosqueId() in
+  // authStorage.ts — it does not check active_mosque_id and its fallback
+  // default is 5 (not 1). Left as-is to avoid changing behavior.
   private getMosqueId(): number {
     const userStr = typeof window !== "undefined" ? localStorage.getItem("auth_user") : null;
     if (userStr) {
@@ -339,7 +337,6 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
     debug: MaintenanceOperationDebugResponse;
   }> {
     const mosqueId = payload.mosque_id || this.getMosqueId();
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
     const category = this.mapCategory(payload.category);
     const priority = this.mapPriority(payload.priority);
@@ -366,10 +363,7 @@ export class MaintenanceRepositoryImpl implements IMaintenanceRepository {
     try {
       const response = await fetch(endpointUrl, {
         method: "POST",
-        headers: {
-          "Accept": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getMultipartAuthHeaders(),
         body: formData,
       });
 

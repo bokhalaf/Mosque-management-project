@@ -10,8 +10,11 @@ import {
   UpdateTameemPayload 
 } from "../../domain/entities/Tameem";
 import { ITameemRepository, PaginatedTameems } from "../../domain/repositories/ITameemRepository";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders, getMultipartAuthHeaders } from "../http/apiClient";
 
-export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+// Re-exported for backward compatibility: src/presentation/hooks/useTameemDetails.ts
+// imports BASE_URL directly from this module.
+export { BASE_URL };
 
 const MOCK_TAMEEMS: Tameem[] = [
   {
@@ -71,12 +74,7 @@ const MOCK_TAMEEMS: Tameem[] = [
 
 export class TameemRepositoryImpl implements ITameemRepository {
   private getAuthHeaders(isFormData: boolean = false): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return isFormData ? getMultipartAuthHeaders() : getSharedAuthHeaders();
   }
 
   private formatTameem(item: any): Tameem {

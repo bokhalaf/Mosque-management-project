@@ -17,17 +17,11 @@ import {
   VolunteerStats,
 } from "../../domain/entities/Volunteer";
 import { IVolunteerRepository } from "../../domain/repositories/IVolunteerRepository";
-
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
 
 export class VolunteerRepositoryImpl implements IVolunteerRepository {
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
   private getMosqueId(): number {

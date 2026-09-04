@@ -4,8 +4,8 @@
 
 import { AppNotification, NotificationStats } from "../../domain/entities/AppNotification";
 import { INotificationRepository } from "../../domain/repositories/INotificationRepository";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
 
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
 const STORAGE_KEY_NOTIFICATIONS = "app_notifications_unified_cache";
 
 const DEFAULT_NOTIFICATIONS: AppNotification[] = [
@@ -58,12 +58,7 @@ const DEFAULT_NOTIFICATIONS: AppNotification[] = [
 
 export class NotificationRepositoryImpl implements INotificationRepository {
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
   private getLocalNotifications(): AppNotification[] {

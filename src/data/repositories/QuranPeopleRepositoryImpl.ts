@@ -4,13 +4,15 @@
 
 import { QuranPerson, SendInvitationPayload, QuranPeopleStats } from "../../domain/entities/QuranPeople";
 import { IQuranPeopleRepository } from "../../domain/repositories/IQuranPeopleRepository";
-
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL } from "../http/apiClient";
 
 export class QuranPeopleRepositoryImpl implements IQuranPeopleRepository {
   public lastUsersRawResponse: any = null;
   public lastDashboardRawResponse: any = null;
 
+  // NOTE: kept local (not migrated to the shared getAuthHeaders()) because this file
+  // reads an extra "token" localStorage fallback key that authStorage.getAuthToken()
+  // does not support — migrating would silently drop that fallback behavior.
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== "undefined" ? (localStorage.getItem("auth_token") || localStorage.getItem("token")) : null;
     return {

@@ -12,17 +12,11 @@ import {
   MosqueTaskPriority,
 } from '../../domain/entities/MosqueTask';
 import { IMosqueTaskRepository } from '../../domain/repositories/IMosqueTaskRepository';
-
-const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
 
 export class MosqueTaskRepositoryImpl implements IMosqueTaskRepository {
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
   private mapTask(item: any): MosqueTask {

@@ -15,21 +15,22 @@ import {
   DawahPaginatedResponse,
 } from "../../domain/entities/DawahProgram";
 import { IDawahProgramRepository } from "../../domain/repositories/IDawahProgramRepository";
+import { BASE_URL, getAuthHeaders as getSharedAuthHeaders } from "../http/apiClient";
+import { getMosqueId as getSharedMosqueId } from "../auth/authStorage";
 
-export const BASE_URL = "https://mms-backend-rose.vercel.app/api";
+export { BASE_URL };
 
 export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
   private programsMosqueMap = new Map<number | string, number>();
 
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    return getSharedAuthHeaders();
   }
 
+  // NOTE: This role check is intentionally narrower than the shared
+  // isSuperAdminUser() in authStorage.ts (it only checks the
+  // roles/is_super_admin fields on auth_user, not the many other
+  // role-name variants). Left as-is to avoid changing behavior.
   private checkIsSuperAdmin(): boolean {
     if (typeof window !== "undefined") {
       try {
@@ -47,20 +48,7 @@ export class DawahProgramRepositoryImpl implements IDawahProgramRepository {
   }
 
   private getMosqueId(): number {
-    if (typeof window !== "undefined") {
-      const activeMosque = localStorage.getItem("active_mosque_id");
-      if (activeMosque && !isNaN(Number(activeMosque))) return Number(activeMosque);
-
-      const userStr = localStorage.getItem("auth_user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user.mosque_id) return Number(user.mosque_id);
-          if (user.mosque?.id) return Number(user.mosque.id);
-        } catch (e) {}
-      }
-    }
-    return 1;
+    return getSharedMosqueId();
   }
 
   private mapProgramItem(item: any, defaultMosqueId: number): DawahProgram {
