@@ -4,13 +4,14 @@
 // ==============================
 
 import { useState, useEffect, useCallback } from 'react';
-import { ComplaintRepositoryImpl, ComplaintOperationDebugResponse } from '../../data/repositories/ComplaintRepositoryImpl';
+import { ComplaintOperationDebugResponse } from '../../data/repositories/ComplaintRepositoryImpl';
+import { getComplaintRepository } from '../../data/factories/repositoryFactory';
 import { ComplaintItem, ComplaintStats } from '../../domain/entities/Complaint';
 import { GetComplaintStatsUseCase } from '../../domain/usecases/complaints/GetComplaintStatsUseCase';
 import { GetAdminComplaintsUseCase } from '../../domain/usecases/complaints/GetAdminComplaintsUseCase';
 import { SearchComplaintsUseCase } from '../../domain/usecases/complaints/SearchComplaintsUseCase';
 
-const complaintRepo = new ComplaintRepositoryImpl();
+const complaintRepo = getComplaintRepository();
 const getStatsUseCase = new GetComplaintStatsUseCase(complaintRepo);
 const getAdminComplaintsUseCase = new GetAdminComplaintsUseCase(complaintRepo);
 const searchComplaintsUseCase = new SearchComplaintsUseCase(complaintRepo);
@@ -137,7 +138,7 @@ export function useComplaints() {
         }));
       }
 
-      const resDebug = await complaintRepo.getAdminComplaintsWithDebug(params);
+      const resDebug = await (complaintRepo as any).getAdminComplaintsWithDebug(params);
       setDebugData(resDebug.debug);
     } catch (err: any) {
       console.error('Error loading admin complaints:', err);

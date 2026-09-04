@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Donation, Campaign, FinancialStats, AddCashDonationPayload } from "../../domain/entities/Donation";
-import { DonationRepositoryImpl } from "../../data/repositories/DonationRepositoryImpl";
+import { getDonationRepository } from "../../data/factories/repositoryFactory";
 import { GetDonationsUseCase } from "../../domain/usecases/donations/GetDonationsUseCase";
 import { GetCampaignsUseCase } from "../../domain/usecases/donations/GetCampaignsUseCase";
 import { GetDonationStatsUseCase } from "../../domain/usecases/donations/GetDonationStatsUseCase";
@@ -54,7 +54,7 @@ export function useDonations() {
     return () => clearTimeout(handler);
   }, [search, debouncedSearch]);
 
-  const repository = useMemo(() => new DonationRepositoryImpl(), []);
+  const repository = useMemo(() => getDonationRepository(), []);
 
   const getDonationsUC = useMemo(() => new GetDonationsUseCase(repository), [repository]);
   const getCampaignsUC = useMemo(() => new GetCampaignsUseCase(repository), [repository]);

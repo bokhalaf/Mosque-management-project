@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from "react";
 import { AuthUser, LoginRequest, LoginResponse } from "../../domain/entities/Auth";
-import { AuthRepositoryImpl } from "../../data/repositories/AuthRepositoryImpl";
+import { getAuthRepository } from "../../data/factories/repositoryFactory";
 import { LoginUseCase } from "../../domain/usecases/LoginUseCase";
 
 export function useLogin() {
@@ -12,7 +12,7 @@ export function useLogin() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const repository = useMemo(() => new AuthRepositoryImpl(), []);
+  const repository = useMemo(() => getAuthRepository(), []);
   const loginUseCase = useMemo(() => new LoginUseCase(repository), [repository]);
 
   // يُعيد LoginResponse عند النجاح أو null عند الفشل

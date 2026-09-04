@@ -4,7 +4,8 @@
 // ==============================
 
 import { useState, useEffect, useCallback } from 'react';
-import { MaintenanceRepositoryImpl, MaintenanceOperationDebugResponse } from '../../data/repositories/MaintenanceRepositoryImpl';
+import { MaintenanceOperationDebugResponse } from '../../data/repositories/MaintenanceRepositoryImpl';
+import { getMaintenanceRepository } from '../../data/factories/repositoryFactory';
 import { MaintenanceRequestItem, MaintenanceStats } from '../../domain/entities/Maintenance';
 import { GetMaintenanceStatsUseCase } from '../../domain/usecases/maintenance/GetMaintenanceStatsUseCase';
 import { GetMaintenanceRequestsUseCase } from '../../domain/usecases/maintenance/GetMaintenanceRequestsUseCase';
@@ -13,7 +14,7 @@ import { UpdateMaintenanceRequestUseCase } from '../../domain/usecases/maintenan
 import { DeleteMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/DeleteMaintenanceRequestUseCase';
 import { useToast } from '../../app/components/ui/Toast';
 
-const maintenanceRepo = new MaintenanceRepositoryImpl();
+const maintenanceRepo = getMaintenanceRepository();
 const getStatsUseCase = new GetMaintenanceStatsUseCase(maintenanceRepo);
 const getRequestsUseCase = new GetMaintenanceRequestsUseCase(maintenanceRepo);
 const searchRequestsUseCase = new SearchMaintenanceRequestsUseCase(maintenanceRepo);
@@ -142,7 +143,7 @@ export function useMaintenance() {
       }
 
       // جلب بيانات المعاينة والـ Debug من الـ Repository للعرض
-      const resDebug = await maintenanceRepo.getMaintenanceRequestsWithDebug(params);
+      const resDebug = await (maintenanceRepo as any).getMaintenanceRequestsWithDebug(params);
       setOperationDebug(resDebug.debug);
 
       const items = paginatedResult.data || [];
@@ -200,7 +201,7 @@ export function useMaintenance() {
       // استخدام حالة الاستخدام الرسمية DeleteMaintenanceRequestUseCase
       await deleteRequestUseCase.execute(id);
 
-      const resDebug = await maintenanceRepo.deleteMaintenanceRequestWithDebug(id);
+      const resDebug = await (maintenanceRepo as any).deleteMaintenanceRequestWithDebug(id);
       setOperationDebug(resDebug.debug);
       setShowDebugBox(true);
 
@@ -224,7 +225,7 @@ export function useMaintenance() {
       // استخدام حالة الاستخدام الرسمية UpdateMaintenanceRequestUseCase
       const updatedItem = await updateRequestUseCase.execute(id, payload);
 
-      const resDebug = await maintenanceRepo.updateMaintenanceRequestWithDebug(id, payload);
+      const resDebug = await (maintenanceRepo as any).updateMaintenanceRequestWithDebug(id, payload);
       setOperationDebug(resDebug.debug);
       setShowDebugBox(true);
 

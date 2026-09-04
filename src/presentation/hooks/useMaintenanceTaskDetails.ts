@@ -4,7 +4,7 @@
 // ==============================
 
 import { useState, useEffect, useCallback } from 'react';
-import { MaintenanceRepositoryImpl } from '../../data/repositories/MaintenanceRepositoryImpl';
+import { getMaintenanceRepository } from '../../data/factories/repositoryFactory';
 import { MaintenanceRequestItem } from '../../domain/entities/Maintenance';
 import { useToast } from '../../app/components/ui/Toast';
 import { GetMaintenanceDetailsUseCase } from '../../domain/usecases/maintenance/GetMaintenanceDetailsUseCase';
@@ -13,7 +13,7 @@ import { UpdateMaintenanceRequestUseCase } from '../../domain/usecases/maintenan
 
 import { ProcessAdminMaintenanceUseCase } from '../../domain/usecases/maintenance/ProcessAdminMaintenanceUseCase';
 
-const maintenanceRepo = new MaintenanceRepositoryImpl();
+const maintenanceRepo = getMaintenanceRepository();
 const getDetailsUseCase = new GetMaintenanceDetailsUseCase(maintenanceRepo);
 const trackUseCase = new TrackMaintenanceRequestUseCase(maintenanceRepo);
 const updateStatusUseCase = new UpdateMaintenanceRequestUseCase(maintenanceRepo);

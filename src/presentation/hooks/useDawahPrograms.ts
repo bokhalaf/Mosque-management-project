@@ -16,7 +16,7 @@ import {
   MosqueSpace,
   MyMosqueDetails,
 } from '../../domain/entities/DawahProgram';
-import { DawahProgramRepositoryImpl } from '../../data/repositories/DawahProgramRepositoryImpl';
+import { getDawahProgramRepository } from '../../data/factories/repositoryFactory';
 import { GetDawahProgramsUseCase } from '../../domain/usecases/dawah/GetDawahProgramsUseCase';
 import { CreateDawahProgramUseCase } from '../../domain/usecases/dawah/CreateDawahProgramUseCase';
 import { UpdateDawahProgramUseCase } from '../../domain/usecases/dawah/UpdateDawahProgramUseCase';
@@ -71,7 +71,7 @@ export function useDawahPrograms() {
     perPage: 6,
   });
 
-  const repository = useMemo(() => new DawahProgramRepositoryImpl(), []);
+  const repository = useMemo(() => getDawahProgramRepository(), []);
 
   const getProgramsUC = useMemo(() => new GetDawahProgramsUseCase(repository), [repository]);
   const createProgramUC = useMemo(() => new CreateDawahProgramUseCase(repository), [repository]);

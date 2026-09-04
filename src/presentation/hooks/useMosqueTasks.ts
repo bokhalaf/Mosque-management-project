@@ -14,7 +14,7 @@ import {
   MosqueTaskStatus,
   MosqueTaskStats,
 } from '../../domain/entities/MosqueTask';
-import { MosqueTaskRepositoryImpl } from '../../data/repositories/MosqueTaskRepositoryImpl';
+import { getMosqueTaskRepository } from '../../data/factories/repositoryFactory';
 import {
   GetMosqueTasksUseCase,
   GetMosqueTaskDateTabsUseCase,
@@ -105,7 +105,7 @@ function installFetchInterceptor() {
 
 
 export function useMosqueTasks() {
-  const repository = useMemo(() => new MosqueTaskRepositoryImpl(), []);
+  const repository = useMemo(() => getMosqueTaskRepository(), []);
 
   const getTasksUC = useMemo(() => new GetMosqueTasksUseCase(repository), [repository]);
   const getDateTabsUC = useMemo(() => new GetMosqueTaskDateTabsUseCase(repository), [repository]);

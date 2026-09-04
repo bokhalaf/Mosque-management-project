@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { VolunteerRepositoryImpl } from '../../data/repositories/VolunteerRepositoryImpl';
+import { getVolunteerRepository } from '../../data/factories/repositoryFactory';
 import {
   CreateVolunteerOpportunityUseCase,
   CreateOpportunityTaskUseCase,
@@ -37,7 +37,7 @@ export function useCreateOpportunity() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const repository = useMemo(() => new VolunteerRepositoryImpl(), []);
+  const repository = useMemo(() => getVolunteerRepository(), []);
   const createOpportunityUC = useMemo(() => new CreateVolunteerOpportunityUseCase(repository), [repository]);
   const createTaskUC = useMemo(() => new CreateOpportunityTaskUseCase(repository), [repository]);
 

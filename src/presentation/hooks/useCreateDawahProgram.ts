@@ -11,7 +11,7 @@ import {
   DawahProgramLevel,
   MosqueSpace,
 } from '../../domain/entities/DawahProgram';
-import { DawahProgramRepositoryImpl } from '../../data/repositories/DawahProgramRepositoryImpl';
+import { getDawahProgramRepository } from '../../data/factories/repositoryFactory';
 import { CreateDawahProgramUseCase } from '../../domain/usecases/dawah/CreateDawahProgramUseCase';
 import { GetMosqueSpacesUseCase } from '../../domain/usecases/dawah/GetMosqueSpacesUseCase';
 import { useToast } from '../../app/components/ui/Toast';
@@ -37,7 +37,7 @@ export interface CreateDawahProgramFormData {
 
 export function useCreateDawahProgram(onSuccess: () => void) {
   const { showToast } = useToast();
-  const repository = useMemo(() => new DawahProgramRepositoryImpl(), []);
+  const repository = useMemo(() => getDawahProgramRepository(), []);
   const createProgramUC = useMemo(() => new CreateDawahProgramUseCase(repository), [repository]);
   const getSpacesUC = useMemo(() => new GetMosqueSpacesUseCase(repository), [repository]);
 

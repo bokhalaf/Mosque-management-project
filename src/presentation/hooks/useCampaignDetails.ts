@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Campaign, UpdateCampaignPayload } from "../../domain/entities/Donation";
-import { DonationRepositoryImpl } from "../../data/repositories/DonationRepositoryImpl";
+import { getDonationRepository } from "../../data/factories/repositoryFactory";
 import { GetCampaignByIdUseCase } from "../../domain/usecases/GetCampaignByIdUseCase";
 import { UpdateCampaignUseCase } from "../../domain/usecases/UpdateCampaignUseCase";
 import { DeleteCampaignUseCase } from "../../domain/usecases/DeleteCampaignUseCase";
@@ -39,7 +39,7 @@ export function useCampaignDetails(campaignId: string | number) {
 
   const clearDebugLogs = useCallback(() => setDebugLogs([]), []);
 
-  const repository = useMemo(() => new DonationRepositoryImpl(), []);
+  const repository = useMemo(() => getDonationRepository(), []);
   const getCampaignByIdUC = useMemo(() => new GetCampaignByIdUseCase(repository), [repository]);
   const updateCampaignUC = useMemo(() => new UpdateCampaignUseCase(repository), [repository]);
   const deleteCampaignUC = useMemo(() => new DeleteCampaignUseCase(repository), [repository]);

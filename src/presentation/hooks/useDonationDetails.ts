@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { DonationDetails } from "../../domain/entities/Donation";
-import { DonationRepositoryImpl } from "../../data/repositories/DonationRepositoryImpl";
+import { getDonationRepository } from "../../data/factories/repositoryFactory";
 import { GetDonationByReferenceUseCase } from "../../domain/usecases/donations/GetDonationByReferenceUseCase";
 import { DownloadReceiptUseCase } from "../../domain/usecases/donations/DownloadReceiptUseCase";
 import { useToast } from "../../app/components/ui/Toast";
@@ -40,7 +40,7 @@ export function useDonationDetails(donationReferenceOrId: string | number) {
 
   const clearDebugLogs = useCallback(() => setDebugLogs([]), []);
 
-  const repository = useMemo(() => new DonationRepositoryImpl(), []);
+  const repository = useMemo(() => getDonationRepository(), []);
   const getDonationUC = useMemo(() => new GetDonationByReferenceUseCase(repository), [repository]);
   const downloadReceiptUC = useMemo(() => new DownloadReceiptUseCase(repository), [repository]);
 

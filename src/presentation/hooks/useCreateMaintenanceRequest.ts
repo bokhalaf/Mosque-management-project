@@ -4,10 +4,11 @@
 // ==============================
 
 import { useState, useRef, useCallback } from 'react';
-import { MaintenanceRepositoryImpl, MaintenanceOperationDebugResponse } from '../../data/repositories/MaintenanceRepositoryImpl';
+import { MaintenanceOperationDebugResponse } from '../../data/repositories/MaintenanceRepositoryImpl';
+import { getMaintenanceRepository } from '../../data/factories/repositoryFactory';
 import { CreateMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/CreateMaintenanceRequestUseCase';
 
-const maintenanceRepo = new MaintenanceRepositoryImpl();
+const maintenanceRepo = getMaintenanceRepository();
 const createMaintenanceUseCase = new CreateMaintenanceRequestUseCase(maintenanceRepo);
 
 export function useCreateMaintenanceRequest(onSuccess: () => void) {
@@ -66,7 +67,7 @@ export function useCreateMaintenanceRequest(onSuccess: () => void) {
     setDebugResponse(null);
 
     try {
-      const resDebug = await maintenanceRepo.createMaintenanceRequestWithDebug({
+      const resDebug = await (maintenanceRepo as any).createMaintenanceRequestWithDebug({
         title: title.trim(),
         category,
         priority,

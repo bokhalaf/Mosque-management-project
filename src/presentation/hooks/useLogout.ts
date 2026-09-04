@@ -3,13 +3,13 @@
 // ==============================
 
 import { useState, useMemo } from "react";
-import { AuthRepositoryImpl } from "../../data/repositories/AuthRepositoryImpl";
+import { getAuthRepository } from "../../data/factories/repositoryFactory";
 import { LogoutUseCase } from "../../domain/usecases/LogoutUseCase";
 
 export function useLogout() {
   const [loading, setLoading] = useState(false);
 
-  const repository = useMemo(() => new AuthRepositoryImpl(), []);
+  const repository = useMemo(() => getAuthRepository(), []);
   const logoutUseCase = useMemo(() => new LogoutUseCase(repository), [repository]);
 
   const logout = async (): Promise<void> => {

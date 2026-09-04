@@ -19,7 +19,7 @@ import {
   VolunteerPaginationState,
   VolunteerStats,
 } from "../../domain/entities/Volunteer";
-import { VolunteerRepositoryImpl } from "../../data/repositories/VolunteerRepositoryImpl";
+import { getVolunteerRepository } from "../../data/factories/repositoryFactory";
 import {
   GetVolunteerOpportunitiesUseCase,
   CreateVolunteerOpportunityUseCase,
@@ -195,7 +195,7 @@ export function useVolunteers() {
 
   const clearDebugLogs = useCallback(() => setDebugLogs([]), []);
 
-  const repository = useMemo(() => new VolunteerRepositoryImpl(), []);
+  const repository = useMemo(() => getVolunteerRepository(), []);
 
   const getOpportunitiesUC = useMemo(() => new GetVolunteerOpportunitiesUseCase(repository), [repository]);
   const createOpportunityUC = useMemo(() => new CreateVolunteerOpportunityUseCase(repository), [repository]);

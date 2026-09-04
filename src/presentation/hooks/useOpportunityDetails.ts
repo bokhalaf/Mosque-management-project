@@ -14,7 +14,7 @@ import {
   AssignTaskPayload,
   CreateOpportunityPayload,
 } from '../../domain/entities/Volunteer';
-import { VolunteerRepositoryImpl } from '../../data/repositories/VolunteerRepositoryImpl';
+import { getVolunteerRepository } from '../../data/factories/repositoryFactory';
 import {
   GetOpportunityByIdUseCase,
   UpdateVolunteerOpportunityUseCase,
@@ -75,7 +75,7 @@ export function useOpportunityDetails(opportunityId: number | string) {
   const [selectedAppForTask, setSelectedAppForTask] = useState<VolunteerApplication | null>(null);
   const [selectedAppForHours, setSelectedAppForHours] = useState<VolunteerApplication | null>(null);
 
-  const repository = useMemo(() => new VolunteerRepositoryImpl(), []);
+  const repository = useMemo(() => getVolunteerRepository(), []);
 
   // UseCases
   const getOpportunityByIdUC = useMemo(() => new GetOpportunityByIdUseCase(repository), [repository]);

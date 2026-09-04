@@ -4,7 +4,7 @@
 // ==============================
 
 import { useState, useEffect, useCallback } from 'react';
-import { ComplaintRepositoryImpl } from '../../data/repositories/ComplaintRepositoryImpl';
+import { getComplaintRepository } from '../../data/factories/repositoryFactory';
 import { ComplaintItem } from '../../domain/entities/Complaint';
 import { GetComplaintDetailsUseCase } from '../../domain/usecases/complaints/GetComplaintDetailsUseCase';
 import { UpdateComplaintStatusUseCase } from '../../domain/usecases/complaints/UpdateComplaintStatusUseCase';
@@ -12,7 +12,7 @@ import { useToast } from '../../app/components/ui/Toast';
 
 import { AssignComplaintToAdminUseCase } from '../../domain/usecases/complaints/AssignComplaintToAdminUseCase';
 
-const complaintRepo = new ComplaintRepositoryImpl();
+const complaintRepo = getComplaintRepository();
 const getDetailsUseCase = new GetComplaintDetailsUseCase(complaintRepo);
 const updateStatusUseCase = new UpdateComplaintStatusUseCase(complaintRepo);
 const assignAdminUseCase = new AssignComplaintToAdminUseCase(complaintRepo);
