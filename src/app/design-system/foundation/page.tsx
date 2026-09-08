@@ -1,6 +1,6 @@
 "use client";
 
-import { FoundationSection } from "../../../app/components/sections/FoundationSection";
+import { FoundationSection } from "../../../presentation/sections/design-system/FoundationSection";
 
 export default function FoundationPage() {
   return <FoundationSection />;

@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Mail, Lock, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
-import { useLogin } from "../../../../presentation/hooks/useLogin";
-import { useToast } from "../../../../presentation/components/ui/Toast";
-import { AuthUser } from "../../../../domain/entities/Auth";
+import { useLogin } from "../../hooks/useLogin";
+import { useToast } from "../../components/ui/Toast";
+import { AuthUser } from "../../../domain/entities/Auth";
 
 interface LoginSectionProps {
   onLogin: (user: AuthUser) => void;

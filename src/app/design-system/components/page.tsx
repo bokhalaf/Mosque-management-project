@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentsSection } from "../../../app/components/sections/ComponentsSection";
+import { ComponentsSection } from "../../../presentation/sections/design-system/ComponentsSection";
 
 export default function ComponentsPage() {
   return <ComponentsSection />;

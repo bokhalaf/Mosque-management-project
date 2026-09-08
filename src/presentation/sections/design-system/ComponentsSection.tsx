@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageHeader } from "../PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import { Search, Plus, ArrowRight, Heart } from "lucide-react";
 
 export function ComponentsSection() {
