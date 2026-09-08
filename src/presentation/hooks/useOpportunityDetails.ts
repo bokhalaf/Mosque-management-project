@@ -33,7 +33,7 @@ import {
   globalDebugListeners,
   VolunteerDebugLog,
 } from './useVolunteers';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export function useOpportunityDetails(opportunityId: number | string) {
   const router = useRouter();

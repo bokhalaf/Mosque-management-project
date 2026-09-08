@@ -16,7 +16,7 @@ import { useTameems } from '../../hooks/useTameems';
 import { Tameem } from '../../../domain/entities/Tameem';
 import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';
 import { QuranPerson } from '../../../domain/entities/QuranPeople';
-import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const cadresRepo = new QuranPeopleRepositoryImpl();
 

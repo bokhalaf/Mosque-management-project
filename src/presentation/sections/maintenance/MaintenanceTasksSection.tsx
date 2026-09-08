@@ -7,7 +7,7 @@ import { MaintenanceFilterBar } from './components/MaintenanceFilterBar';
 import { MaintenanceTable } from './components/MaintenanceTable';
 import { MaintenanceTimeline } from './components/MaintenanceTimeline';
 import { EditMaintenanceModal } from './components/EditMaintenanceModal';
-import { DownloadReportModal } from '../../../app/components/ui/DownloadReportModal';
+import { DownloadReportModal } from '../../components/ui/DownloadReportModal';
 import { MaintenanceRequestItem } from '../../../domain/entities/Maintenance';
 
 interface MaintenanceTasksSectionProps {

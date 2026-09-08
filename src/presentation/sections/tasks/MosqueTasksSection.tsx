@@ -6,8 +6,8 @@
 
 import React, { useState } from 'react';
 import { PageHeader } from "../../../app/components/PageHeader";
-import { DeleteConfirmModal } from "../../../app/components/ui/DeleteConfirmModal";
-import { useToast } from "../../../app/components/ui/Toast";
+import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
+import { useToast } from "../../components/ui/Toast";
 import { Plus, Terminal, CheckSquare } from 'lucide-react';
 
 import { MosqueTask } from '../../../domain/entities/MosqueTask';

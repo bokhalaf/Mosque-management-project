@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { Plus, BookOpen, RefreshCw, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useDawahPrograms } from '../../hooks/useDawahPrograms';
-import { useToast } from '../../../app/components/ui/Toast';
-import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
+import { useToast } from '../../components/ui/Toast';
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { DawahProgram } from '../../../domain/entities/DawahProgram';
 import {
   DawahFilterBar,

@@ -17,7 +17,7 @@ import {
   ManagerProfile,
   UpdateProfilePayload,
 } from "../../../domain/entities/ManagerProfile";
-import { useToast } from "../../../app/components/ui/Toast";
+import { useToast } from "../../components/ui/Toast";
 import { ProfileDebugBox, ProfileApiDebugLog } from "./components/ProfileDebugBox";
 import { MosqueSpacesSection } from "./components/MosqueSpacesSection";
 import { MosqueVolunteerLoader } from "../volunteers/components/MosqueVolunteerLoader";

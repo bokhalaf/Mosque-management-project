@@ -7,7 +7,7 @@ import { AuthLayout } from "./components/layouts/AuthLayout";
 import { LoginSection } from "./components/sections/auth/LoginSection";
 import { ForgotPasswordSection } from "./components/sections/auth/ForgotPasswordSection";
 import { ResetPasswordSection } from "./components/sections/auth/ResetPasswordSection";
-import { ToastProvider, useToast } from "./components/ui/Toast";
+import { ToastProvider, useToast } from "../presentation/components/ui/Toast";
 import { useLogout } from "../presentation/hooks/useLogout";
 import { AuthUser } from "../domain/entities/Auth";
 import { usePathname } from "next/navigation";

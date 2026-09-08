@@ -17,7 +17,7 @@ import {
   DeleteMosqueUseCase,
   GetGeoCatalogUseCase,
 } from '../../domain/usecases/mosques';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export interface DebugLog {
   time: string;

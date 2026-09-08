@@ -9,7 +9,7 @@ import {
   BookOpen, Check, XCircle, AlertCircle, FileText, Send 
 } from 'lucide-react';
 import { Sermon, SermonPagination } from '../../../../domain/entities/Sermon';
-import { DeleteConfirmModal } from '../../../../app/components/ui/DeleteConfirmModal';
+import { DeleteConfirmModal } from '../../../components/ui/DeleteConfirmModal';
 
 interface PendingModalProps {
   pendingSermons: Sermon[];

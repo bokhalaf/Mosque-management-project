@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { useMosque } from '../../hooks/useMosque';
 import { useMosques } from '../../hooks/useMosques';
-import { useToast } from '../../../app/components/ui/Toast';
-import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
+import { useToast } from '../../components/ui/Toast';
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 interface MosqueDetailsSectionProps {
   mosqueId: string | number;

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useMosques } from '../../hooks/useMosques';
 import { useMosque } from '../../hooks/useMosque';
-import { useToast } from '../../../app/components/ui/Toast';
+import { useToast } from '../../components/ui/Toast';
 import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';
 import { QuranPerson } from '../../../domain/entities/QuranPeople';
 import { InteractiveMapLocationPicker } from './components/InteractiveMapLocationPicker';

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { UserPlus, Users, RefreshCw, AlertCircle, Mail, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useQuranPeople } from '../../hooks/useQuranPeople';
-import { useToast } from '../../../app/components/ui/Toast';
+import { useToast } from '../../components/ui/Toast';
 import { QuranPerson } from '../../../domain/entities/QuranPeople';
 import {
   StaffStatsBanner,

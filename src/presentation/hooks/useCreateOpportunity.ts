@@ -11,7 +11,7 @@ import {
   CreateVolunteerOpportunityUseCase,
   CreateOpportunityTaskUseCase,
 } from '../../domain/usecases/volunteers';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export function useCreateOpportunity() {
   const router = useRouter();

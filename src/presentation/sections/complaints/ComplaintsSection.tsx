@@ -7,7 +7,7 @@ import { ComplaintFilterBar } from './components/ComplaintFilterBar';
 import { ComplaintTable } from './components/ComplaintTable';
 import { ComplaintTimeline } from './components/ComplaintTimeline';
 import { ComplaintDebugBox } from './components/ComplaintDebugBox';
-import { DownloadReportModal } from '../../../app/components/ui/DownloadReportModal';
+import { DownloadReportModal } from '../../components/ui/DownloadReportModal';
 
 interface ComplaintsSectionProps {
   onViewComplaintDetails?: (id: string) => void;

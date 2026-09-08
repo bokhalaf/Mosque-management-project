@@ -13,7 +13,7 @@ import {
   MarkTameemAsReadUseCase,
 } from '../../domain/usecases/tameem';
 import { Tameem, UpdateTameemPayload } from '../../domain/entities/Tameem';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export interface ApiDebugLog {
   action: string;

@@ -7,7 +7,7 @@ import { GetCampaignByIdUseCase } from "../../domain/usecases/GetCampaignByIdUse
 import { AddCampaignUseCase } from "../../domain/usecases/AddCampaignUseCase";
 import { UpdateCampaignUseCase } from "../../domain/usecases/UpdateCampaignUseCase";
 import { DeleteCampaignUseCase } from "../../domain/usecases/DeleteCampaignUseCase";
-import { useToast } from "../../app/components/ui/Toast";
+import { useToast } from "../components/ui/Toast";
 
 export interface ApiDebugLog {
   action: string;

@@ -6,7 +6,7 @@ import { MaintenanceTaskDetailsSection } from "../../../../presentation/sections
 import { EditMaintenanceModal } from "../../../../presentation/sections/maintenance/components/EditMaintenanceModal";
 import { useMaintenanceTaskActions } from "../../../../presentation/hooks/useMaintenanceTaskActions";
 import { MaintenanceRequestItem } from "../../../../domain/entities/Maintenance";
-import { useToast } from "../../../components/ui/Toast";
+import { useToast } from "../../../../presentation/components/ui/Toast";
 
 export default function MaintenanceTaskDetailsPage() {
   const router = useRouter();

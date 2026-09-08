@@ -11,7 +11,7 @@ import {
   Building2, CheckCircle2, Loader2, Sparkles
 } from "lucide-react";
 import { useCampaigns } from "../../hooks/useCampaigns";
-import { useToast } from "../../../app/components/ui/Toast";
+import { useToast } from "../../components/ui/Toast";
 
 interface CreateCampaignSectionProps {
   onBack: () => void;

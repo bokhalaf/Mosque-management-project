@@ -13,9 +13,9 @@ import {
   RefreshCw, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Eye
 } from 'lucide-react';
 import { useVolunteers } from '../../hooks/useVolunteers';
-import { useToast } from '../../../app/components/ui/Toast';
+import { useToast } from '../../components/ui/Toast';
 import { VolunteerApplication, VolunteerOpportunity, VolunteerCertificate } from '../../../domain/entities/Volunteer';
-import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import {
   VolunteerStatsBanner,
   VolunteerTabsNavigation,

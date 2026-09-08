@@ -14,7 +14,7 @@ import {
   ExternalLink, Compass, Layers
 } from 'lucide-react';
 import { useMosques } from '../../hooks/useMosques';
-import { useToast } from '../../../app/components/ui/Toast';
+import { useToast } from '../../components/ui/Toast';
 import { GeoGovernorate, GeoCity, GeoDistrict } from '../../../domain/entities/Mosque';
 import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';
 import { QuranPerson } from '../../../domain/entities/QuranPeople';

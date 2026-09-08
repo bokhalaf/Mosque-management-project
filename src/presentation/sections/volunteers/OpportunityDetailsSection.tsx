@@ -11,7 +11,7 @@ import {
   ListTodo, Users, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { useOpportunityDetails } from '../../hooks/useOpportunityDetails';
-import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import {
   OpportunityHeader,
   OpportunityTasksTab,

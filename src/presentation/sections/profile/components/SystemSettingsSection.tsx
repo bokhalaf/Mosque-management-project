@@ -11,7 +11,7 @@ import {
   DollarSign, RefreshCw, AlertCircle, HelpCircle, Save, Sparkles
 } from 'lucide-react';
 import { useSystemSettings } from '../../../hooks/useSystemSettings';
-import { useToast } from '../../../../app/components/ui/Toast';
+import { useToast } from '../../../components/ui/Toast';
 
 interface SystemSettingsSectionProps {
   onAddDebugLog?: (action: string, url: string, status: number, response: any) => void;

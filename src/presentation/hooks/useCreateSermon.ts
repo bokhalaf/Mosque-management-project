@@ -7,7 +7,7 @@ import { useState, useRef, useCallback, useMemo } from 'react';
 import type { SermonRepositoryImpl, SermonCreateApiResponse } from '../../data/repositories/SermonRepositoryImpl';
 import { getSermonRepository } from '../../data/factories/repositoryFactory';
 import { createWorker } from 'tesseract.js';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 // NOTE: createSermonWithDebug() is a debug-only helper exposed by the concrete
 // SermonRepositoryImpl (it returns extra httpStatus/endpointUrl/rawResponse

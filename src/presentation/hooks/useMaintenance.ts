@@ -12,7 +12,7 @@ import { GetMaintenanceRequestsUseCase } from '../../domain/usecases/maintenance
 import { SearchMaintenanceRequestsUseCase } from '../../domain/usecases/maintenance/SearchMaintenanceRequestsUseCase';
 import { UpdateMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/UpdateMaintenanceRequestUseCase';
 import { DeleteMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/DeleteMaintenanceRequestUseCase';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 const maintenanceRepo = getMaintenanceRepository();
 const getStatsUseCase = new GetMaintenanceStatsUseCase(maintenanceRepo);

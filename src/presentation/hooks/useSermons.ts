@@ -16,7 +16,7 @@ import { SearchSermonsUseCase } from '../../domain/usecases/sermons/SearchSermon
 import { GetArchivedSermonsUseCase } from '../../domain/usecases/sermons/GetArchivedSermonsUseCase';
 import { GetPendingSermonsUseCase } from '../../domain/usecases/sermons/GetPendingSermonsUseCase';
 import { GetMostSelectedSermonsUseCase } from '../../domain/usecases/sermons/GetMostSelectedSermonsUseCase';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export interface ApiDebugLog {
   action: string;
