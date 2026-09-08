@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import {
   Bell, CheckCircle2, Trash2, Clock, CheckCheck, RefreshCw,
   Wrench, Heart, BookOpen, Users, Sparkles, AlertCircle, ArrowRight

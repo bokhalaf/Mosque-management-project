@@ -8,7 +8,7 @@ import {
   Upload, X, Info, Wallet, Tag, Target,
   CheckCircle2, Loader2, User, Package
 } from "lucide-react";
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import { useDonations } from "../../hooks/useDonations";
 import { useToast } from "../../components/ui/Toast";
 

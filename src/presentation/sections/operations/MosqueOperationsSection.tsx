@@ -12,7 +12,7 @@ import {
   Activity, RefreshCw, ChevronLeft, ChevronRight,
   History, Calendar, Filter, Sparkles, Inbox
 } from 'lucide-react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useMosqueOperations } from '../../hooks/useMosqueOperations';
 import { OperationsStatCards } from './components/OperationsStatCards';
 import { OperationsFilterBar } from './components/OperationsFilterBar';

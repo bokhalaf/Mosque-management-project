@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import {
   BookOpen, Plus, Mic, Square, Play, Pause, Send, FileText, CheckCircle2,
   AlertTriangle, RefreshCw, X, ScanText

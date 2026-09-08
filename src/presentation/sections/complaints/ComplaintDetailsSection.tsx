@@ -4,7 +4,7 @@
 // ==============================
 
 import React, { useState } from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import {
   CheckCircle2, Archive, FileText, Send, Paperclip, MessageSquare,
   Calendar, AlertCircle, RefreshCw, Printer, Clock, AlertTriangle, ShieldCheck, X, UserPlus, ArrowUpRight, Building2

@@ -5,7 +5,7 @@
 // ==============================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import {
   User, Building2, Lock, Activity, CheckCircle2,
   Edit, Key, Clock, RefreshCw, Terminal, Phone, Mail,

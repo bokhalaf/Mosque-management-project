@@ -11,7 +11,7 @@ import {
   Users, UserCheck, Check, ChevronDown, ArrowRight, User, ShieldCheck, Send
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useTameems } from '../../hooks/useTameems';
 import { Tameem } from '../../../domain/entities/Tameem';
 import { QuranPeopleRepositoryImpl } from '../../../data/repositories/QuranPeopleRepositoryImpl';

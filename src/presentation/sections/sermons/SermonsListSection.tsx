@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Clock, History, RefreshCw, BookOpen, AlertCircle, ChevronRight, ChevronLeft, Star, Check, X, ShieldCheck, Archive, User, Eye, Send } from 'lucide-react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useSermons } from '../../hooks/useSermons';
 import { FridaySermonBanner } from './components/FridaySermonBanner';
 import { SermonFilterBar } from './components/SermonFilterBar';

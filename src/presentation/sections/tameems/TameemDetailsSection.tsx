@@ -11,7 +11,7 @@ import {
   Copy, Check, Send, Users, FileText, Calendar, Eye
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useTameemDetails } from '../../hooks/useTameemDetails';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { useToast } from '../../components/ui/Toast';

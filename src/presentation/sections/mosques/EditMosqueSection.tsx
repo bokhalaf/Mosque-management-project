@@ -6,7 +6,7 @@
 // ==============================
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import {
   Building2, Upload, X, MapPin, Clock, User, Star,
   CheckCircle2, Loader2, Sparkles, Navigation, Globe,

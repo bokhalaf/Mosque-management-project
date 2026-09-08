@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import {
   Building2, UserCheck, BookOpen, Clock, MapPin, Plus, Trash2,
   RefreshCw, CheckCircle2, AlertCircle, Save, Check,
