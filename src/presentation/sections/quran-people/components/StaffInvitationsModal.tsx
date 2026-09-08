@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, X, RefreshCw, Send, Clock, CheckCircle2, AlertCircle, GraduationCap, Shield, Users, Building2, Trash2 } from 'lucide-react';
 import { QuranPeopleRepositoryImpl } from '../../../../data/repositories/QuranPeopleRepositoryImpl';
-import { useToast } from '../../../../app/components/ui/Toast';
+import { useToast } from '../../../components/ui/Toast';
 
 interface StaffInvitationsModalProps {
   isOpen: boolean;

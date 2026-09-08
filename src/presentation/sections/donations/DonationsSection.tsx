@@ -6,7 +6,7 @@ import { DonationStatCards } from './components/DonationStatCards';
 import { DonationFilterBar } from './components/DonationFilterBar';
 import { DonationTable } from './components/DonationTable';
 import { DonationDailySummaryPanel } from './components/DonationDailySummaryPanel';
-import { DownloadReportModal } from '../../../app/components/ui/DownloadReportModal';
+import { DownloadReportModal } from '../../components/ui/DownloadReportModal';
 
 interface DonationsSectionProps {
   onAddDonation?: () => void;

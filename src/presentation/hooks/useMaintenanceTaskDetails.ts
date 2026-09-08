@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getMaintenanceRepository } from '../../data/factories/repositoryFactory';
 import { MaintenanceRequestItem } from '../../domain/entities/Maintenance';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 import { GetMaintenanceDetailsUseCase } from '../../domain/usecases/maintenance/GetMaintenanceDetailsUseCase';
 import { TrackMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/TrackMaintenanceRequestUseCase';
 import { UpdateMaintenanceRequestUseCase } from '../../domain/usecases/maintenance/UpdateMaintenanceRequestUseCase';

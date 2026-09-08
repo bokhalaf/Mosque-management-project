@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Calendar, Clock, Trash2, Edit, AlertCircle, RefreshCw } from 'lucide-react';
-import { DeleteConfirmModal } from '../../../../app/components/ui/DeleteConfirmModal';
+import { DeleteConfirmModal } from '../../../components/ui/DeleteConfirmModal';
 import { DawahProgram, ProgramSchedule, CreateProgramSchedulePayload, UpdateProgramSchedulePayload } from '../../../../domain/entities/DawahProgram';
 
 interface ScheduleManagementModalProps {

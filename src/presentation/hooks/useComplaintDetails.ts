@@ -8,7 +8,7 @@ import { getComplaintRepository } from '../../data/factories/repositoryFactory';
 import { ComplaintItem } from '../../domain/entities/Complaint';
 import { GetComplaintDetailsUseCase } from '../../domain/usecases/complaints/GetComplaintDetailsUseCase';
 import { UpdateComplaintStatusUseCase } from '../../domain/usecases/complaints/UpdateComplaintStatusUseCase';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 import { AssignComplaintToAdminUseCase } from '../../domain/usecases/complaints/AssignComplaintToAdminUseCase';
 

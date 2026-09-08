@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { MosqueSpace, CreateSpacePayload, UpdateSpacePayload } from '../../../../domain/entities/Space';
 import { useMosqueSpaces } from '../../../hooks/useMosqueSpaces';
-import { useToast } from '../../../../app/components/ui/Toast';
-import { DeleteConfirmModal } from '../../../../app/components/ui/DeleteConfirmModal';
+import { useToast } from '../../../components/ui/Toast';
+import { DeleteConfirmModal } from '../../../components/ui/DeleteConfirmModal';
 
 interface MosqueSpacesSectionProps {
   mosqueId: number | string;

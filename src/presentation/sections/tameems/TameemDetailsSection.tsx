@@ -13,8 +13,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../app/components/PageHeader';
 import { useTameemDetails } from '../../hooks/useTameemDetails';
-import { DeleteConfirmModal } from '../../../app/components/ui/DeleteConfirmModal';
-import { useToast } from '../../../app/components/ui/Toast';
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
+import { useToast } from '../../components/ui/Toast';
 
 interface TameemDetailsSectionProps {
   tameemId: string | number;

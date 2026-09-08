@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../../../app/components/PageHeader";
 import { useDonations } from "../../hooks/useDonations";
-import { useToast } from "../../../app/components/ui/Toast";
+import { useToast } from "../../components/ui/Toast";
 
 interface AddDonationSectionProps {
   onBack: () => void;

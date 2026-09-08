@@ -14,7 +14,7 @@ import {
 import { getDawahProgramRepository } from '../../data/factories/repositoryFactory';
 import { CreateDawahProgramUseCase } from '../../domain/usecases/dawah/CreateDawahProgramUseCase';
 import { GetMosqueSpacesUseCase } from '../../domain/usecases/dawah/GetMosqueSpacesUseCase';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export interface ScheduleItemState {
   id: string;

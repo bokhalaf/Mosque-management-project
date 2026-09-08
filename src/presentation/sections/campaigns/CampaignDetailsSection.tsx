@@ -12,7 +12,7 @@ import { PageHeader } from "../../../app/components/PageHeader";
 import { useCampaignDetails } from "../../hooks/useCampaignDetails";
 import { EditCampaignModal } from "./components/EditCampaignModal";
 import { DeleteCampaignModal } from "./components/DeleteCampaignModal";
-import { useToast } from "../../../app/components/ui/Toast";
+import { useToast } from "../../components/ui/Toast";
 
 interface CampaignDetailsSectionProps {
   campaignId: string | number;

@@ -8,7 +8,7 @@ import { DonationDetails } from "../../domain/entities/Donation";
 import { getDonationRepository } from "../../data/factories/repositoryFactory";
 import { GetDonationByReferenceUseCase } from "../../domain/usecases/donations/GetDonationByReferenceUseCase";
 import { DownloadReceiptUseCase } from "../../domain/usecases/donations/DownloadReceiptUseCase";
-import { useToast } from "../../app/components/ui/Toast";
+import { useToast } from "../components/ui/Toast";
 
 export interface ApiDebugLog {
   action: string;

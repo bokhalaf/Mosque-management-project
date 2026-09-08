@@ -13,7 +13,7 @@ import { StoreSermonSelectionUseCase } from '../../domain/usecases/sermons/Store
 import { DeleteSermonSelectionUseCase } from '../../domain/usecases/sermons/DeleteSermonSelectionUseCase';
 import { ApproveSermonUseCase } from '../../domain/usecases/sermons/ApproveSermonUseCase';
 import { RejectSermonUseCase } from '../../domain/usecases/sermons/RejectSermonUseCase';
-import { useToast } from '../../app/components/ui/Toast';
+import { useToast } from '../components/ui/Toast';
 
 export interface ApiDebugLog {
   action: string;
