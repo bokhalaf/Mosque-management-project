@@ -6,7 +6,7 @@
 // ==============================
 
 import React from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { AlertCircle } from 'lucide-react';
 import { useCreateOpportunity } from '../../hooks/useCreateOpportunity';
 import {

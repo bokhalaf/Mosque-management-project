@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import {
   Wrench, Send, X, AlertTriangle, Clock, Paperclip, RefreshCw,
   Zap, Droplets, Hammer, Sparkles, FileText, Check

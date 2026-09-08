@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Download, RefreshCw, Search, ChevronRight, ChevronLeft } from 'lucide-react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { CampaignStatCards } from './components/CampaignStatCards';
 import { CampaignFilterBar } from './components/CampaignFilterBar';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, RefreshCw, FileDown } from 'lucide-react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useMaintenance } from '../../hooks/useMaintenance';
 import { MaintenanceStatCards } from './components/MaintenanceStatCards';
 import { MaintenanceFilterBar } from './components/MaintenanceFilterBar';

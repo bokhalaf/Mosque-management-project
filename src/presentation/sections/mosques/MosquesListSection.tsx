@@ -10,7 +10,7 @@ import {
   ChevronRight, ChevronLeft, UserPlus, Mail
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useMosques } from '../../hooks/useMosques';
 import { MosqueDetail } from '../../../domain/entities/Mosque';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';

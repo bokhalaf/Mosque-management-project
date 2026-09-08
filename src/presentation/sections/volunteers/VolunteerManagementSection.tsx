@@ -7,7 +7,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import {
   HeartHandshake, Plus, Users, Briefcase, Award, Clock,
   RefreshCw, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Eye

@@ -10,7 +10,7 @@ import {
   Receipt, Download, AlertCircle, RefreshCw, Terminal, Paperclip, HeartHandshake,
   Copy, Check
 } from "lucide-react";
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import { useDonationDetails } from "../../hooks/useDonationDetails";
 
 interface DonationDetailsSectionProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { Plus, BookOpen, RefreshCw, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useDawahPrograms } from '../../hooks/useDawahPrograms';
 import { useToast } from '../../components/ui/Toast';

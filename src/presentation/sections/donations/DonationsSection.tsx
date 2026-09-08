@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, RefreshCw, FileDown } from 'lucide-react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { useDonations } from '../../hooks/useDonations';
 import { DonationStatCards } from './components/DonationStatCards';
 import { DonationFilterBar } from './components/DonationFilterBar';

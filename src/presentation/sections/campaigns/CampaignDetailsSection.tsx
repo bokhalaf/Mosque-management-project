@@ -8,7 +8,7 @@ import {
   Users, Clock, CheckCircle2, Target, Wallet, Calendar, Share2, 
   AlertCircle, Edit3, Trash2, RefreshCw, Building2, ChevronRight, Tag
 } from "lucide-react";
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import { useCampaignDetails } from "../../hooks/useCampaignDetails";
 import { EditCampaignModal } from "./components/EditCampaignModal";
 import { DeleteCampaignModal } from "./components/DeleteCampaignModal";

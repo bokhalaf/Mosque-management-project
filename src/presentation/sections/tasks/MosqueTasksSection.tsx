@@ -5,7 +5,7 @@
 // ==============================
 
 import React, { useState } from 'react';
-import { PageHeader } from "../../../app/components/PageHeader";
+import { PageHeader } from "../../components/PageHeader";
 import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import { useToast } from "../../components/ui/Toast";
 import { Plus, Terminal, CheckSquare } from 'lucide-react';

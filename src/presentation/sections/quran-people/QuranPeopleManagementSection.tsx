@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PageHeader } from '../../../app/components/PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import { UserPlus, Users, RefreshCw, AlertCircle, Mail, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useQuranPeople } from '../../hooks/useQuranPeople';
 import { useToast } from '../../components/ui/Toast';
