@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Sidebar } from "./components/Sidebar";
-import { TopBar } from "./components/TopBar";
-import { AuthLayout } from "./components/layouts/AuthLayout";
-import { LoginSection } from "./components/sections/auth/LoginSection";
-import { ForgotPasswordSection } from "./components/sections/auth/ForgotPasswordSection";
-import { ResetPasswordSection } from "./components/sections/auth/ResetPasswordSection";
+import { Sidebar } from "../presentation/components/Sidebar";
+import { TopBar } from "../presentation/components/TopBar";
+import { AuthLayout } from "../presentation/components/layouts/AuthLayout";
+import { LoginSection } from "../presentation/sections/auth/LoginSection";
+import { ForgotPasswordSection } from "../presentation/sections/auth/ForgotPasswordSection";
+import { ResetPasswordSection } from "../presentation/sections/auth/ResetPasswordSection";
 import { ToastProvider, useToast } from "../presentation/components/ui/Toast";
 import { useLogout } from "../presentation/hooks/useLogout";
 import { AuthUser } from "../domain/entities/Auth";

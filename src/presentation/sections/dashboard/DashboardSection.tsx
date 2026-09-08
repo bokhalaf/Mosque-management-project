@@ -8,7 +8,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { PageHeader } from '../PageHeader';
+import { PageHeader } from '../../components/PageHeader';
 import {
   DollarSign, Wrench, MessageSquareWarning, HeartHandshake,
   BookOpen, ArrowUpRight, AlertTriangle, CheckCircle2,
@@ -16,8 +16,8 @@ import {
   CalendarCheck, Activity, UserPlus, Sparkles, ShieldCheck,
   Building2, Coins, ArrowRightLeft, TrendingUp, RefreshCw
 } from 'lucide-react';
-import { useDashboardData, MosqueManagerDashboardData, RegionManagerDashboardData } from '../../../presentation/hooks/useDashboardData';
-import { MosqueVolunteerLoader } from '../../../presentation/sections/volunteers/components/MosqueVolunteerLoader';
+import { useDashboardData, MosqueManagerDashboardData, RegionManagerDashboardData } from '../../hooks/useDashboardData';
+import { MosqueVolunteerLoader } from '../volunteers/components/MosqueVolunteerLoader';
 
 // ── 1. واجهة مدير المسجد ────────────────────────────────────────────────
 function MosqueManagerView({

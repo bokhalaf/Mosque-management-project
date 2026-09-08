@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardSection } from "./components/sections/DashboardSection";
+import { DashboardSection } from "../presentation/sections/dashboard/DashboardSection";
 
 export default function HomePage() {
   return <DashboardSection />;
