@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Campaign, AddCampaignPayload, UpdateCampaignPayload } from "../../domain/entities/Donation";
 import { getDonationRepository } from "../../data/factories/repositoryFactory";
-import { GetCampaignsUseCase } from "../../domain/usecases/GetCampaignsUseCase";
-import { GetCampaignStatsUseCase } from "../../domain/usecases/GetCampaignStatsUseCase";
-import { GetCampaignByIdUseCase } from "../../domain/usecases/GetCampaignByIdUseCase";
-import { AddCampaignUseCase } from "../../domain/usecases/AddCampaignUseCase";
-import { UpdateCampaignUseCase } from "../../domain/usecases/UpdateCampaignUseCase";
-import { DeleteCampaignUseCase } from "../../domain/usecases/DeleteCampaignUseCase";
+import { GetCampaignsUseCase } from "../../domain/usecases/donations/GetCampaignsUseCase";
+import { GetCampaignStatsUseCase } from "../../domain/usecases/donations/GetCampaignStatsUseCase";
+import { GetCampaignByIdUseCase } from "../../domain/usecases/donations/GetCampaignByIdUseCase";
+import { AddCampaignUseCase } from "../../domain/usecases/donations/AddCampaignUseCase";
+import { UpdateCampaignUseCase } from "../../domain/usecases/donations/UpdateCampaignUseCase";
+import { DeleteCampaignUseCase } from "../../domain/usecases/donations/DeleteCampaignUseCase";
 import { useToast } from "../components/ui/Toast";
 
 export interface ApiDebugLog {

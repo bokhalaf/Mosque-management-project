@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Campaign, UpdateCampaignPayload } from "../../domain/entities/Donation";
 import { getDonationRepository } from "../../data/factories/repositoryFactory";
-import { GetCampaignByIdUseCase } from "../../domain/usecases/GetCampaignByIdUseCase";
-import { UpdateCampaignUseCase } from "../../domain/usecases/UpdateCampaignUseCase";
-import { DeleteCampaignUseCase } from "../../domain/usecases/DeleteCampaignUseCase";
+import { GetCampaignByIdUseCase } from "../../domain/usecases/donations/GetCampaignByIdUseCase";
+import { UpdateCampaignUseCase } from "../../domain/usecases/donations/UpdateCampaignUseCase";
+import { DeleteCampaignUseCase } from "../../domain/usecases/donations/DeleteCampaignUseCase";
 import { useToast } from "../components/ui/Toast";
 
 export interface ApiDebugLog {
